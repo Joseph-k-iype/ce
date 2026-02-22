@@ -47,6 +47,7 @@ class DataDictionaryExecutor(ComplianceAgentExecutor):
             return
 
         await self.emit_working(event_queue, ctx)
+        self.record_invocation(state)
 
         self.event_store.append(
             session_id=session_id,
@@ -70,6 +71,7 @@ class DataDictionaryExecutor(ComplianceAgentExecutor):
 
             if parsed:
                 state["dictionary_result"] = parsed
+                self.record_success(state)
                 state["current_phase"] = "cypher_generator"
 
                 duration = (time.time() - start_time) * 1000
@@ -98,6 +100,7 @@ class DataDictionaryExecutor(ComplianceAgentExecutor):
                     ],
                 })
             else:
+                self.record_failure(state, "Failed to parse response")
                 state["current_phase"] = "supervisor"
                 state["iteration"] = state.get("iteration", 0) + 1
                 self.event_store.append(
@@ -109,6 +112,7 @@ class DataDictionaryExecutor(ComplianceAgentExecutor):
 
         except AIRequestError as e:
             logger.error(f"Data dictionary error: {e}")
+            self.record_failure(state, str(e))
             state["current_phase"] = "supervisor"
             state["iteration"] = state.get("iteration", 0) + 1
             self.event_store.append(

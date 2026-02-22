@@ -46,6 +46,7 @@ class ReferenceDataExecutor(ComplianceAgentExecutor):
             return
 
         await self.emit_working(event_queue, ctx)
+        self.record_invocation(state)
 
         self.event_store.append(
             session_id=session_id,
@@ -74,6 +75,7 @@ class ReferenceDataExecutor(ComplianceAgentExecutor):
             parsed = parse_json_response(response)
 
             if parsed:
+                self.record_success(state)
                 actions = parsed.get("actions_needed", [])
                 duration = (time.time() - start_time) * 1000
 
@@ -104,6 +106,7 @@ class ReferenceDataExecutor(ComplianceAgentExecutor):
 
         except AIRequestError as e:
             logger.error(f"Reference data error: {e}")
+            self.record_failure(state, str(e))
             state["current_phase"] = "supervisor"
             state["iteration"] = state.get("iteration", 0) + 1
             self.event_store.append(

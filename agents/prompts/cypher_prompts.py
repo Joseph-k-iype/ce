@@ -55,7 +55,7 @@ You receive:
 3. **NO CALL subqueries**: `CALL {{ ... }}` is NOT supported.
 4. **NO UNION**: UNION is NOT supported in a single query. Return separate queries instead.
 5. **NO FOREACH**: Use UNWIND instead.
-6. **Parameters**: Use `$param_name` syntax for parameters.
+6. **Parameters**: Use `$param_name` syntax for parameters. When using `$param_name` placeholders, you MUST populate the `query_params` dict in your output with concrete example values for every parameter used. Example: if a query uses `$rule_id` and `$country`, then `query_params` must include `{"rule_id": "RULE_SAR_UK", "country": "United Kingdom"}`. Queries with unbound `$param` placeholders will fail at execution time.
 7. **Multiple MATCH clauses**: You CAN chain MATCH, OPTIONAL MATCH, WITH, WHERE, CREATE, MERGE, SET, RETURN.
 8. **MERGE is supported**: Use MERGE for upserts.
 9. **Pattern matching in WHERE**: Use `WHERE EXISTS((n)-[:REL]->(m))` NOT `WHERE EXISTS {{ MATCH (n)-[:REL]->(m) }}`.
@@ -167,7 +167,7 @@ Return ONLY valid JSON:
         "rule_links": "string — SINGLE Cypher statement to create LINKED_TO edges to entities (or empty string if none)",
         "validation": "string — SINGLE Cypher statement to validate rule works"
     }},
-    "query_params": {{}},
+    "query_params": {{"$param1": "example_value1", "$param2": "example_value2"}},
     "optimization_notes": ["string"]
 }}
 ```

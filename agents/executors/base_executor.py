@@ -34,6 +34,7 @@ from a2a.types import (
 
 from agents.ai_service import get_ai_service, AIRequestError, AIAuthenticationError
 from agents.audit.event_store import get_event_store
+from agents.executors.utils import FailureCategory, classify_failure
 from agents.state.wizard_state import WizardAgentState
 from models.agent_models import AgentEvent, AgentEventType
 from services.sse_manager import get_sse_manager
@@ -146,6 +147,86 @@ class ComplianceAgentExecutor(AgentExecutor):
             )
         )
 
+    # -- failure/success tracking for circuit breaker ----------------------------
+
+    def record_failure(self, state: WizardAgentState, error: str):
+        """Record a failure for this agent in the enhanced circuit breaker state."""
+        name = self.agent_name
+        category = classify_failure(error)
+
+        counts = state.get("agent_failure_counts", {})
+        counts[name] = counts.get(name, 0) + 1
+        state["agent_failure_counts"] = counts
+
+        reasons = state.get("agent_failure_reasons", {})
+        agent_reasons = reasons.get(name, [])
+        agent_reasons.append(f"{category.value}: {error[:200]}")
+        # Keep only last 10 reasons per agent
+        reasons[name] = agent_reasons[-10:]
+        state["agent_failure_reasons"] = reasons
+
+        state.setdefault("agent_last_success", {})[name] = False
+
+        logger.info(
+            f"Circuit breaker: {name} failure #{counts[name]} "
+            f"(category={category.value}): {error[:100]}"
+        )
+
+    def record_success(self, state: WizardAgentState):
+        """Record a success for this agent in the enhanced circuit breaker state."""
+        name = self.agent_name
+        state.setdefault("agent_last_success", {})[name] = True
+        # Reset failure count on success
+        counts = state.get("agent_failure_counts", {})
+        counts[name] = 0
+        state["agent_failure_counts"] = counts
+
+    def record_invocation(self, state: WizardAgentState):
+        """Record that this agent was invoked."""
+        name = self.agent_name
+        counts = state.get("agent_invocation_counts", {})
+        counts[name] = counts.get(name, 0) + 1
+        state["agent_invocation_counts"] = counts
+
+    # -- SSE event convenience emitter -----------------------------------------
+
+    def emit_sse_event(
+        self,
+        state: WizardAgentState,
+        event_type: AgentEventType,
+        message: str,
+        data: dict = None,
+        progress_pct: float = None,
+        step_current: int = None,
+        step_total: int = None,
+    ):
+        """Emit an SSE event directly (convenience method for rich events)."""
+        sse_manager = get_sse_manager()
+        session_id = state.get("origin_country", "unknown")
+
+        event_data = data or {}
+        if step_current is not None:
+            event_data["step_current"] = step_current
+        if step_total is not None:
+            event_data["step_total"] = step_total
+
+        event = AgentEvent(
+            event_type=event_type,
+            session_id=session_id,
+            agent_name=self.agent_name,
+            phase=state.get("current_phase", ""),
+            message=message,
+            data=event_data if event_data else None,
+            progress_pct=progress_pct,
+        )
+        sse_manager.publish_sync(session_id, event)
+        state.setdefault("events", []).append({
+            "event_type": event_type.value,
+            "agent_name": self.agent_name,
+            "message": message,
+            "data": event_data if event_data else None,
+        })
+
     # -- AI call with retry (handles 401 token refresh transparently) ----------
 
     def call_ai_with_retry(
@@ -162,6 +243,8 @@ class ComplianceAgentExecutor(AgentExecutor):
         full prompt context across retries so no information is lost.
         On auth errors, the full state is preserved and context is re-injected.
 
+        Emits AI_CALL_STARTED, AI_CALL_COMPLETED, and AI_CALL_RETRY SSE events.
+
         Returns:
             LLM response text
 
@@ -170,6 +253,17 @@ class ComplianceAgentExecutor(AgentExecutor):
         """
         last_error = None
         accumulated_errors: list[str] = []
+        call_start = time.time()
+
+        # Emit AI_CALL_STARTED event
+        state = context._state if context and hasattr(context, '_state') else None
+        if state:
+            self.emit_sse_event(
+                state,
+                AgentEventType.AI_CALL_STARTED,
+                f"{self.agent_name}: calling AI model",
+                data={"prompt_length": len(user_prompt)},
+            )
 
         for attempt in range(max_retries + 1):
             try:
@@ -182,9 +276,22 @@ class ComplianceAgentExecutor(AgentExecutor):
 
                 result = self.ai_service.chat(enhanced_prompt, system_prompt)
 
+                # Emit AI_CALL_COMPLETED event
+                elapsed = (time.time() - call_start) * 1000
+                if state:
+                    self.emit_sse_event(
+                        state,
+                        AgentEventType.AI_CALL_COMPLETED,
+                        f"{self.agent_name}: AI response received ({elapsed:.0f}ms)",
+                        data={
+                            "attempt": attempt + 1,
+                            "response_length": len(result),
+                            "elapsed_ms": elapsed,
+                        },
+                    )
+
                 # Save checkpoint on success if context available
                 if context and hasattr(context, '_state'):
-                    state = context._state
                     checkpoints = state.get("memory_checkpoints", {})
                     checkpoints[f"{self.agent_name}_last_success"] = {
                         "attempt": attempt + 1,
@@ -202,6 +309,18 @@ class ComplianceAgentExecutor(AgentExecutor):
                         f"{self.agent_name}: auth/request error "
                         f"(attempt {attempt + 1}/{max_retries + 1}), retrying in {wait_time}s: {e}"
                     )
+                    # Emit AI_CALL_RETRY event
+                    if state:
+                        self.emit_sse_event(
+                            state,
+                            AgentEventType.AI_CALL_RETRY,
+                            f"{self.agent_name}: retrying AI call (attempt {attempt + 2}/{max_retries + 1})",
+                            data={
+                                "attempt": attempt + 1,
+                                "error": str(e)[:200],
+                                "wait_seconds": wait_time,
+                            },
+                        )
                     time.sleep(wait_time)
                     continue
         raise AIRequestError(
@@ -287,6 +406,13 @@ async def _drain_event_queue_to_sse(
     # Ensure events list exists
     if "events" not in state or not isinstance(state.get("events"), list):
         state["events"] = []
+
+    # Emit step progress event
+    try:
+        from agents.workflows.rule_ingestion_workflow import _emit_step_progress
+        _emit_step_progress(state, agent_name)
+    except ImportError:
+        pass
 
     # Emit agent_started event at the beginning of every phase
     started_event = AgentEvent(

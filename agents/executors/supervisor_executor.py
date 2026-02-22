@@ -5,6 +5,7 @@ Orchestrates the wizard workflow, manages routing decisions.
 Implements Google A2A SDK AgentExecutor interface.
 """
 
+import json
 import logging
 
 from a2a.server.agent_execution import RequestContext
@@ -23,6 +24,30 @@ from agents.ai_service import AIRequestError
 logger = logging.getLogger(__name__)
 
 
+def _compress_agent_outputs(agent_outputs: dict) -> dict:
+    """Compress agent outputs to summary-only for retry iterations.
+
+    Instead of sending full outputs on every supervisor call, send only
+    existence flags and key metrics to reduce prompt size.
+    """
+    compressed = {}
+    for key, value in agent_outputs.items():
+        if value is None:
+            compressed[key] = None
+        elif isinstance(value, dict):
+            # Extract just the key summary fields
+            summary = {"_present": True}
+            for field in ("rule_id", "name", "rule_type", "outcome", "overall_valid",
+                          "confidence_score", "skipped", "total", "passed", "failed",
+                          "auto_completed", "reason"):
+                if field in value:
+                    summary[field] = value[field]
+            compressed[key] = summary
+        else:
+            compressed[key] = str(value)[:200]
+    return compressed
+
+
 class SupervisorExecutor(ComplianceAgentExecutor):
     """Supervisor agent executor - orchestrates workflow routing."""
 
@@ -37,10 +62,11 @@ class SupervisorExecutor(ComplianceAgentExecutor):
         state = ctx.state
 
         await self.emit_working(event_queue, ctx)
+        self.record_invocation(state)
 
         session_id = state.get("origin_country", "unknown")
 
-        # Build agent outputs summary
+        # Build agent outputs summary — compress on retry iterations to reduce prompt size
         agent_outputs = {
             "analysis_result": state.get("analysis_result"),
             "dictionary_result": state.get("dictionary_result"),
@@ -48,6 +74,14 @@ class SupervisorExecutor(ComplianceAgentExecutor):
             "cypher_queries": state.get("cypher_queries"),
             "validation_result": state.get("validation_result"),
         }
+        iteration = state.get("iteration", 0)
+        if iteration > 0:
+            agent_outputs = _compress_agent_outputs(agent_outputs)
+
+        # Limit shared_reasoning to last 2 entries on retries to reduce prompt bloat
+        shared_reasoning = state.get("shared_reasoning", [])
+        if iteration > 0 and len(shared_reasoning) > 2:
+            state["shared_reasoning"] = shared_reasoning[-2:]
 
         validation_status = "Not yet validated"
         if state.get("validation_result"):

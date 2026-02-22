@@ -54,6 +54,7 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
             is_pii_related=session.is_pii_related,
             thread_id=session_id,
             agentic_mode=session.agentic_mode,
+            processing_mode=getattr(session, "processing_mode", "autonomous"),
         )
 
         session.analysis_result = result.analysis_result

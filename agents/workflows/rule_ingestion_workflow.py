@@ -15,8 +15,51 @@ from agents.nodes.reference_data import reference_data_node
 from agents.nodes.rule_tester import rule_tester_node
 from agents.audit.event_store import get_event_store
 from agents.audit.event_types import AuditEventType
+from agents.executors.utils import FailureCategory, classify_failure, FAILURE_RETRY_LIMITS
+from models.agent_models import AgentEvent, AgentEventType
+from services.sse_manager import get_sse_manager
 
 logger = logging.getLogger(__name__)
+
+# ── Step progress mapping ────────────────────────────────────────────────
+# Maps agent names to step numbers for progress tracking
+STEP_PROGRESS_MAP = {
+    "rule_analyzer": (1, 6, "Analyzing rule text"),
+    "data_dictionary": (2, 6, "Generating data dictionary"),
+    "cypher_generator": (3, 6, "Generating graph queries"),
+    "validator": (4, 6, "Validating outputs"),
+    "rule_tester": (5, 6, "Running test scenarios"),
+    "review_proposal": (6, 6, "Preparing proposal"),
+}
+
+
+def _emit_step_progress(state: WizardAgentState, agent_name: str):
+    """Emit a STEP_PROGRESS SSE event based on the current agent."""
+    step_info = STEP_PROGRESS_MAP.get(agent_name)
+    if not step_info:
+        return
+
+    step_current, step_total, description = step_info
+    session_id = state.get("origin_country", "unknown")
+    sse_manager = get_sse_manager()
+
+    event = AgentEvent(
+        event_type=AgentEventType.STEP_PROGRESS,
+        session_id=session_id,
+        agent_name=agent_name,
+        phase=state.get("current_phase", ""),
+        message=f"Step {step_current}/{step_total} — {description}",
+        step_current=step_current,
+        step_total=step_total,
+        progress_pct=(step_current / step_total) * 100,
+    )
+    sse_manager.publish_sync(session_id, event)
+    state.setdefault("events", []).append({
+        "event_type": AgentEventType.STEP_PROGRESS.value,
+        "agent_name": agent_name,
+        "message": event.message,
+        "data": {"step_current": step_current, "step_total": step_total},
+    })
 
 
 def human_review_node(state: WizardAgentState) -> WizardAgentState:
@@ -126,8 +169,30 @@ def _increment_agent_retry(state: WizardAgentState, agent_name: str) -> int:
     return counts[agent_name]
 
 
+def _get_dominant_failure_category(state: WizardAgentState, agent_name: str) -> FailureCategory:
+    """Determine the dominant failure category for an agent based on its failure history."""
+    reasons = state.get("agent_failure_reasons", {}).get(agent_name, [])
+    if not reasons:
+        return FailureCategory.LOGIC  # default
+    # Count category occurrences from stored reasons (format: "category: message")
+    counts = {}
+    for reason in reasons:
+        cat = reason.split(":")[0].strip() if ":" in reason else "logic"
+        counts[cat] = counts.get(cat, 0) + 1
+    dominant = max(counts, key=counts.get)
+    try:
+        return FailureCategory(dominant)
+    except ValueError:
+        return FailureCategory.LOGIC
+
+
 def route_from_supervisor(state: WizardAgentState) -> str:
-    """Route based on supervisor decision with hard circuit breakers."""
+    """Route based on supervisor decision with failure-aware circuit breakers.
+
+    Uses enhanced tracking: counts *failures* not just *invocations*, distinguishes
+    transient vs logic errors, and applies different retry limits per category.
+    Includes idempotency guard to skip re-invocation if prior output is still valid.
+    """
     phase = state.get("current_phase", "fail")
 
     # ── Breaker 1: hard graph step limit ──
@@ -149,17 +214,70 @@ def route_from_supervisor(state: WizardAgentState) -> str:
     if retry_count >= 3 and phase not in ("complete", "fail", "rule_tester"):
         return "validator"
 
-    # ── Breaker 4: per-agent retry limit ──
     valid_routes = {
         "rule_analyzer", "data_dictionary", "cypher_generator",
         "validator", "reference_data", "rule_tester", "human_review", "complete", "fail"
     }
 
+    # ── Idempotency guard: skip re-invocation if prior output is still valid ──
+    if phase in valid_routes and phase not in ("complete", "fail", "human_review"):
+        output_map = {
+            "rule_analyzer": "rule_definition",
+            "data_dictionary": "dictionary_result",
+            "cypher_generator": "cypher_queries",
+            "validator": "validation_result",
+            "rule_tester": "test_results",
+        }
+        output_key = output_map.get(phase)
+        last_success = state.get("agent_last_success", {}).get(phase, False)
+        if output_key and state.get(output_key) and last_success:
+            logger.info(
+                f"Idempotency guard: '{phase}' already has valid output and last run succeeded, skipping"
+            )
+            skip_map = {
+                "rule_analyzer": "cypher_generator",
+                "data_dictionary": "cypher_generator",
+                "cypher_generator": "validator",
+                "validator": "rule_tester",
+                "reference_data": "rule_tester",
+                "rule_tester": "complete",
+            }
+            return skip_map.get(phase, "complete")
+
+    # ── Breaker 4: failure-aware per-agent retry limit ──
+    if phase in valid_routes and phase not in ("complete", "fail", "human_review"):
+        failure_counts = state.get("agent_failure_counts", {})
+        failure_count = failure_counts.get(phase, 0)
+
+        if failure_count > 0:
+            # Determine retry limit based on dominant failure category
+            dominant_category = _get_dominant_failure_category(state, phase)
+            retry_limit = FAILURE_RETRY_LIMITS.get(dominant_category, MAX_AGENT_RETRIES)
+
+            if failure_count >= retry_limit:
+                reasons = state.get("agent_failure_reasons", {}).get(phase, [])
+                last_reason = reasons[-1] if reasons else "unknown"
+                logger.warning(
+                    f"Circuit breaker: agent '{phase}' failed {failure_count} times "
+                    f"(category={dominant_category.value}, limit={retry_limit}), "
+                    f"last reason: {last_reason}"
+                )
+                skip_map = {
+                    "rule_analyzer": "cypher_generator",
+                    "data_dictionary": "cypher_generator",
+                    "cypher_generator": "validator",
+                    "validator": "rule_tester",
+                    "reference_data": "rule_tester",
+                    "rule_tester": "complete",
+                }
+                return skip_map.get(phase, "complete")
+
+    # ── Legacy fallback: per-agent invocation limit (kept for backward compat) ──
     if phase in valid_routes and phase not in ("complete", "fail", "human_review"):
         agent_counts = state.get("agent_retry_counts", {})
         agent_count = agent_counts.get(phase, 0)
         if agent_count >= MAX_AGENT_RETRIES:
-            logger.warning(f"Circuit breaker: agent '{phase}' invoked {agent_count} times, skipping")
+            logger.warning(f"Circuit breaker (legacy): agent '{phase}' invoked {agent_count} times, skipping")
             skip_map = {
                 "rule_analyzer": "cypher_generator",
                 "data_dictionary": "cypher_generator",
@@ -176,17 +294,91 @@ def route_from_supervisor(state: WizardAgentState) -> str:
 
 
 def entry_point_router(state: WizardAgentState) -> Union[str, List[str]]:
-    """Determine initial nodes. If in agentic mode, run analyzer and dictionary in parallel."""
-    if state.get("agentic_mode"):
+    """Determine initial nodes based on processing mode.
+
+    - standard mode: deterministic pipeline, no supervisor
+    - autonomous mode: LLM-supervised with parallel start
+    - legacy (non-agentic): sequential through supervisor
+    """
+    mode = state.get("processing_mode", "autonomous")
+
+    # Pre-warm graph schema cache at workflow start
+    try:
+        from agents.prompts.prompt_builder import build_graph_entities_context
+        build_graph_entities_context()
+        logger.info("Graph schema cache pre-warmed at workflow start")
+    except Exception as e:
+        logger.debug(f"Graph schema pre-warm failed (non-critical): {e}")
+
+    if mode == "standard":
+        # Deterministic pipeline: start with parallel analyzer + dictionary
+        return ["rule_analyzer", "data_dictionary"]
+    elif state.get("agentic_mode"):
         return ["rule_analyzer", "data_dictionary"]
     return "supervisor"
 
 
-def build_rule_ingestion_graph(with_interrupt: bool = True) -> tuple:
-    """Build optimized LangGraph workflow."""
+# ── Standard mode routing functions ──────────────────────────────────────
+
+def _standard_route_after_initial(state: WizardAgentState) -> str:
+    """Standard mode: after analyzer+dictionary, go to cypher generator."""
+    if state.get("rule_definition"):
+        return "cypher_generator"
+    # One retry: go back to analyzer
+    if state.get("agent_failure_counts", {}).get("rule_analyzer", 0) >= 1:
+        return "complete_with_warning"
+    return "rule_analyzer"
+
+
+def _standard_route_after_cypher(state: WizardAgentState) -> str:
+    """Standard mode: after cypher, go to validator."""
+    if state.get("cypher_queries"):
+        return "validator"
+    if state.get("agent_failure_counts", {}).get("cypher_generator", 0) >= 1:
+        return "complete_with_warning"
+    return "cypher_generator"
+
+
+def _standard_route_after_validator(state: WizardAgentState) -> str:
+    """Standard mode: after validator, go to tester or complete."""
+    v_result = state.get("validation_result", {})
+    if v_result.get("overall_valid") or v_result.get("skipped"):
+        return "rule_tester"
+    # One retry on validation failure
+    if state.get("agent_failure_counts", {}).get("validator", 0) >= 1:
+        return "rule_tester"
+    return "validator"
+
+
+def _standard_route_after_tester(state: WizardAgentState) -> str:
+    """Standard mode: after tester, always complete."""
+    return "review_proposal"
+
+
+def complete_with_warning_node(state: WizardAgentState) -> WizardAgentState:
+    """Standard mode: auto-complete with warning when an agent fails."""
+    state["success"] = True
+    state.setdefault("events", []).append({
+        "event_type": "workflow_complete",
+        "agent_name": "system",
+        "message": "Workflow auto-completed with warnings (standard mode)",
+    })
+    failure_reasons = state.get("agent_failure_reasons", {})
+    state["error_message"] = f"Auto-completed with failures: {dict(failure_reasons)}"
+    logger.warning(f"Standard mode auto-complete with warnings: {failure_reasons}")
+    return state
+
+
+def build_rule_ingestion_graph(with_interrupt: bool = True, processing_mode: str = "autonomous") -> tuple:
+    """Build optimized LangGraph workflow.
+
+    Args:
+        processing_mode: "standard" for deterministic pipeline (no supervisor LLM calls),
+                         "autonomous" for LLM-supervised workflow (default).
+    """
     workflow = StateGraph(WizardAgentState)
 
-    # Add nodes
+    # Add nodes (shared across both modes)
     workflow.add_node("supervisor", supervisor_node)
     workflow.add_node("rule_analyzer", rule_analyzer_node)
     workflow.add_node("data_dictionary", data_dictionary_node)
@@ -198,8 +390,9 @@ def build_rule_ingestion_graph(with_interrupt: bool = True) -> tuple:
     workflow.add_node("review_proposal", review_proposal_node)
     workflow.add_node("complete", complete_node)
     workflow.add_node("fail", fail_node)
+    workflow.add_node("complete_with_warning", complete_with_warning_node)
 
-    # ── Optimization: Entry Point Branching ──
+    # ── Entry point (shared) ──
     workflow.set_conditional_entry_point(
         entry_point_router,
         {
@@ -209,77 +402,154 @@ def build_rule_ingestion_graph(with_interrupt: bool = True) -> tuple:
         }
     )
 
-    # ── Routing Logic ──
+    if processing_mode == "standard":
+        # ═══════════════════════════════════════════════════════════════════
+        # STANDARD MODE: deterministic pipeline, no supervisor LLM calls
+        # Fixed sequence: analyzer+dictionary → cypher → validator → tester → complete
+        # ═══════════════════════════════════════════════════════════════════
 
-    def _route_after_initial_agents(state: WizardAgentState) -> str:
-        """After initial parallel nodes, join and move to cypher if both done."""
-        # If in agentic mode and haven't run cypher yet, move to cypher
-        if state.get("agentic_mode") and not state.get("cypher_queries") and state.get("iteration", 0) == 0:
-            if state.get("rule_definition") and state.get("dictionary_result"):
-                return "cypher_generator"
-            return "supervisor"  # Fallback to supervisor to sync
-        return "supervisor"
+        workflow.add_conditional_edges(
+            "rule_analyzer",
+            _standard_route_after_initial,
+            {
+                "cypher_generator": "cypher_generator",
+                "rule_analyzer": "rule_analyzer",
+                "complete_with_warning": "complete_with_warning",
+            }
+        )
+        workflow.add_conditional_edges(
+            "data_dictionary",
+            _standard_route_after_initial,
+            {
+                "cypher_generator": "cypher_generator",
+                "rule_analyzer": "rule_analyzer",
+                "complete_with_warning": "complete_with_warning",
+            }
+        )
+        workflow.add_conditional_edges(
+            "cypher_generator",
+            _standard_route_after_cypher,
+            {
+                "validator": "validator",
+                "cypher_generator": "cypher_generator",
+                "complete_with_warning": "complete_with_warning",
+            }
+        )
+        workflow.add_conditional_edges(
+            "validator",
+            _standard_route_after_validator,
+            {
+                "rule_tester": "rule_tester",
+                "validator": "validator",
+            }
+        )
+        workflow.add_conditional_edges(
+            "rule_tester",
+            _standard_route_after_tester,
+            {
+                "review_proposal": "review_proposal",
+            }
+        )
 
-    def _route_after_cypher(state: WizardAgentState) -> str:
-        """Fast path: go straight to validator after cypher in round 0."""
-        if state.get("agentic_mode") and state.get("iteration", 0) == 0:
-            return "validator"
-        return "supervisor"
+        # Terminal edges for standard mode
+        workflow.add_edge("complete_with_warning", "review_proposal")
+        workflow.add_edge("review_proposal", "complete")
+        workflow.add_edge("complete", END)
+        workflow.add_edge("fail", END)
 
-    def _route_after_validator(state: WizardAgentState) -> str:
-        """Fast path: go straight to review if valid in round 0."""
-        if state.get("agentic_mode") and state.get("iteration", 0) == 0:
-            v_res = state.get("validation_result") or {}
-            if v_res.get("overall_valid"):
-                return "review_proposal"
-        
-        phase = state.get("current_phase", "supervisor")
-        if phase == "rule_tester": return "rule_tester"
-        if phase in ("complete", "review_proposal"): return "review_proposal"
-        if phase == "fail": return "fail"
-        return "supervisor"
+        # Unused edges needed for graph compilation (reference_data, human_review, supervisor)
+        workflow.add_edge("reference_data", "complete")
+        workflow.add_edge("human_review", "complete")
+        workflow.add_conditional_edges(
+            "supervisor",
+            route_from_supervisor,
+            {
+                "rule_analyzer": "rule_analyzer",
+                "data_dictionary": "data_dictionary",
+                "cypher_generator": "cypher_generator",
+                "validator": "validator",
+                "reference_data": "reference_data",
+                "rule_tester": "rule_tester",
+                "human_review": "human_review",
+                "complete": "review_proposal",
+                "fail": "fail",
+            }
+        )
 
-    # Parallel agent transitions
-    workflow.add_conditional_edges("rule_analyzer", _route_after_initial_agents, {"cypher_generator": "cypher_generator", "supervisor": "supervisor"})
-    workflow.add_conditional_edges("data_dictionary", _route_after_initial_agents, {"cypher_generator": "cypher_generator", "supervisor": "supervisor"})
-    
-    workflow.add_conditional_edges("cypher_generator", _route_after_cypher, {"validator": "validator", "supervisor": "supervisor"})
-    
-    workflow.add_conditional_edges(
-        "validator",
-        _route_after_validator,
-        {
-            "rule_tester": "rule_tester",
-            "review_proposal": "review_proposal",
-            "fail": "fail",
-            "supervisor": "supervisor",
-        }
-    )
+    else:
+        # ═══════════════════════════════════════════════════════════════════
+        # AUTONOMOUS MODE: LLM-supervised with dynamic routing
+        # ═══════════════════════════════════════════════════════════════════
 
-    # Standard supervisor routing
-    workflow.add_conditional_edges(
-        "supervisor",
-        route_from_supervisor,
-        {
-            "rule_analyzer": "rule_analyzer",
-            "data_dictionary": "data_dictionary",
-            "cypher_generator": "cypher_generator",
-            "validator": "validator",
-            "reference_data": "reference_data",
-            "rule_tester": "rule_tester",
-            "human_review": "human_review",
-            "complete": "review_proposal",
-            "fail": "fail",
-        }
-    )
+        def _route_after_initial_agents(state: WizardAgentState) -> str:
+            """After initial parallel nodes, join and move to cypher if both done."""
+            if state.get("agentic_mode") and not state.get("cypher_queries") and state.get("iteration", 0) == 0:
+                if state.get("rule_definition") and state.get("dictionary_result"):
+                    return "cypher_generator"
+                return "supervisor"
+            return "supervisor"
 
-    # Terminal nodes and other edges
-    workflow.add_edge("rule_tester", "supervisor")
-    workflow.add_edge("reference_data", "supervisor")
-    workflow.add_edge("human_review", "supervisor")
-    workflow.add_edge("review_proposal", "complete")
-    workflow.add_edge("complete", END)
-    workflow.add_edge("fail", END)
+        def _route_after_cypher(state: WizardAgentState) -> str:
+            """Fast path: go straight to validator after cypher in round 0."""
+            if state.get("agentic_mode") and state.get("iteration", 0) == 0:
+                return "validator"
+            return "supervisor"
+
+        def _route_after_validator(state: WizardAgentState) -> str:
+            """Fast path: go straight to review if valid in round 0."""
+            if state.get("agentic_mode") and state.get("iteration", 0) == 0:
+                v_res = state.get("validation_result") or {}
+                if v_res.get("overall_valid"):
+                    return "review_proposal"
+
+            phase = state.get("current_phase", "supervisor")
+            if phase == "rule_tester": return "rule_tester"
+            if phase in ("complete", "review_proposal"): return "review_proposal"
+            if phase == "fail": return "fail"
+            return "supervisor"
+
+        # Parallel agent transitions
+        workflow.add_conditional_edges("rule_analyzer", _route_after_initial_agents, {"cypher_generator": "cypher_generator", "supervisor": "supervisor"})
+        workflow.add_conditional_edges("data_dictionary", _route_after_initial_agents, {"cypher_generator": "cypher_generator", "supervisor": "supervisor"})
+
+        workflow.add_conditional_edges("cypher_generator", _route_after_cypher, {"validator": "validator", "supervisor": "supervisor"})
+
+        workflow.add_conditional_edges(
+            "validator",
+            _route_after_validator,
+            {
+                "rule_tester": "rule_tester",
+                "review_proposal": "review_proposal",
+                "fail": "fail",
+                "supervisor": "supervisor",
+            }
+        )
+
+        # Standard supervisor routing
+        workflow.add_conditional_edges(
+            "supervisor",
+            route_from_supervisor,
+            {
+                "rule_analyzer": "rule_analyzer",
+                "data_dictionary": "data_dictionary",
+                "cypher_generator": "cypher_generator",
+                "validator": "validator",
+                "reference_data": "reference_data",
+                "rule_tester": "rule_tester",
+                "human_review": "human_review",
+                "complete": "review_proposal",
+                "fail": "fail",
+            }
+        )
+
+        # Terminal nodes and other edges
+        workflow.add_edge("rule_tester", "supervisor")
+        workflow.add_edge("reference_data", "supervisor")
+        workflow.add_edge("human_review", "supervisor")
+        workflow.add_edge("complete_with_warning", "review_proposal")
+        workflow.add_edge("review_proposal", "complete")
+        workflow.add_edge("complete", END)
+        workflow.add_edge("fail", END)
 
     checkpointer = MemorySaver()
     interrupt = ["human_review"] if with_interrupt else None
@@ -307,6 +577,9 @@ class RuleIngestionResult:
         self.iterations = state.get("iteration", 0)
         self.events = state.get("events", [])
         self.requires_human_input = state.get("requires_human_input", False)
+        self.processing_mode = state.get("processing_mode", "autonomous")
+        self.agent_failure_counts = state.get("agent_failure_counts", {})
+        self.agent_invocation_counts = state.get("agent_invocation_counts", {})
 
 
 def run_rule_ingestion(
@@ -319,8 +592,15 @@ def run_rule_ingestion(
     max_iterations: int = 10,
     thread_id: Optional[str] = None,
     agentic_mode: bool = False,
+    processing_mode: str = "autonomous",
 ) -> RuleIngestionResult:
-    """Run the rule ingestion workflow."""
+    """Run the rule ingestion workflow.
+
+    Args:
+        processing_mode: "standard" for deterministic pipeline (no supervisor LLM calls,
+                         faster, ~30-60s), or "autonomous" for LLM-supervised workflow
+                         (dynamic routing, ~60-180s). Default: "autonomous".
+    """
     initial_state = create_initial_state(
         origin_country=origin_country,
         scenario_type=scenario_type,
@@ -330,19 +610,27 @@ def run_rule_ingestion(
         is_pii_related=is_pii_related,
         max_iterations=max_iterations,
         agentic_mode=agentic_mode,
+        processing_mode=processing_mode,
     )
 
     event_store = get_event_store()
     event_store.append(
         session_id=origin_country,
         event_type=AuditEventType.WORKFLOW_STARTED,
-        data={"rule_text": rule_text[:200], "agentic_mode": agentic_mode},
+        data={
+            "rule_text": rule_text[:200],
+            "agentic_mode": agentic_mode,
+            "processing_mode": processing_mode,
+        },
     )
 
     config = {"configurable": {"thread_id": thread_id or "default"}, "recursion_limit": 50}
 
     try:
-        graph, _ = build_rule_ingestion_graph(with_interrupt=not agentic_mode)
+        graph, _ = build_rule_ingestion_graph(
+            with_interrupt=not agentic_mode,
+            processing_mode=processing_mode,
+        )
         final_state = graph.invoke(initial_state, config)
         return RuleIngestionResult(final_state)
     except Exception as e:

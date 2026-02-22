@@ -6,6 +6,57 @@ Shared helpers for agent executors.
 
 import json
 import re
+from enum import Enum
+from typing import Dict, List, Optional
+
+
+class FailureCategory(str, Enum):
+    """Categories of agent failures for circuit breaker decisions."""
+    TRANSIENT = "transient"  # network, timeout, rate limit — worth retrying
+    AUTH = "auth"            # authentication/authorization errors
+    LOGIC = "logic"          # LLM produced invalid reasoning/output
+    PARSE = "parse"          # JSON parse failure from LLM response
+    DB = "db"                # database/graph execution error
+
+
+# Max retries per failure category before circuit breaker trips
+FAILURE_RETRY_LIMITS: Dict[str, int] = {
+    FailureCategory.TRANSIENT: 5,
+    FailureCategory.AUTH: 2,
+    FailureCategory.LOGIC: 3,
+    FailureCategory.PARSE: 3,
+    FailureCategory.DB: 3,
+}
+
+
+def classify_failure(error: str) -> FailureCategory:
+    """Classify an error string into a failure category."""
+    error_lower = error.lower()
+
+    # Auth patterns
+    if any(kw in error_lower for kw in ("401", "403", "auth", "token", "unauthorized", "forbidden")):
+        return FailureCategory.AUTH
+
+    # Transient patterns
+    if any(kw in error_lower for kw in (
+        "timeout", "rate limit", "429", "503", "502", "504",
+        "connection", "network", "retry", "temporary", "unavailable",
+    )):
+        return FailureCategory.TRANSIENT
+
+    # DB patterns
+    if any(kw in error_lower for kw in (
+        "falkordb", "graph", "cypher", "query failed", "redis", "database",
+        "syntax error", "unknown function", "type mismatch",
+    )):
+        return FailureCategory.DB
+
+    # Parse patterns
+    if any(kw in error_lower for kw in ("parse", "json", "decode", "unexpected token", "malformed")):
+        return FailureCategory.PARSE
+
+    # Default to logic error
+    return FailureCategory.LOGIC
 
 
 def parse_json_response(response: str) -> dict | None:

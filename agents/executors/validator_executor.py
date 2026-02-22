@@ -87,6 +87,7 @@ class ValidatorExecutor(ComplianceAgentExecutor):
             return
 
         await self.emit_working(event_queue, ctx)
+        self.record_invocation(state)
 
         self.event_store.append(
             session_id=session_id,
@@ -177,6 +178,7 @@ class ValidatorExecutor(ComplianceAgentExecutor):
 
             if is_acceptable:
                 # Validation passed — reset retry counter, route to rule_tester
+                self.record_success(state)
                 state["validation_retry_count"] = 0
                 state["current_phase"] = "rule_tester"
                 state["success"] = True
@@ -201,6 +203,7 @@ class ValidatorExecutor(ComplianceAgentExecutor):
                 })
             else:
                 # Validation failed — increment retry counter
+                self.record_failure(state, f"Validation failed: {validated.errors[:3]}")
                 state["validation_retry_count"] = retry_count + 1
 
                 # Store errors for next iteration's context
@@ -233,6 +236,7 @@ class ValidatorExecutor(ComplianceAgentExecutor):
 
         except ValidationError as ve:
             # Pydantic model error — count as retry
+            self.record_failure(state, f"Pydantic error: {ve}")
             state["validation_retry_count"] = retry_count + 1
             state["current_phase"] = "supervisor"
             self.event_store.append(
@@ -247,27 +251,52 @@ class ValidatorExecutor(ComplianceAgentExecutor):
     def _run_test_queries(self, state: dict, session_id: str):
         """Run validation queries in a temporary FalkorDB graph.
 
-        Skips execution if queries contain $param placeholders since
-        FalkorDB requires actual parameter values (not just placeholders).
+        Binds $param placeholders using query_params from the cypher_queries
+        state. Only skips if queries have $params AND no params dict is available.
         """
-        cypher_queries = state.get("cypher_queries", {}).get("queries", {})
+        cypher_data = state.get("cypher_queries", {})
+        cypher_queries = cypher_data.get("queries", {})
+        params = cypher_data.get("params", {}) or {}
+
         rule_insert = cypher_queries.get("rule_insert", "")
         validation_query = cypher_queries.get("validation", "")
 
         if not rule_insert or not validation_query:
             return
 
-        if '$' in rule_insert or '$' in validation_query:
-            logger.info("Skipping FalkorDB test: queries contain $param placeholders")
+        # Only skip if queries have $params AND no params dict is available
+        has_params_insert = '$' in rule_insert
+        has_params_validation = '$' in validation_query
+        if (has_params_insert or has_params_validation) and not params:
+            logger.warning(
+                "Skipping FalkorDB test: queries contain $param placeholders "
+                "but no query_params were provided by the cypher generator"
+            )
+            state.setdefault("events", []).append({
+                "event_type": "validation_detail",
+                "agent_name": self.agent_name,
+                "message": "Test queries skipped: $param placeholders present but no params dict provided",
+            })
             return
 
         temp_graph = None
         graph_name = None
         try:
             temp_graph, graph_name = self.db_service.get_temp_graph()
-            temp_graph.query(rule_insert)
-            result = temp_graph.query(validation_query)
-            logger.info(f"Test query returned {len(result.result_set) if hasattr(result, 'result_set') else 0} rows")
+
+            # Execute with bound params if needed, otherwise plain execution
+            if has_params_insert:
+                temp_graph.query(rule_insert, params)
+            else:
+                temp_graph.query(rule_insert)
+
+            if has_params_validation:
+                result = temp_graph.query(validation_query, params)
+            else:
+                result = temp_graph.query(validation_query)
+
+            row_count = len(result.result_set) if hasattr(result, 'result_set') else 0
+            logger.info(f"Test query returned {row_count} rows (params bound: {bool(params)})")
 
         except Exception as e:
             logger.warning(f"FalkorDB test query failed: {e}")

@@ -60,6 +60,7 @@ class WizardSessionState(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     agentic_mode: bool = False
+    processing_mode: str = "autonomous"  # "standard" or "autonomous"
 
     # Step 1: Country
     origin_country: Optional[str] = None

@@ -75,6 +75,7 @@ class RuleTesterExecutor(ComplianceAgentExecutor):
             return
 
         await self.emit_working(event_queue, ctx)
+        self.record_invocation(state)
 
         self.event_store.append(
             session_id=session_id,
@@ -270,6 +271,7 @@ class RuleTesterExecutor(ComplianceAgentExecutor):
 
         if failed == 0:
             # All tests passed -> complete
+            self.record_success(state)
             state["current_phase"] = "complete"
             state["success"] = True
             self.event_store.append(
@@ -297,6 +299,7 @@ class RuleTesterExecutor(ComplianceAgentExecutor):
                 f"- {r['name']}: {r.get('reason', 'unknown')}"
                 for r in results if not r.get("passed")
             ]
+            self.record_failure(state, f"{failed}/{total} test scenarios failed")
             state["test_retry_count"] = state.get("test_retry_count", 0) + 1
             state["iteration"] = state.get("iteration", 0) + 1
 

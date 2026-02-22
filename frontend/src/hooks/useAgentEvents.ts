@@ -78,6 +78,10 @@ export function useAgentEvents(sessionId: string | null) {
       'phase_changed', 'analysis_progress', 'dictionary_progress',
       'validation_progress', 'cypher_progress', 'human_review_required',
       'workflow_complete', 'workflow_failed', 'heartbeat',
+      // Enhanced event types
+      'ai_call_started', 'ai_call_completed', 'ai_call_retry',
+      'query_execution', 'circuit_breaker_state', 'validation_detail',
+      'agent_reasoning', 'step_progress', 'iteration_started',
     ];
 
     eventTypes.forEach(type => source.addEventListener(type, handler));

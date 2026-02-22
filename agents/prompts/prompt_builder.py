@@ -100,6 +100,33 @@ def build_country_groups_context() -> str:
     return "\n".join(lines)
 
 
+def compress_prompt_for_retry(prompt: str, max_length: int = 4000) -> str:
+    """Optionally reduce prompt size for retry iterations.
+
+    Truncates agent output JSON blocks and long sections while preserving
+    the structure and key fields needed for decision-making.
+    """
+    if len(prompt) <= max_length:
+        return prompt
+
+    # Find and truncate large JSON blocks (agent_outputs section)
+    import re
+    json_blocks = list(re.finditer(r'\{[^{}]{500,}\}', prompt, re.DOTALL))
+    if json_blocks:
+        for match in reversed(json_blocks):
+            block = match.group()
+            if len(block) > 500:
+                # Truncate inner content, keep first/last 200 chars
+                truncated = block[:200] + "\n... [truncated for retry] ...\n" + block[-200:]
+                prompt = prompt[:match.start()] + truncated + prompt[match.end():]
+
+    # Final truncation if still too long
+    if len(prompt) > max_length:
+        prompt = prompt[:max_length] + "\n\n[... prompt truncated for retry iteration ...]"
+
+    return prompt
+
+
 def build_supervisor_prompt(
     template: str,
     rule_text: str,

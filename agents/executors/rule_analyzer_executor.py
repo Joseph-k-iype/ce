@@ -44,6 +44,7 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
         session_id = state.get("origin_country", "unknown")
 
         await self.emit_working(event_queue, ctx)
+        self.record_invocation(state)
 
         self.event_store.append(
             session_id=session_id,
@@ -107,6 +108,7 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
                 try:
                     validated = RuleDefinitionModel(**rule_def)
                     state["rule_definition"] = validated.model_dump()
+                    self.record_success(state)
                     state["current_phase"] = (
                         "data_dictionary" if state.get("data_categories") else "cypher_generator"
                     )
@@ -136,6 +138,7 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
 
                 except ValidationError as ve:
                     errors = [str(e) for e in ve.errors()]
+                    self.record_failure(state, f"Validation errors: {errors}")
                     state["current_phase"] = "supervisor"
                     state["iteration"] = state.get("iteration", 0) + 1
                     self.event_store.append(
@@ -146,6 +149,7 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
                     )
                     logger.warning(f"Rule validation failed: {errors}")
             else:
+                self.record_failure(state, "Failed to parse response")
                 state["current_phase"] = "supervisor"
                 state["iteration"] = state.get("iteration", 0) + 1
                 self.event_store.append(
@@ -157,6 +161,7 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
 
         except AIRequestError as e:
             logger.error(f"Rule analyzer error: {e}")
+            self.record_failure(state, str(e))
             state["current_phase"] = "supervisor"
             state["iteration"] = state.get("iteration", 0) + 1
             self.event_store.append(

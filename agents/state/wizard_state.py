@@ -46,8 +46,17 @@ class WizardAgentState(TypedDict):
 
     # Circuit breaker: tracks total graph node transitions and per-agent invocations
     graph_step: int                          # incremented on every supervisor call
-    agent_retry_counts: Dict[str, int]       # per-agent invocation counts
+    agent_retry_counts: Dict[str, int]       # per-agent invocation counts (legacy, still used by supervisor)
     test_retry_count: int                    # consecutive rule_tester failures
+
+    # Enhanced circuit breaker: failure-aware tracking
+    agent_invocation_counts: Dict[str, int]     # times each agent was called
+    agent_failure_counts: Dict[str, int]        # times each agent actually failed
+    agent_failure_reasons: Dict[str, List[str]] # categorized failure reasons per agent
+    agent_last_success: Dict[str, bool]         # whether last run succeeded per agent
+
+    # Processing mode
+    processing_mode: str                     # "standard" (deterministic) or "autonomous" (LLM-supervised)
 
     # Shared reasoning context between agents
     shared_reasoning: List[Dict[str, Any]]
@@ -72,8 +81,14 @@ def create_initial_state(
     is_pii_related: bool = False,
     max_iterations: int = 10,
     agentic_mode: bool = False,
+    processing_mode: str = "autonomous",
 ) -> WizardAgentState:
-    """Create the initial state for a wizard workflow run."""
+    """Create the initial state for a wizard workflow run.
+
+    Args:
+        processing_mode: "standard" for deterministic pipeline (no supervisor),
+                         "autonomous" for LLM-supervised workflow (default).
+    """
     return WizardAgentState(
         origin_country=origin_country,
         scenario_type=scenario_type,
@@ -99,6 +114,11 @@ def create_initial_state(
         graph_step=0,
         agent_retry_counts={},
         test_retry_count=0,
+        agent_invocation_counts={},
+        agent_failure_counts={},
+        agent_failure_reasons={},
+        agent_last_success={},
+        processing_mode=processing_mode,
         shared_reasoning=[],
         memory_checkpoints={},
         events=[],
