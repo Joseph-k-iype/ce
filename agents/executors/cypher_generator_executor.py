@@ -14,7 +14,7 @@ from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 
 from agents.executors.base_executor import ComplianceAgentExecutor, InProcessRequestContext
-from agents.executors.utils import parse_json_response
+from agents.executors.utils import parse_json_response, sanitize_query_params
 from agents.prompts.cypher_prompts import (
     CYPHER_GENERATOR_SYSTEM_PROMPT,
     CYPHER_GENERATOR_USER_TEMPLATE,
@@ -77,11 +77,7 @@ class CypherGeneratorExecutor(ComplianceAgentExecutor):
                     # Sanitize query_params keys: strip $ prefix and embedded quotes
                     # that LLMs sometimes produce (e.g. "$rule_id" or '"rule_id"')
                     raw_params = parsed.get("query_params", {})
-                    sanitized_params = {}
-                    for k, v in raw_params.items():
-                        clean_key = k.strip().strip('"').strip("'").lstrip('$')
-                        if clean_key:
-                            sanitized_params[clean_key] = v
+                    sanitized_params = sanitize_query_params(raw_params)
                     state["cypher_queries"] = {
                         "queries": validated.model_dump(),
                         "params": sanitized_params,

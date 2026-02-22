@@ -78,3 +78,28 @@ def parse_json_response(response: str) -> dict | None:
             except json.JSONDecodeError:
                 pass
     return None
+
+
+def sanitize_query_params(raw_params: dict) -> dict:
+    """Sanitize LLM-generated query_params keys for FalkorDB compatibility.
+
+    LLMs sometimes produce keys with embedded quotes or $ prefixes, e.g.:
+        '"rule_id"', '$rule_id', '$"rule_id"', "'rule_id'"
+    FalkorDB expects clean keys like 'rule_id' to match $rule_id in queries.
+    """
+    if not raw_params or not isinstance(raw_params, dict):
+        return {}
+    sanitized = {}
+    for k, v in raw_params.items():
+        if not isinstance(k, str):
+            k = str(k)
+        # Strip whitespace, then iteratively strip all outer quotes and $ signs
+        clean = k.strip()
+        prev = None
+        while clean != prev:
+            prev = clean
+            clean = clean.strip('"').strip("'").strip()
+            clean = clean.lstrip('$').strip()
+        if clean:
+            sanitized[clean] = v
+    return sanitized

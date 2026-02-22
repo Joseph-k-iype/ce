@@ -19,7 +19,7 @@ from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 
 from agents.executors.base_executor import ComplianceAgentExecutor, InProcessRequestContext
-from agents.executors.utils import parse_json_response
+from agents.executors.utils import parse_json_response, sanitize_query_params
 from agents.prompts.validator_prompts import (
     VALIDATOR_SYSTEM_PROMPT,
     VALIDATOR_USER_TEMPLATE,
@@ -258,11 +258,7 @@ class ValidatorExecutor(ComplianceAgentExecutor):
         cypher_queries = cypher_data.get("queries", {})
         raw_params = cypher_data.get("params", {}) or {}
         # Sanitize param keys: strip $ prefix and embedded quotes from LLM output
-        params = {}
-        for k, v in raw_params.items():
-            clean_key = k.strip().strip('"').strip("'").lstrip('$')
-            if clean_key:
-                params[clean_key] = v
+        params = sanitize_query_params(raw_params)
 
         rule_insert = cypher_queries.get("rule_insert", "")
         validation_query = cypher_queries.get("validation", "")
