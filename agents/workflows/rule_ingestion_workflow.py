@@ -150,7 +150,7 @@ def fail_node(state: WizardAgentState) -> WizardAgentState:
 
 # ── Circuit breaker constants ─────────────────────────────────────────────
 MAX_GRAPH_STEPS = 35          # hard cap on total node transitions (recursion_limit=50)
-MAX_AGENT_RETRIES = 3         # max times any single agent can be invoked
+MAX_AGENT_RETRIES = 5         # max times any single agent can be invoked before skip
 MAX_TEST_RETRIES = 2          # max rule_tester failures before auto-completing
 
 
@@ -235,7 +235,7 @@ def route_from_supervisor(state: WizardAgentState) -> str:
                 f"Idempotency guard: '{phase}' already has valid output and last run succeeded, skipping"
             )
             skip_map = {
-                "rule_analyzer": "cypher_generator",
+                "rule_analyzer": "data_dictionary",
                 "data_dictionary": "cypher_generator",
                 "cypher_generator": "validator",
                 "validator": "rule_tester",
@@ -263,7 +263,7 @@ def route_from_supervisor(state: WizardAgentState) -> str:
                     f"last reason: {last_reason}"
                 )
                 skip_map = {
-                    "rule_analyzer": "cypher_generator",
+                    "rule_analyzer": "data_dictionary",
                     "data_dictionary": "cypher_generator",
                     "cypher_generator": "validator",
                     "validator": "rule_tester",
@@ -272,14 +272,14 @@ def route_from_supervisor(state: WizardAgentState) -> str:
                 }
                 return skip_map.get(phase, "complete")
 
-    # ── Legacy fallback: per-agent invocation limit (kept for backward compat) ──
+    # ── Legacy fallback: per-agent failure limit (uses failure counts, not invocations) ──
     if phase in valid_routes and phase not in ("complete", "fail", "human_review"):
-        agent_counts = state.get("agent_retry_counts", {})
-        agent_count = agent_counts.get(phase, 0)
-        if agent_count >= MAX_AGENT_RETRIES:
-            logger.warning(f"Circuit breaker (legacy): agent '{phase}' invoked {agent_count} times, skipping")
+        failure_counts = state.get("agent_failure_counts", {})
+        agent_failures = failure_counts.get(phase, 0)
+        if agent_failures >= MAX_AGENT_RETRIES:
+            logger.warning(f"Circuit breaker (legacy): agent '{phase}' failed {agent_failures} times, skipping")
             skip_map = {
-                "rule_analyzer": "cypher_generator",
+                "rule_analyzer": "data_dictionary",
                 "data_dictionary": "cypher_generator",
                 "cypher_generator": "validator",
                 "validator": "rule_tester",
