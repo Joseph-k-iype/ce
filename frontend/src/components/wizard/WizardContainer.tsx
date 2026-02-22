@@ -69,49 +69,49 @@ export function WizardContainer() {
 
       if (step === 2 && sessionId) {
         console.log('[Wizard] Step 2 complete event, fetching results...');
-        
+
         // Race condition fix: retry fetching session results if results are missing
         let session = await getWizardSession(sessionId);
         let retries = 0;
         const maxRetries = 5;
-        
+
         while (session.status !== 'failed' && !session.analysis_result && retries < maxRetries) {
-            console.log(`[Wizard] Results not ready (attempt ${retries + 1}/${maxRetries}), waiting...`);
-            await new Promise(resolve => setTimeout(resolve, 1000 + (retries * 500)));
-            session = await getWizardSession(sessionId);
-            retries++;
+          console.log(`[Wizard] Results not ready (attempt ${retries + 1}/${maxRetries}), waiting...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 + (retries * 500)));
+          session = await getWizardSession(sessionId);
+          retries++;
         }
 
         console.log('[Wizard] Final session status for transition:', session.status);
-        
+
         if (session.status === 'failed') {
           store.setError(session.error_message || 'AI processing failed. Go Back to edit and retry.');
           store.setProcessing(false);
           return;
         }
-        
+
         // Populate store with whatever results we have
         if (session.analysis_result) store.setAnalysisResult(session.analysis_result);
         if (session.dictionary_result) store.setDictionaryResult(session.dictionary_result);
         if (session.edited_rule_definition) store.setEditedRuleDefinition(session.edited_rule_definition);
         if (session.edited_terms_dictionary) store.setEditedTermsDictionary(session.edited_terms_dictionary);
         if (session.proposal) store.setProposal(session.proposal);
-        
+
         // Notify backend that we are moving off step 2
         try {
-            await submitWizardStep(sessionId, { step: 2, data: {} });
+          await submitWizardStep(sessionId, { step: 2, data: {} });
         } catch (e) {
-            console.warn('[Wizard] submitWizardStep(2) failed, continuing anyway...', e);
+          console.warn('[Wizard] submitWizardStep(2) failed, continuing anyway...', e);
         }
-        
+
         if (state.agenticMode) {
-            console.log('[Wizard] Agentic mode: jumping to step 4 (Review)');
-            store.setStep(4);
+          console.log('[Wizard] Agentic mode: jumping to step 4 (Review)');
+          store.setStep(4);
         } else {
-            console.log('[Wizard] Standard mode: advancing to step 3 (Metadata)');
-            store.setStep(3);
+          console.log('[Wizard] Standard mode: advancing to step 3 (Metadata)');
+          store.setStep(3);
         }
-        
+
         store.setProcessing(false);
         return;
       }
@@ -195,11 +195,11 @@ export function WizardContainer() {
 
   useEffect(() => {
     const isComplete = events.some(e => e.event_type === 'workflow_complete');
-    
+
     if (store.currentStep === 2 && isComplete && !autoProgressedRef.current) {
-      console.log('[Wizard] workflow_complete detected, triggering auto-progression...');
+      console.log('[Wizard] workflow_complete detected via SSE, triggering auto-progression...');
       autoProgressedRef.current = true;
-      
+
       const timer = setTimeout(() => {
         if (useWizardStore.getState().currentStep === 2) {
           handleNext();
@@ -207,11 +207,35 @@ export function WizardContainer() {
       }, 1000);
       return () => clearTimeout(timer);
     }
-    
+
     if (store.currentStep !== 2) {
       autoProgressedRef.current = false;
     }
   }, [events, store.currentStep, handleNext]);
+
+  // Polling fallback: check session status every 3s while on step 2 and processing
+  // This catches the case where SSE events are missed (network issues, connection timing)
+  useEffect(() => {
+    if (store.currentStep !== 2 || !store.isProcessing || !store.sessionId) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const session = await getWizardSession(store.sessionId!);
+        if (session.status === 'awaiting_review' || session.status === 'failed') {
+          console.log(`[Wizard] Poll detected completion: status=${session.status}`);
+          if (!autoProgressedRef.current) {
+            autoProgressedRef.current = true;
+            clearInterval(pollInterval);
+            handleNext();
+          }
+        }
+      } catch (err) {
+        console.warn('[Wizard] Poll error:', err);
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [store.currentStep, store.isProcessing, store.sessionId, handleNext]);
 
   useEffect(() => {
     if (stepRef.current && prevStepRef.current !== store.currentStep) {
@@ -253,11 +277,11 @@ export function WizardContainer() {
         if (store.sandboxGraphName) store.setSandboxGraphName(null);
         store.clearSandboxTestResults();
       }
-      
+
       if (store.agenticMode && store.currentStep === 4) {
-          store.setStep(2);
+        store.setStep(2);
       } else {
-          store.setStep(store.currentStep - 1);
+        store.setStep(store.currentStep - 1);
       }
     }
   };

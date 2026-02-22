@@ -43,6 +43,11 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
     """Run the rule ingestion workflow in a background thread.
     This unblocks the event loop so SSE events can stream in real-time.
     """
+    from services.sse_manager import get_sse_manager
+    from models.agent_models import AgentEvent, AgentEventType
+
+    sse = get_sse_manager()
+
     try:
         result = await asyncio.to_thread(
             run_rule_ingestion,
@@ -68,16 +73,38 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
             if session.valid_until and session.edited_rule_definition:
                 session.edited_rule_definition['valid_until'] = session.valid_until
             session.status = WizardSessionStatus.AWAITING_REVIEW
-            # If in agentic mode, we can skip metadata configuration
             session.current_step = 4 if session.agentic_mode else 3
+
+            # Emit workflow_complete SSE event under the WIZARD session ID
+            # so the frontend (which subscribes by wizard session UUID) receives it
+            sse.publish_sync(session_id, AgentEvent(
+                event_type=AgentEventType.WORKFLOW_COMPLETE,
+                session_id=session_id,
+                agent_name="system",
+                message="Workflow completed successfully",
+            ))
         else:
             session.error_message = result.error_message
             session.status = WizardSessionStatus.FAILED
+
+            sse.publish_sync(session_id, AgentEvent(
+                event_type=AgentEventType.WORKFLOW_FAILED,
+                session_id=session_id,
+                agent_name="system",
+                message=result.error_message or "Workflow failed",
+            ))
 
     except Exception as e:
         logger.error(f"Background workflow error: {e}")
         session.error_message = str(e)
         session.status = WizardSessionStatus.FAILED
+
+        sse.publish_sync(session_id, AgentEvent(
+            event_type=AgentEventType.WORKFLOW_FAILED,
+            session_id=session_id,
+            agent_name="system",
+            message=str(e),
+        ))
 
     session.updated_at = datetime.now().isoformat()
 
