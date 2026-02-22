@@ -69,6 +69,9 @@ async def evaluate_rules(
                 metadata=request.metadata,
                 origin_legal_entity=request.origin_legal_entity,
                 receiving_legal_entity=request.receiving_legal_entity[0] if request.receiving_legal_entity else None,
+                data_subjects=request.get_data_subjects(),
+                regulators=request.get_regulators(),
+                authorities=request.get_authorities(),
             )
             return result
 
@@ -87,6 +90,9 @@ async def evaluate_rules(
                 data_categories=data_categories,
                 metadata=request.metadata,
                 origin_legal_entity=request.origin_legal_entity,
+                data_subjects=request.get_data_subjects(),
+                regulators=request.get_regulators(),
+                authorities=request.get_authorities(),
             )
             all_results.append(r)
 

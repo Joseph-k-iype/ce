@@ -180,6 +180,19 @@ WITH r, required_assessments, duty_names, prohibition_names, linked_attributes,
      linked_data_categories, linked_purposes,
      collect(DISTINCT proc.name) AS linked_processes
 OPTIONAL MATCH (r)-[:HAS_GDC]->(gdc:GDC)
+WITH r, required_assessments, duty_names, prohibition_names, linked_attributes,
+     linked_data_categories, linked_purposes, linked_processes,
+     collect(DISTINCT gdc.name) AS linked_gdcs
+OPTIONAL MATCH (r)-[:LINKED_TO]->(ds:DataSubject)
+WITH r, required_assessments, duty_names, prohibition_names, linked_attributes,
+     linked_data_categories, linked_purposes, linked_processes, linked_gdcs,
+     collect(DISTINCT ds.name) AS linked_data_subjects
+OPTIONAL MATCH (r)-[:LINKED_TO]->(reg:Regulator)
+WITH r, required_assessments, duty_names, prohibition_names, linked_attributes,
+     linked_data_categories, linked_purposes, linked_processes, linked_gdcs,
+     linked_data_subjects,
+     collect(DISTINCT reg.name) AS linked_regulators
+OPTIONAL MATCH (r)-[:LINKED_TO]->(auth:Authority)
 RETURN DISTINCT
     r.rule_id AS rule_id, r.name AS name, r.description AS description,
     r.rule_type AS rule_type,
@@ -200,7 +213,10 @@ RETURN DISTINCT
     linked_data_categories,
     linked_purposes,
     linked_processes,
-    collect(DISTINCT gdc.name) AS linked_gdcs
+    linked_gdcs,
+    linked_data_subjects,
+    linked_regulators,
+    collect(DISTINCT auth.name) AS linked_authorities
 ORDER BY r.priority_order
 """
 
@@ -221,6 +237,9 @@ class EvaluationContext:
     detected_attributes: List[DetectedAttribute] = field(default_factory=list)
     origin_legal_entity: Optional[str] = None
     receiving_legal_entity: Optional[str] = None
+    data_subjects: List[str] = field(default_factory=list)
+    regulators: List[str] = field(default_factory=list)
+    authorities: List[str] = field(default_factory=list)
     # rule_id -> {label -> [node_names]}
     triggered_node_mappings: Dict[str, Dict[str, List[str]]] = field(default_factory=dict)
 
@@ -275,6 +294,9 @@ class RulesEvaluator:
         metadata: Optional[Dict[str, Any]] = None,
         origin_legal_entity: Optional[str] = None,
         receiving_legal_entity: Optional[str] = None,
+        data_subjects: Optional[List[str]] = None,
+        regulators: Optional[List[str]] = None,
+        authorities: Optional[List[str]] = None,
     ) -> RulesEvaluationResponse:
         """Evaluate all applicable rules for a data transfer via graph queries."""
         start_time = time.time()
@@ -300,6 +322,9 @@ class RulesEvaluator:
             metadata=metadata or {},
             origin_legal_entity=origin_legal_entity,
             receiving_legal_entity=receiving_legal_entity,
+            data_subjects=data_subjects or [],
+            regulators=regulators or [],
+            authorities=authorities or [],
         )
 
         # Detect attributes for informational enrichment
@@ -363,6 +388,9 @@ class RulesEvaluator:
                 or rule_row.get('linked_purposes')
                 or rule_row.get('linked_processes')
                 or rule_row.get('linked_gdcs')
+                or rule_row.get('linked_data_subjects')
+                or rule_row.get('linked_regulators')
+                or rule_row.get('linked_authorities')
             )
 
             # Determine if this rule requires content matching
@@ -785,8 +813,14 @@ class RulesEvaluator:
         linked_purposes = rule_row.get('linked_purposes') or []
         linked_processes = rule_row.get('linked_processes') or []
         linked_gdcs = rule_row.get('linked_gdcs') or []
+        linked_data_subjects = rule_row.get('linked_data_subjects') or []
+        linked_regulators = rule_row.get('linked_regulators') or []
+        linked_authorities = rule_row.get('linked_authorities') or []
 
-        if not linked_attrs and not linked_cats and not linked_purposes and not linked_processes and not linked_gdcs:
+        if (not linked_attrs and not linked_cats and not linked_purposes
+                and not linked_processes and not linked_gdcs
+                and not linked_data_subjects and not linked_regulators
+                and not linked_authorities):
             return False
 
         rule_id = rule_row.get('rule_id', 'unknown')
@@ -885,6 +919,48 @@ class RulesEvaluator:
 
             dimension_results.append(proc_matched)
             logger.debug(f"Tier 1: processes dimension {'matched' if proc_matched else 'NOT matched'}: {matched_originals}")
+
+        # Data subjects (normalized)
+        if linked_data_subjects:
+            rule_ds_norm = {_normalize_text(str(d)) for d in linked_data_subjects if d} - {''}
+            ctx_ds_norm = {_normalize_text(str(d)) for d in context.data_subjects if d} - {''}
+            matched_norm = rule_ds_norm & ctx_ds_norm
+            if matched_norm:
+                dimension_results.append(True)
+                matched_originals = [d for d in linked_data_subjects if d and _normalize_text(str(d)) in matched_norm]
+                current_matches["DataSubject"] = matched_originals
+                logger.debug(f"Tier 1: data_subjects dimension matched: {matched_originals}")
+            else:
+                dimension_results.append(False)
+                logger.debug(f"Tier 1: data_subjects dimension NOT matched")
+
+        # Regulators (normalized)
+        if linked_regulators:
+            rule_reg_norm = {_normalize_text(str(r)) for r in linked_regulators if r} - {''}
+            ctx_reg_norm = {_normalize_text(str(r)) for r in context.regulators if r} - {''}
+            matched_norm = rule_reg_norm & ctx_reg_norm
+            if matched_norm:
+                dimension_results.append(True)
+                matched_originals = [r for r in linked_regulators if r and _normalize_text(str(r)) in matched_norm]
+                current_matches["Regulator"] = matched_originals
+                logger.debug(f"Tier 1: regulators dimension matched: {matched_originals}")
+            else:
+                dimension_results.append(False)
+                logger.debug(f"Tier 1: regulators dimension NOT matched")
+
+        # Authorities (normalized)
+        if linked_authorities:
+            rule_auth_norm = {_normalize_text(str(a)) for a in linked_authorities if a} - {''}
+            ctx_auth_norm = {_normalize_text(str(a)) for a in context.authorities if a} - {''}
+            matched_norm = rule_auth_norm & ctx_auth_norm
+            if matched_norm:
+                dimension_results.append(True)
+                matched_originals = [a for a in linked_authorities if a and _normalize_text(str(a)) in matched_norm]
+                current_matches["Authority"] = matched_originals
+                logger.debug(f"Tier 1: authorities dimension matched: {matched_originals}")
+            else:
+                dimension_results.append(False)
+                logger.debug(f"Tier 1: authorities dimension NOT matched")
 
         # If rule specifies structured dimensions: AND across all
         if dimension_results:
@@ -1600,6 +1676,9 @@ class RulesEvaluator:
         metadata: Optional[Dict[str, Any]] = None,
         origin_legal_entity: Optional[str] = None,
         receiving_legal_entity: Optional[str] = None,
+        data_subjects: Optional[List[str]] = None,
+        regulators: Optional[List[str]] = None,
+        authorities: Optional[List[str]] = None,
     ) -> RulesEvaluationResponse:
         """Evaluate all applicable rules for a data transfer via graph queries."""
         start_time = time.time()
@@ -1625,6 +1704,9 @@ class RulesEvaluator:
             metadata=metadata or {},
             origin_legal_entity=origin_legal_entity,
             receiving_legal_entity=receiving_legal_entity,
+            data_subjects=data_subjects or [],
+            regulators=regulators or [],
+            authorities=authorities or [],
         )
 
         # Detect attributes for informational enrichment
@@ -1688,6 +1770,9 @@ class RulesEvaluator:
                 or rule_row.get('linked_purposes')
                 or rule_row.get('linked_processes')
                 or rule_row.get('linked_gdcs')
+                or rule_row.get('linked_data_subjects')
+                or rule_row.get('linked_regulators')
+                or rule_row.get('linked_authorities')
             )
 
             # Determine if this rule requires content matching
@@ -2101,8 +2186,14 @@ class RulesEvaluator:
         linked_purposes = rule_row.get('linked_purposes') or []
         linked_processes = rule_row.get('linked_processes') or []
         linked_gdcs = rule_row.get('linked_gdcs') or []
+        linked_data_subjects = rule_row.get('linked_data_subjects') or []
+        linked_regulators = rule_row.get('linked_regulators') or []
+        linked_authorities = rule_row.get('linked_authorities') or []
 
-        if not linked_attrs and not linked_cats and not linked_purposes and not linked_processes and not linked_gdcs:
+        if (not linked_attrs and not linked_cats and not linked_purposes
+                and not linked_processes and not linked_gdcs
+                and not linked_data_subjects and not linked_regulators
+                and not linked_authorities):
             return False
 
         rule_id = rule_row.get('rule_id', 'unknown')
@@ -2205,6 +2296,48 @@ class RulesEvaluator:
 
             dimension_results.append(proc_matched)
             logger.debug(f"Tier 1: processes dimension {'matched' if proc_matched else 'NOT matched'}: {matched_originals}")
+
+        # Data subjects (normalized)
+        if linked_data_subjects:
+            rule_ds_norm = {_normalize_text(str(d)) for d in linked_data_subjects if d} - {''}
+            ctx_ds_norm = {_normalize_text(str(d)) for d in context.data_subjects if d} - {''}
+            matched_norm = rule_ds_norm & ctx_ds_norm
+            if matched_norm:
+                dimension_results.append(True)
+                matched_originals = [d for d in linked_data_subjects if d and _normalize_text(str(d)) in matched_norm]
+                current_matches["DataSubject"] = matched_originals
+                logger.debug(f"Tier 1: data_subjects dimension matched: {matched_originals}")
+            else:
+                dimension_results.append(False)
+                logger.debug(f"Tier 1: data_subjects dimension NOT matched")
+
+        # Regulators (normalized)
+        if linked_regulators:
+            rule_reg_norm = {_normalize_text(str(r)) for r in linked_regulators if r} - {''}
+            ctx_reg_norm = {_normalize_text(str(r)) for r in context.regulators if r} - {''}
+            matched_norm = rule_reg_norm & ctx_reg_norm
+            if matched_norm:
+                dimension_results.append(True)
+                matched_originals = [r for r in linked_regulators if r and _normalize_text(str(r)) in matched_norm]
+                current_matches["Regulator"] = matched_originals
+                logger.debug(f"Tier 1: regulators dimension matched: {matched_originals}")
+            else:
+                dimension_results.append(False)
+                logger.debug(f"Tier 1: regulators dimension NOT matched")
+
+        # Authorities (normalized)
+        if linked_authorities:
+            rule_auth_norm = {_normalize_text(str(a)) for a in linked_authorities if a} - {''}
+            ctx_auth_norm = {_normalize_text(str(a)) for a in context.authorities if a} - {''}
+            matched_norm = rule_auth_norm & ctx_auth_norm
+            if matched_norm:
+                dimension_results.append(True)
+                matched_originals = [a for a in linked_authorities if a and _normalize_text(str(a)) in matched_norm]
+                current_matches["Authority"] = matched_originals
+                logger.debug(f"Tier 1: authorities dimension matched: {matched_originals}")
+            else:
+                dimension_results.append(False)
+                logger.debug(f"Tier 1: authorities dimension NOT matched")
 
         # If rule specifies structured dimensions: AND across all
         if dimension_results:

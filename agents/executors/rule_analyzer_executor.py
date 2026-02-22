@@ -85,6 +85,25 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
                 suggested_entities = parsed.get("suggested_linked_entities", {})
                 if suggested_entities:
                     rule_def["suggested_linked_entities"] = suggested_entities
+                    # Hoist to top-level for add_rule() which reads flat keys only.
+                    # Key mapping: prompt uses "gdcs" (plural), add_rule() reads "gdc" (no s).
+                    _entity_key_map = {
+                        "regulators":                "regulators",
+                        "authorities":               "authorities",
+                        "purposes_of_processing":    "purposes_of_processing",
+                        "data_categories":           "data_categories",
+                        "sensitive_data_categories": "sensitive_data_categories",
+                        "processes":                 "processes",
+                        "gdcs":                      "gdc",
+                        "data_subjects":             "data_subjects",
+                        "legal_entities":            "legal_entities",
+                        "global_business_functions": "global_business_functions",
+                    }
+                    for src_key, dst_key in _entity_key_map.items():
+                        values = suggested_entities.get(src_key) or []
+                        if values:
+                            existing = rule_def.get(dst_key) or []
+                            rule_def[dst_key] = list(dict.fromkeys(existing + values))
 
                 # Auto-generate rule_id if AI returned placeholder
                 raw_id = rule_def.get("rule_id", "")
@@ -108,9 +127,8 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
                     validated = RuleDefinitionModel(**rule_def)
                     state["rule_definition"] = validated.model_dump()
                     self.record_success(state)
-                    state["current_phase"] = (
-                        "data_dictionary" if state.get("data_categories") else "cypher_generator"
-                    )
+                    has_categories = bool(state.get("data_categories") or rule_def.get("data_categories"))
+                    state["current_phase"] = "data_dictionary" if has_categories else "cypher_generator"
 
                     duration = (time.time() - start_time) * 1000
                     self.event_store.append(

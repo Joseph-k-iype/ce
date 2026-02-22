@@ -294,6 +294,18 @@ async def load_sandbox(session_id: str):
             rule_def.setdefault('data_categories', session.data_categories)
         if session.purposes_of_processing:
             rule_def.setdefault('purposes_of_processing', session.purposes_of_processing)
+        # Inject processes from all levels
+        session_processes = []
+        for lvl in [session.process_l1, session.process_l2, session.process_l3]:
+            if lvl:
+                session_processes.extend(lvl)
+        if session_processes:
+            existing = rule_def.get('processes') or []
+            rule_def['processes'] = list(dict.fromkeys(existing + session_processes))
+        # Inject group_data_categories as gdc
+        if session.group_data_categories:
+            existing_gdc = rule_def.get('gdc') or []
+            rule_def['gdc'] = list(dict.fromkeys(existing_gdc + session.group_data_categories))
 
         graph_name = sandbox.create_sandbox(session_id)
         success = sandbox.add_rule_to_sandbox(
@@ -403,6 +415,18 @@ async def approve_rule(session_id: str, request: WizardApprovalRequest):
             rule_def.setdefault('data_categories', session.data_categories)
         if session.purposes_of_processing:
             rule_def.setdefault('purposes_of_processing', session.purposes_of_processing)
+        # Inject processes from all levels
+        session_processes = []
+        for lvl in [session.process_l1, session.process_l2, session.process_l3]:
+            if lvl:
+                session_processes.extend(lvl)
+        if session_processes:
+            existing = rule_def.get('processes') or []
+            rule_def['processes'] = list(dict.fromkeys(existing + session_processes))
+        # Inject group_data_categories as gdc
+        if session.group_data_categories:
+            existing_gdc = rule_def.get('gdc') or []
+            rule_def['gdc'] = list(dict.fromkeys(existing_gdc + session.group_data_categories))
 
         success = sandbox.promote_to_main(
             graph_name=session.sandbox_graph_name or "",

@@ -26,6 +26,10 @@ export function EvaluatorForm() {
     process_l3: [],
     origin_legal_entity: '',
     receiving_legal_entity: [],
+    data_subjects: [],
+    gdc: [],
+    regulator: [],
+    authority: [],
   });
 
   const [metadataEntries, setMetadataEntries] = useState<MetadataEntry[]>([]);
@@ -213,6 +217,60 @@ export function EvaluatorForm() {
             className="input-dark"
           />
           <p className="text-xs text-gray-400 mt-1">Comma-separated list</p>
+        </div>
+      </div>
+
+      {/* Data Subjects, GDC, Regulator, Authority */}
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-semibold text-white mb-2">Data Subjects</label>
+          <select
+            multiple
+            value={Array.isArray(formData.data_subjects) ? formData.data_subjects : []}
+            onChange={(e) => setFormData(f => ({ ...f, data_subjects: Array.from(e.target.selectedOptions, o => o.value) }))}
+            className="input-dark h-20"
+          >
+            {(dropdowns?.data_subjects || []).map((ds: { name: string }) => <option key={ds.name} value={ds.name}>{ds.name}</option>)}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-white mb-2">Group Data Categories (GDC)</label>
+          <select
+            multiple
+            value={Array.isArray(formData.gdc) ? formData.gdc : []}
+            onChange={(e) => setFormData(f => ({ ...f, gdc: Array.from(e.target.selectedOptions, o => o.value) }))}
+            className="input-dark h-20"
+          >
+            {(dropdowns?.gdc || []).map((g: { name: string }) => <option key={g.name} value={g.name}>{g.name}</option>)}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-semibold text-white mb-2">Regulator</label>
+          <select
+            multiple
+            value={Array.isArray(formData.regulator) ? formData.regulator : []}
+            onChange={(e) => setFormData(f => ({ ...f, regulator: Array.from(e.target.selectedOptions, o => o.value) }))}
+            className="input-dark h-20"
+          >
+            {(dropdowns?.regulators || []).map((r: { name: string }) => <option key={r.name} value={r.name}>{r.name}</option>)}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-white mb-2">Authority</label>
+          <select
+            multiple
+            value={Array.isArray(formData.authority) ? formData.authority : []}
+            onChange={(e) => setFormData(f => ({ ...f, authority: Array.from(e.target.selectedOptions, o => o.value) }))}
+            className="input-dark h-20"
+          >
+            {(dropdowns?.authorities || []).map((a: { name: string }) => <option key={a.name} value={a.name}>{a.name}</option>)}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
         </div>
       </div>
 

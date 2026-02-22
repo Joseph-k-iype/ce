@@ -131,6 +131,7 @@ Identify which graph entities the rule should be linked to:
 - Purposes of processing, processes, GDCs
 - Data subjects, legal entities, global business functions
 - Use ONLY exact names from the entity values listed above.
+- Populate these BOTH in `rule_definition` (flat fields) AND in `suggested_linked_entities`.
 
 ### Step 7: ERROR & HALLUCINATION CHECK
 
@@ -199,7 +200,16 @@ Return ONLY valid JSON with these two parts:
         "required_actions": ["string"],
         "odrl_type": "Prohibition | Permission",
         "odrl_action": "transfer",
-        "odrl_target": "string"
+        "odrl_target": "string",
+        "data_categories": ["string — exact names from graph entities above"],
+        "purposes_of_processing": ["string — exact names from graph entities above"],
+        "processes": ["string — exact names from graph entities above"],
+        "gdc": ["string — GDC names from graph entities above"],
+        "regulators": ["string — exact names from graph entities above"],
+        "authorities": ["string — exact names from graph entities above"],
+        "data_subjects": ["string — exact names from graph entities above"],
+        "sensitive_data_categories": ["string — exact names from graph entities above"],
+        "global_business_functions": ["string — exact names from graph entities above"]
     }},
     "suggested_linked_entities": {{
         "regulators": ["string"],

@@ -39,8 +39,13 @@ class DataDictionaryExecutor(ComplianceAgentExecutor):
         start_time = time.time()
         session_id = state.get("origin_country", "unknown")
 
-        # Skip if no data categories
-        if not state.get("data_categories"):
+        # Resolve data categories with fallback to analyzer output
+        data_categories = state.get("data_categories") or []
+        if not data_categories:
+            rule_def = state.get("rule_definition") or {}
+            data_categories = rule_def.get("data_categories") or []
+
+        if not data_categories:
             state["current_phase"] = "cypher_generator"
             state["dictionary_result"] = {"skipped": True, "reason": "No data categories specified"}
             await self.emit_completed(event_queue, ctx)
@@ -57,7 +62,7 @@ class DataDictionaryExecutor(ComplianceAgentExecutor):
 
         user_prompt = build_dictionary_prompt(
             template=DICTIONARY_USER_TEMPLATE,
-            data_categories=state.get("data_categories", []),
+            data_categories=data_categories,
             rule_text=state.get("rule_text", ""),
             origin_country=state.get("origin_country", ""),
             scenario_type=state.get("scenario_type", "transfer"),
