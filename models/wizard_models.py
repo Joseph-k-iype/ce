@@ -87,6 +87,9 @@ class WizardSessionState(BaseModel):
     process_l2: List[str] = Field(default_factory=list)
     process_l3: List[str] = Field(default_factory=list)
     group_data_categories: List[str] = Field(default_factory=list)
+    sensitive_data_categories: List[str] = Field(default_factory=list)
+    regulators: List[str] = Field(default_factory=list)
+    authorities: List[str] = Field(default_factory=list)
     valid_until: Optional[str] = None
 
     # Step 3: Rule text input
@@ -146,6 +149,9 @@ class WizardSessionResponse(BaseModel):
     process_l2: List[str] = Field(default_factory=list)
     process_l3: List[str] = Field(default_factory=list)
     group_data_categories: List[str] = Field(default_factory=list)
+    sensitive_data_categories: List[str] = Field(default_factory=list)
+    regulators: List[str] = Field(default_factory=list)
+    authorities: List[str] = Field(default_factory=list)
     valid_until: Optional[str] = None
     rule_text: Optional[str] = None
     analysis_result: Optional[Dict[str, Any]] = None

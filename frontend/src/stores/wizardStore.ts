@@ -16,6 +16,9 @@ interface WizardState {
   processL2: string[];
   processL3: string[];
   groupDataCategories: string[];
+  sensitiveDataCategories: string[];
+  regulators: string[];
+  authorities: string[];
   validUntil: string;
   // Step 3
   ruleText: string;
@@ -50,6 +53,9 @@ interface WizardState {
   setProcessL2: (p: string[]) => void;
   setProcessL3: (p: string[]) => void;
   setGroupDataCategories: (g: string[]) => void;
+  setSensitiveDataCategories: (s: string[]) => void;
+  setRegulators: (r: string[]) => void;
+  setAuthorities: (a: string[]) => void;
   setValidUntil: (d: string) => void;
   setRuleText: (t: string) => void;
   setIsPiiRelated: (p: boolean) => void;
@@ -86,6 +92,9 @@ const initialState = {
   processL2: [] as string[],
   processL3: [] as string[],
   groupDataCategories: [] as string[],
+  sensitiveDataCategories: [] as string[],
+  regulators: [] as string[],
+  authorities: [] as string[],
   validUntil: '',
   ruleText: '',
   isPiiRelated: false,
@@ -118,6 +127,9 @@ export const useWizardStore = create<WizardState>((set, get) => ({
   setProcessL2: (p) => set({ processL2: p }),
   setProcessL3: (p) => set({ processL3: p }),
   setGroupDataCategories: (g) => set({ groupDataCategories: g }),
+  setSensitiveDataCategories: (s) => set({ sensitiveDataCategories: s }),
+  setRegulators: (r) => set({ regulators: r }),
+  setAuthorities: (a) => set({ authorities: a }),
   setValidUntil: (d) => set({ validUntil: d }),
   setRuleText: (t) => set({ ruleText: t }),
   setIsPiiRelated: (p) => set({ isPiiRelated: p }),
@@ -154,6 +166,9 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       processL2: session.process_l2 as string[] || [],
       processL3: session.process_l3 as string[] || [],
       groupDataCategories: session.group_data_categories as string[] || [],
+      sensitiveDataCategories: session.sensitive_data_categories as string[] || [],
+      regulators: session.regulators as string[] || [],
+      authorities: session.authorities as string[] || [],
       validUntil: session.valid_until as string || '',
       ruleText: session.rule_text as string || '',
       analysisResult: session.analysis_result as Record<string, unknown> || null,
@@ -184,6 +199,9 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       processL2: state.processL2,
       processL3: state.processL3,
       groupDataCategories: state.groupDataCategories,
+      sensitiveDataCategories: state.sensitiveDataCategories,
+      regulators: state.regulators,
+      authorities: state.authorities,
       validUntil: state.validUntil,
       ruleText: state.ruleText,
       editedRuleDefinition: state.editedRuleDefinition,

@@ -1061,6 +1061,12 @@ class RulesGraphBuilder:
                     MATCH (p:PurposeOfProcessing {name: $name})
                     MERGE (r)-[:HAS_PURPOSE]->(p)
                     """, {"rule_id": rule_id, "name": purpose_name})
+                    # Also link to Purpose node — ALL_RULES_QUERY matches :Purpose not :PurposeOfProcessing
+                    self.graph.query("""
+                    MATCH (r:Rule {rule_id: $rule_id})
+                    MATCH (p:Purpose {name: $name})
+                    MERGE (r)-[:HAS_PURPOSE]->(p)
+                    """, {"rule_id": rule_id, "name": purpose_name})
 
             # Processes — MERGE nodes and link to rule
             for proc in (rule_def.get('processes') or []):

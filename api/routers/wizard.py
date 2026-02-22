@@ -182,12 +182,10 @@ async def submit_step(session_id: str, submission: WizardStepSubmission):
         session.process_l2 = data.get("process_l2", [])
         session.process_l3 = data.get("process_l3", [])
         session.group_data_categories = data.get("group_data_categories", [])
+        session.sensitive_data_categories = data.get("sensitive_data_categories", [])
+        session.regulators = data.get("regulators", [])
+        session.authorities = data.get("authorities", [])
         session.valid_until = data.get("valid_until")
-        # Also accept new simplified fields
-        if data.get("sensitive_data_categories"):
-            session.data_categories = list(set(
-                (session.data_categories or []) + data.get("sensitive_data_categories", [])
-            ))
         session.current_step = 4
 
     elif step == 4:
@@ -234,6 +232,9 @@ async def get_session(session_id: str):
         process_l2=session.process_l2,
         process_l3=session.process_l3,
         group_data_categories=session.group_data_categories,
+        sensitive_data_categories=session.sensitive_data_categories,
+        regulators=session.regulators,
+        authorities=session.authorities,
         valid_until=session.valid_until,
         rule_text=session.rule_text,
         analysis_result=session.analysis_result,
@@ -306,6 +307,16 @@ async def load_sandbox(session_id: str):
         if session.group_data_categories:
             existing_gdc = rule_def.get('gdc') or []
             rule_def['gdc'] = list(dict.fromkeys(existing_gdc + session.group_data_categories))
+        # Inject regulators, authorities, sensitive_data_categories
+        if session.regulators:
+            existing = rule_def.get('regulators') or []
+            rule_def['regulators'] = list(dict.fromkeys(existing + session.regulators))
+        if session.authorities:
+            existing = rule_def.get('authorities') or []
+            rule_def['authorities'] = list(dict.fromkeys(existing + session.authorities))
+        if session.sensitive_data_categories:
+            existing = rule_def.get('sensitive_data_categories') or []
+            rule_def['sensitive_data_categories'] = list(dict.fromkeys(existing + session.sensitive_data_categories))
 
         graph_name = sandbox.create_sandbox(session_id)
         success = sandbox.add_rule_to_sandbox(
@@ -366,6 +377,15 @@ async def sandbox_evaluate(session_id: str, request: dict):
         session_purposes = session.purposes_of_processing or []
         merged_purposes = list(set(req_purposes + session_purposes)) if (req_purposes or session_purposes) else None
 
+        # Merge process_l1/l2/l3 from request and session
+        def _merge_proc(req_val, session_val):
+            req_list = req_val if isinstance(req_val, list) else ([req_val] if req_val else [])
+            combined = list(dict.fromkeys(req_list + (session_val or [])))
+            return combined or None
+        merged_proc_l1 = _merge_proc(request.get("process_l1"), session.process_l1)
+        merged_proc_l2 = _merge_proc(request.get("process_l2"), session.process_l2)
+        merged_proc_l3 = _merge_proc(request.get("process_l3"), session.process_l3)
+
         # Evaluate for each receiving country (or once with empty string)
         all_results = []
         targets = receiving_list if receiving_list else [""]
@@ -376,12 +396,14 @@ async def sandbox_evaluate(session_id: str, request: dict):
                 receiving_country=rc,
                 pii=request.get("pii", False),
                 purposes=merged_purposes,
-                process_l1=request.get("process_l1"),
-                process_l2=request.get("process_l2"),
-                process_l3=request.get("process_l3"),
+                process_l1=merged_proc_l1,
+                process_l2=merged_proc_l2,
+                process_l3=merged_proc_l3,
                 personal_data_names=request.get("personal_data_names"),
                 data_categories=merged_categories,
                 metadata=request.get("metadata"),
+                regulators=session.regulators or None,
+                authorities=session.authorities or None,
             )
             all_results.append(result)
 
@@ -427,6 +449,16 @@ async def approve_rule(session_id: str, request: WizardApprovalRequest):
         if session.group_data_categories:
             existing_gdc = rule_def.get('gdc') or []
             rule_def['gdc'] = list(dict.fromkeys(existing_gdc + session.group_data_categories))
+        # Inject regulators, authorities, sensitive_data_categories
+        if session.regulators:
+            existing = rule_def.get('regulators') or []
+            rule_def['regulators'] = list(dict.fromkeys(existing + session.regulators))
+        if session.authorities:
+            existing = rule_def.get('authorities') or []
+            rule_def['authorities'] = list(dict.fromkeys(existing + session.authorities))
+        if session.sensitive_data_categories:
+            existing = rule_def.get('sensitive_data_categories') or []
+            rule_def['sensitive_data_categories'] = list(dict.fromkeys(existing + session.sensitive_data_categories))
 
         success = sandbox.promote_to_main(
             graph_name=session.sandbox_graph_name or "",
@@ -549,6 +581,9 @@ async def resume_session(session_id: str):
         process_l2=session.process_l2,
         process_l3=session.process_l3,
         group_data_categories=session.group_data_categories,
+        sensitive_data_categories=session.sensitive_data_categories,
+        regulators=session.regulators,
+        authorities=session.authorities,
         valid_until=session.valid_until,
         rule_text=session.rule_text,
         analysis_result=session.analysis_result,
