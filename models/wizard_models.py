@@ -65,9 +65,9 @@ class WizardSessionState(BaseModel):
     origin_country: Optional[str] = None
     receiving_countries: List[str] = Field(default_factory=list)
     origin_legal_entity: Optional[List[str]] = Field(default_factory=list)
-    receiving_legal_entity: Optional[str] = None
+    receiving_legal_entity: Optional[List[str]] = Field(default_factory=list)
 
-    @field_validator('origin_legal_entity', mode='before')
+    @field_validator('origin_legal_entity', 'receiving_legal_entity', mode='before')
     @classmethod
     def coerce_legal_entity_to_list(cls, v):
         """Handle backward compat: string -> list, None -> []."""
@@ -127,10 +127,10 @@ class WizardSessionResponse(BaseModel):
     origin_country: Optional[str] = None
     receiving_countries: List[str] = Field(default_factory=list)
     origin_legal_entity: Optional[List[str]] = Field(default_factory=list)
-    receiving_legal_entity: Optional[str] = None
+    receiving_legal_entity: Optional[List[str]] = Field(default_factory=list)
     data_categories: List[str] = Field(default_factory=list)
 
-    @field_validator('origin_legal_entity', mode='before')
+    @field_validator('origin_legal_entity', 'receiving_legal_entity', mode='before')
     @classmethod
     def coerce_legal_entity_to_list(cls, v):
         if v is None:

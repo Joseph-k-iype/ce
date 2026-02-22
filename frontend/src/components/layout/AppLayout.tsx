@@ -17,7 +17,7 @@ export function AppLayout() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Navbar />
-      <main ref={mainRef} className={isEditorPage ? 'flex-1 flex flex-col' : 'px-8 pb-8'}>
+      <main ref={mainRef} className={isEditorPage ? 'flex-1 flex flex-col overflow-hidden' : 'flex-1 overflow-auto px-8 pb-8'}>
         <Outlet />
       </main>
     </div>

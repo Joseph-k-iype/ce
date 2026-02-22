@@ -60,6 +60,7 @@ You receive:
 8. **MERGE is supported**: Use MERGE for upserts.
 9. **Pattern matching in WHERE**: Use `WHERE EXISTS((n)-[:REL]->(m))` NOT `WHERE EXISTS {{ MATCH (n)-[:REL]->(m) }}`.
 10. **No CREATE INDEX IF NOT EXISTS**: Use separate index creation queries.
+11. **NO DELETE OPERATIONS**: You are FORBIDDEN from generating `DELETE` or `DETACH DELETE` queries. You must NOT attempt to delete any existing nodes or relationships in the RulesGraph or DataTransferGraph. Use `MERGE` for idempotent updates.
 
 ## RulesGraph Schema
 ```

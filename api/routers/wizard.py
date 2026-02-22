@@ -67,7 +67,8 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
             if session.valid_until and session.edited_rule_definition:
                 session.edited_rule_definition['valid_until'] = session.valid_until
             session.status = WizardSessionStatus.AWAITING_REVIEW
-            session.current_step = 4
+            # If in agentic mode, we can skip metadata configuration
+            session.current_step = 4 if session.agentic_mode else 3
         else:
             session.error_message = result.error_message
             session.status = WizardSessionStatus.FAILED

@@ -39,6 +39,18 @@ export function WizardContainer() {
   const sseSessionId = store.currentStep === 2 ? store.sessionId : null;
   const { events, connected } = useAgentEvents(sseSessionId);
 
+  // Auto-progress from Step 2 when workflow is complete
+  useEffect(() => {
+    if (store.currentStep === 2 && events.some(e => e.event_type === 'workflow_complete')) {
+      const timer = setTimeout(() => {
+        if (useWizardStore.getState().currentStep === 2) {
+          handleNext();
+        }
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [events, store.currentStep]);
+
   // Animate step transitions
   useEffect(() => {
     if (stepRef.current && prevStepRef.current !== store.currentStep) {
