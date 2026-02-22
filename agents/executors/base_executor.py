@@ -188,6 +188,32 @@ class ComplianceAgentExecutor(AgentExecutor):
         counts[name] = counts.get(name, 0) + 1
         state["agent_invocation_counts"] = counts
 
+    def validate_preconditions(
+        self,
+        state: WizardAgentState,
+        required_keys: list[str],
+    ) -> "RequirementCheckResult":
+        """Check that all required state keys exist and are non-empty before executing.
+
+        Returns a RequirementCheckResult. If requirements_met is False,
+        the executor should halt, emit the result, and route to supervisor.
+        """
+        from agents.nodes.validation_models import RequirementCheckResult
+
+        missing = []
+        for key in required_keys:
+            val = state.get(key)
+            if val is None or val == "" or val == [] or val == {}:
+                missing.append(key)
+
+        return RequirementCheckResult(
+            requirements_met=len(missing) == 0,
+            missing_inputs=missing,
+            clarifying_questions=[
+                f"Missing required input: {m}" for m in missing
+            ],
+        )
+
     # -- SSE event convenience emitter -----------------------------------------
 
     def emit_sse_event(

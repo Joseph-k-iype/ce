@@ -53,7 +53,6 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
         )
 
         system_prompt = RULE_ANALYZER_SYSTEM_PROMPT.format(
-            country_groups=build_country_groups_context(),
             graph_entities=build_graph_entities_context(),
         )
 

@@ -32,7 +32,7 @@ class TestAgentNodes:
 {
     "chain_of_thought": {"step1": "Analyzed rule text"},
     "rule_definition": {
-        "rule_type": "transfer",
+        "rule_type": "attribute",
         "rule_id": "RULE_TEST_001",
         "name": "Test Transfer Rule",
         "description": "A test rule for transfer validation purposes",

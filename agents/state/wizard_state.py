@@ -64,6 +64,11 @@ class WizardAgentState(TypedDict):
     # Memory checkpoints for intermediate results preservation
     memory_checkpoints: Dict[str, Any]
 
+    # Workflow halt tracking (hard-stop gates)
+    workflow_halted: bool
+    halt_reason: Optional[str]
+    requirement_check_results: Dict[str, Any]  # per-agent RequirementCheckResult
+
     # Events for SSE streaming
     events: List[Dict[str, Any]]
 
@@ -121,6 +126,9 @@ def create_initial_state(
         processing_mode=processing_mode,
         shared_reasoning=[],
         memory_checkpoints={},
+        workflow_halted=False,
+        halt_reason=None,
+        requirement_check_results={},
         events=[],
         success=False,
         error_message=None,

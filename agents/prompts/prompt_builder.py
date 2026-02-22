@@ -187,11 +187,19 @@ def build_cypher_prompt(
     template: str,
     rule_definition: Dict[str, Any],
     feedback: str,
+    dictionary_result: Optional[Dict[str, Any]] = None,
+    origin_country: str = "",
+    receiving_countries: Optional[List[str]] = None,
+    data_categories: Optional[List[str]] = None,
 ) -> str:
     """Build a fully-assembled Cypher generator user prompt."""
     return template.format(
         rule_definition=json.dumps(rule_definition, indent=2),
         feedback=feedback or "None",
+        dictionary_result=json.dumps(dictionary_result, indent=2) if dictionary_result else "None",
+        origin_country=origin_country,
+        receiving_countries=", ".join(receiving_countries) if receiving_countries else "None",
+        data_categories=", ".join(data_categories) if data_categories else "None",
     )
 
 

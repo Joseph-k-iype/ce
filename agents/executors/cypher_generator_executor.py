@@ -57,13 +57,17 @@ class CypherGeneratorExecutor(ComplianceAgentExecutor):
         )
 
         system_prompt = CYPHER_GENERATOR_SYSTEM_PROMPT.format(
-            graph_entities=build_graph_entities_context(),
+            graph_schema=build_graph_entities_context(),
         )
 
         user_prompt = build_cypher_prompt(
             template=CYPHER_GENERATOR_USER_TEMPLATE,
             rule_definition=state.get("rule_definition", {}),
             feedback="",
+            dictionary_result=state.get("dictionary_result"),
+            origin_country=state.get("origin_country", ""),
+            receiving_countries=state.get("receiving_countries", []),
+            data_categories=state.get("data_categories", []),
         )
 
         try:
