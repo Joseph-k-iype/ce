@@ -74,9 +74,17 @@ class CypherGeneratorExecutor(ComplianceAgentExecutor):
                 queries = parsed.get("cypher_queries", {})
                 try:
                     validated = CypherQueriesModel(**queries)
+                    # Sanitize query_params keys: strip $ prefix and embedded quotes
+                    # that LLMs sometimes produce (e.g. "$rule_id" or '"rule_id"')
+                    raw_params = parsed.get("query_params", {})
+                    sanitized_params = {}
+                    for k, v in raw_params.items():
+                        clean_key = k.strip().strip('"').strip("'").lstrip('$')
+                        if clean_key:
+                            sanitized_params[clean_key] = v
                     state["cypher_queries"] = {
                         "queries": validated.model_dump(),
-                        "params": parsed.get("query_params", {}),
+                        "params": sanitized_params,
                         "optimization_notes": parsed.get("optimization_notes", []),
                     }
 

@@ -167,7 +167,7 @@ Return ONLY valid JSON:
         "rule_links": "string — SINGLE Cypher statement to create LINKED_TO edges to entities (or empty string if none)",
         "validation": "string — SINGLE Cypher statement to validate rule works"
     }},
-    "query_params": {{"$param1": "example_value1", "$param2": "example_value2"}},
+    "query_params": {{"rule_id": "RULE_SAR_UK", "country": "United Kingdom", "outcome": "prohibition"}},
     "optimization_notes": ["string"]
 }}
 ```

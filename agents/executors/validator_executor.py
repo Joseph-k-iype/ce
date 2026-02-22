@@ -256,7 +256,13 @@ class ValidatorExecutor(ComplianceAgentExecutor):
         """
         cypher_data = state.get("cypher_queries", {})
         cypher_queries = cypher_data.get("queries", {})
-        params = cypher_data.get("params", {}) or {}
+        raw_params = cypher_data.get("params", {}) or {}
+        # Sanitize param keys: strip $ prefix and embedded quotes from LLM output
+        params = {}
+        for k, v in raw_params.items():
+            clean_key = k.strip().strip('"').strip("'").lstrip('$')
+            if clean_key:
+                params[clean_key] = v
 
         rule_insert = cypher_queries.get("rule_insert", "")
         validation_query = cypher_queries.get("validation", "")
