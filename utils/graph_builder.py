@@ -119,7 +119,19 @@ def _read_csv(filename: str) -> List[Dict[str, str]]:
         with open(csv_file, newline='', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                rows.append({k: (v.strip() if v else '') for k, v in row.items()})
+                cleaned = {}
+                for k, v in row.items():
+                    if k is None:
+                        # Extra columns beyond headers — skip
+                        continue
+                    if isinstance(v, str):
+                        cleaned[k] = v.strip()
+                    elif v is None:
+                        cleaned[k] = ''
+                    else:
+                        # Non-string (e.g. list from restkey) — skip
+                        cleaned[k] = str(v).strip() if v else ''
+                rows.append(cleaned)
     except Exception as e:
         logger.error(f"Failed to read {filename}: {e}")
     return rows
