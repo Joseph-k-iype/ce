@@ -68,9 +68,21 @@ export function WizardContainer() {
       }
 
       if (step === 2 && sessionId) {
-        console.log('[Wizard] Fetching AI results for step 2...');
-        const session = await getWizardSession(sessionId);
-        console.log('[Wizard] Session status:', session.status);
+        console.log('[Wizard] Step 2 complete event, fetching results...');
+        
+        // Race condition fix: retry fetching session results if results are missing
+        let session = await getWizardSession(sessionId);
+        let retries = 0;
+        const maxRetries = 5;
+        
+        while (session.status !== 'failed' && !session.analysis_result && retries < maxRetries) {
+            console.log(`[Wizard] Results not ready (attempt ${retries + 1}/${maxRetries}), waiting...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 + (retries * 500)));
+            session = await getWizardSession(sessionId);
+            retries++;
+        }
+
+        console.log('[Wizard] Final session status for transition:', session.status);
         
         if (session.status === 'failed') {
           store.setError(session.error_message || 'AI processing failed. Go Back to edit and retry.');
@@ -78,19 +90,25 @@ export function WizardContainer() {
           return;
         }
         
+        // Populate store with whatever results we have
         if (session.analysis_result) store.setAnalysisResult(session.analysis_result);
         if (session.dictionary_result) store.setDictionaryResult(session.dictionary_result);
         if (session.edited_rule_definition) store.setEditedRuleDefinition(session.edited_rule_definition);
         if (session.edited_terms_dictionary) store.setEditedTermsDictionary(session.edited_terms_dictionary);
         if (session.proposal) store.setProposal(session.proposal);
         
-        await submitWizardStep(sessionId, { step: 2, data: {} });
+        // Notify backend that we are moving off step 2
+        try {
+            await submitWizardStep(sessionId, { step: 2, data: {} });
+        } catch (e) {
+            console.warn('[Wizard] submitWizardStep(2) failed, continuing anyway...', e);
+        }
         
         if (state.agenticMode) {
-            console.log('[Wizard] Agentic mode: jumping to step 4');
+            console.log('[Wizard] Agentic mode: jumping to step 4 (Review)');
             store.setStep(4);
         } else {
-            console.log('[Wizard] Standard mode: advancing to step 3');
+            console.log('[Wizard] Standard mode: advancing to step 3 (Metadata)');
             store.setStep(3);
         }
         

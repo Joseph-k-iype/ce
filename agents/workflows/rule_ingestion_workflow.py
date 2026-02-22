@@ -1,15 +1,5 @@
-"""
-Rule Ingestion Workflow
-========================
-LangGraph StateGraph for wizard steps 4-5.
-Entry -> Supervisor -> {agents} -> Supervisor -> ... -> complete/fail
-
-Uses MemorySaver checkpointer — each rule ingestion is a self-contained run,
-so persistent checkpointing is unnecessary and avoids SQLite corruption issues.
-"""
-
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 
 from langgraph.graph import StateGraph, END
@@ -137,15 +127,7 @@ def _increment_agent_retry(state: WizardAgentState, agent_name: str) -> int:
 
 
 def route_from_supervisor(state: WizardAgentState) -> str:
-    """Route based on supervisor decision with hard circuit breakers.
-
-    Circuit breakers (checked in order):
-    1. graph_step >= MAX_GRAPH_STEPS → fail (prevents recursion error)
-    2. iteration >= max_iterations → fail
-    3. validation_retry_count >= 3 → force validator (triggers skip fallback)
-    4. target agent retried >= MAX_AGENT_RETRIES → skip to next logical phase
-    5. Otherwise follow supervisor's decision
-    """
+    """Route based on supervisor decision with hard circuit breakers."""
     phase = state.get("current_phase", "fail")
 
     # ── Breaker 1: hard graph step limit ──
@@ -162,7 +144,7 @@ def route_from_supervisor(state: WizardAgentState) -> str:
         logger.warning(f"Circuit breaker: iteration={iteration} >= max={max_iterations}")
         return "fail"
 
-    # ── Breaker 3: validation retry exhaustion → force validator skip fallback ──
+    # ── Breaker 3: validation retry exhaustion ──
     retry_count = state.get("validation_retry_count", 0)
     if retry_count >= 3 and phase not in ("complete", "fail", "rule_tester"):
         return "validator"
@@ -177,11 +159,7 @@ def route_from_supervisor(state: WizardAgentState) -> str:
         agent_counts = state.get("agent_retry_counts", {})
         agent_count = agent_counts.get(phase, 0)
         if agent_count >= MAX_AGENT_RETRIES:
-            logger.warning(
-                f"Circuit breaker: agent '{phase}' invoked {agent_count} times, "
-                f"skipping to next phase"
-            )
-            # Skip logic: push forward in the pipeline
+            logger.warning(f"Circuit breaker: agent '{phase}' invoked {agent_count} times, skipping")
             skip_map = {
                 "rule_analyzer": "cypher_generator",
                 "data_dictionary": "cypher_generator",
@@ -197,49 +175,15 @@ def route_from_supervisor(state: WizardAgentState) -> str:
     return "fail"
 
 
-def route_after_validation(state: WizardAgentState) -> str:
-    """Route after validation. Increments graph step for safety."""
-    _increment_graph_step(state)
-    phase = state.get("current_phase", "supervisor")
-    if phase == "rule_tester":
-        return "rule_tester"
-    elif phase == "complete":
-        return "review_proposal"
-    elif phase == "fail":
-        return "fail"
+def entry_point_router(state: WizardAgentState) -> Union[str, List[str]]:
+    """Determine initial nodes. If in agentic mode, run analyzer and dictionary in parallel."""
+    if state.get("agentic_mode"):
+        return ["rule_analyzer", "data_dictionary"]
     return "supervisor"
-
-
-def route_after_rule_tester(state: WizardAgentState) -> str:
-    """Route after rule tester. Increments graph step for safety."""
-    _increment_graph_step(state)
-    phase = state.get("current_phase", "supervisor")
-    if phase == "complete":
-        return "review_proposal"
-    elif phase == "fail":
-        return "fail"
-    return "supervisor"
-
-
-def _create_checkpointer():
-    """Create a MemorySaver checkpointer.
-
-    Each rule ingestion is a self-contained run, so persistent checkpointing
-    is unnecessary. MemorySaver avoids all SQLite corruption issues.
-    """
-    return MemorySaver()
 
 
 def build_rule_ingestion_graph(with_interrupt: bool = True) -> tuple:
-    """
-    Build the LangGraph workflow for rule ingestion.
-
-    Args:
-        with_interrupt: If True, adds interrupt_before on human_review
-
-    Returns:
-        Tuple of (compiled graph, checkpointer)
-    """
+    """Build optimized LangGraph workflow."""
     workflow = StateGraph(WizardAgentState)
 
     # Add nodes
@@ -255,10 +199,64 @@ def build_rule_ingestion_graph(with_interrupt: bool = True) -> tuple:
     workflow.add_node("complete", complete_node)
     workflow.add_node("fail", fail_node)
 
-    # Entry point -> supervisor
-    workflow.set_entry_point("supervisor")
+    # ── Optimization: Entry Point Branching ──
+    workflow.set_conditional_entry_point(
+        entry_point_router,
+        {
+            "rule_analyzer": "rule_analyzer",
+            "data_dictionary": "data_dictionary",
+            "supervisor": "supervisor"
+        }
+    )
 
-    # Supervisor routes to any agent
+    # ── Routing Logic ──
+
+    def _route_after_initial_agents(state: WizardAgentState) -> str:
+        """After initial parallel nodes, join and move to cypher if both done."""
+        # If in agentic mode and haven't run cypher yet, move to cypher
+        if state.get("agentic_mode") and not state.get("cypher_queries") and state.get("iteration", 0) == 0:
+            if state.get("rule_definition") and state.get("dictionary_result"):
+                return "cypher_generator"
+            return "supervisor"  # Fallback to supervisor to sync
+        return "supervisor"
+
+    def _route_after_cypher(state: WizardAgentState) -> str:
+        """Fast path: go straight to validator after cypher in round 0."""
+        if state.get("agentic_mode") and state.get("iteration", 0) == 0:
+            return "validator"
+        return "supervisor"
+
+    def _route_after_validator(state: WizardAgentState) -> str:
+        """Fast path: go straight to review if valid in round 0."""
+        if state.get("agentic_mode") and state.get("iteration", 0) == 0:
+            v_res = state.get("validation_result") or {}
+            if v_res.get("overall_valid"):
+                return "review_proposal"
+        
+        phase = state.get("current_phase", "supervisor")
+        if phase == "rule_tester": return "rule_tester"
+        if phase in ("complete", "review_proposal"): return "review_proposal"
+        if phase == "fail": return "fail"
+        return "supervisor"
+
+    # Parallel agent transitions
+    workflow.add_conditional_edges("rule_analyzer", _route_after_initial_agents, {"cypher_generator": "cypher_generator", "supervisor": "supervisor"})
+    workflow.add_conditional_edges("data_dictionary", _route_after_initial_agents, {"cypher_generator": "cypher_generator", "supervisor": "supervisor"})
+    
+    workflow.add_conditional_edges("cypher_generator", _route_after_cypher, {"validator": "validator", "supervisor": "supervisor"})
+    
+    workflow.add_conditional_edges(
+        "validator",
+        _route_after_validator,
+        {
+            "rule_tester": "rule_tester",
+            "review_proposal": "review_proposal",
+            "fail": "fail",
+            "supervisor": "supervisor",
+        }
+    )
+
+    # Standard supervisor routing
     workflow.add_conditional_edges(
         "supervisor",
         route_from_supervisor,
@@ -275,64 +273,15 @@ def build_rule_ingestion_graph(with_interrupt: bool = True) -> tuple:
         }
     )
 
-    # Agent routing function
-    def _route_agent(state: WizardAgentState) -> str:
-        return state.get("current_phase", "supervisor")
-
-    # All agents route back to supervisor (or forward to next agent)
-    agent_route_map = {
-        "supervisor": "supervisor",
-        "rule_analyzer": "rule_analyzer",
-        "data_dictionary": "data_dictionary",
-        "cypher_generator": "cypher_generator",
-        "validator": "validator",
-        "reference_data": "reference_data",
-        "rule_tester": "rule_tester",
-        "human_review": "human_review",
-        "complete": "review_proposal",
-        "fail": "fail",
-    }
-    for agent in ["rule_analyzer", "data_dictionary", "cypher_generator", "reference_data"]:
-        workflow.add_conditional_edges(agent, _route_agent, agent_route_map)
-
-    # Validator has special routing (can go to rule_tester)
-    workflow.add_conditional_edges(
-        "validator",
-        route_after_validation,
-        {
-            "rule_tester": "rule_tester",
-            "complete": "review_proposal",
-            "review_proposal": "review_proposal",
-            "fail": "fail",
-            "supervisor": "supervisor",
-        }
-    )
-
-    # Rule tester routing
-    workflow.add_conditional_edges(
-        "rule_tester",
-        route_after_rule_tester,
-        {
-            "complete": "review_proposal",
-            "review_proposal": "review_proposal",
-            "fail": "fail",
-            "supervisor": "supervisor",
-        }
-    )
-
-    # Human review goes back to supervisor
+    # Terminal nodes and other edges
+    workflow.add_edge("rule_tester", "supervisor")
+    workflow.add_edge("reference_data", "supervisor")
     workflow.add_edge("human_review", "supervisor")
-    
-    # Review proposal leads to complete
     workflow.add_edge("review_proposal", "complete")
-
-    # Terminal nodes
     workflow.add_edge("complete", END)
     workflow.add_edge("fail", END)
 
-    # Compile with checkpointer — prefer SqliteSaver for persistent memory
-    checkpointer = _create_checkpointer()
-
+    checkpointer = MemorySaver()
     interrupt = ["human_review"] if with_interrupt else None
 
     compiled = workflow.compile(
@@ -345,7 +294,6 @@ def build_rule_ingestion_graph(with_interrupt: bool = True) -> tuple:
 
 class RuleIngestionResult:
     """Result of running the rule ingestion workflow."""
-
     def __init__(self, state: WizardAgentState):
         self.success = state.get("success", False)
         self.rule_definition = state.get("rule_definition")
@@ -372,22 +320,7 @@ def run_rule_ingestion(
     thread_id: Optional[str] = None,
     agentic_mode: bool = False,
 ) -> RuleIngestionResult:
-    """
-    Run the rule ingestion workflow.
-
-    Args:
-        origin_country: Origin country
-        scenario_type: transfer or attribute
-        receiving_countries: List of receiving countries
-        rule_text: Natural language rule description
-        data_categories: Optional data categories for dictionary generation
-        max_iterations: Max retry iterations
-        thread_id: Thread ID for checkpointer (session tracking)
-        agentic_mode: If True, operates autonomously
-
-    Returns:
-        RuleIngestionResult with all outputs
-    """
+    """Run the rule ingestion workflow."""
     initial_state = create_initial_state(
         origin_country=origin_country,
         scenario_type=scenario_type,
@@ -406,32 +339,15 @@ def run_rule_ingestion(
         data={"rule_text": rule_text[:200], "agentic_mode": agentic_mode},
     )
 
-    config = {
-        "configurable": {"thread_id": thread_id or "default"},
-        "recursion_limit": 50,
-    }
+    config = {"configurable": {"thread_id": thread_id or "default"}, "recursion_limit": 50}
 
     try:
-        # Build without interrupts if in autonomous agentic mode
-        graph, checkpointer = build_rule_ingestion_graph(with_interrupt=not agentic_mode)
+        graph, _ = build_rule_ingestion_graph(with_interrupt=not agentic_mode)
         final_state = graph.invoke(initial_state, config)
         return RuleIngestionResult(final_state)
-
     except Exception as e:
-        error_str = str(e)
         logger.error(f"Workflow execution failed: {e}", exc_info=True)
-
-        # Cleanup any stale temp graphs on workflow failure
-        try:
-            from services.database import get_db_service
-            db = get_db_service()
-            cleaned = db.cleanup_stale_temp_graphs()
-            if cleaned:
-                logger.info(f"Cleaned {cleaned} stale temp graphs after workflow error")
-        except Exception as cleanup_err:
-            logger.debug(f"Temp graph cleanup skipped: {cleanup_err}")
-
         error_state = initial_state.copy()
         error_state["success"] = False
-        error_state["error_message"] = f"Workflow error: {error_str}"
+        error_state["error_message"] = f"Workflow error: {str(e)}"
         return RuleIngestionResult(error_state)
