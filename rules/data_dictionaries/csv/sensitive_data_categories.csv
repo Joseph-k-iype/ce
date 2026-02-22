@@ -1,0 +1,28 @@
+id,name,definition,country_code,sensitive_data_category_name
+racial_ethnic_origin,Racial or Ethnic Origin,Data revealing racial or ethnic origin of a person,EU,Special Category Data
+political_opinions,Political Opinions,Data revealing political opinions or affiliations,EU,Special Category Data
+religious_beliefs,Religious or Philosophical Beliefs,Data revealing religious or philosophical beliefs,EU,Special Category Data
+trade_union_membership,Trade Union Membership,Data revealing trade union membership,EU,Special Category Data
+genetic_data_sensitive,Genetic Data,Genetic data for uniquely identifying a natural person,EU,Special Category Data
+biometric_data_sensitive,Biometric Data for Identification,Biometric data processed for uniquely identifying a person,EU,Special Category Data
+health_data_sensitive,Health Data,Data concerning physical or mental health,EU,Special Category Data
+sex_life_orientation,Sex Life or Sexual Orientation,Data concerning sex life or sexual orientation,EU,Special Category Data
+criminal_convictions,Criminal Convictions and Offences,Data relating to criminal convictions and offences,EU,Special Category Data
+aadhaar_number,Aadhaar Number,Unique 12-digit identification number issued by UIDAI,IN,Sensitive Personal Data
+financial_data_in,Financial Data,Financial information including bank account and credit details,IN,Sensitive Personal Data
+health_data_in,Physical or Mental Health,Data related to physical physiological or mental health,IN,Sensitive Personal Data
+sexual_orientation_in,Sexual Orientation,Data concerning sexual orientation or sex life,IN,Sensitive Personal Data
+biometric_data_in,Biometric Data,Physiological and behavioral biometric characteristics,IN,Sensitive Personal Data
+passwords_in,Passwords,Authentication credentials and passwords,IN,Sensitive Personal Data
+medical_records_in,Medical Records and History,Complete medical history and treatment records,IN,Sensitive Personal Data
+government_id_cn,Government Identification,Chinese national ID card and government identifiers,CN,Important Data
+financial_account_cn,Financial Account Information,Bank accounts and financial institution details,CN,Important Data
+location_tracking_cn,Precise Location Tracking,Real-time or historical precise geolocation data,CN,Important Data
+biometric_data_cn,Biometric Recognition Data,Facial recognition fingerprint and other biometric data,CN,Important Data
+health_data_cn,Medical and Health Data,Medical records and health condition information,CN,Important Data
+minors_data_cn,Personal Information of Minors,Data of individuals under 14 years of age,CN,Important Data
+social_security_us,Social Security Number,US Social Security Number,US,Sensitive PII
+financial_account_us,Financial Account Numbers,Bank routing and account numbers,US,Sensitive PII
+health_data_us,Protected Health Information,Health data protected under HIPAA,US,Sensitive PII
+biometric_data_us,Biometric Identifiers,Fingerprints retina scans voiceprints,US,Sensitive PII
+genetic_data_us,Genetic Information,Genetic testing results and family medical history,US,Sensitive PII

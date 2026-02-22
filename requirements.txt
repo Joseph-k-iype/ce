@@ -1,0 +1,48 @@
+# Compliance Engine Requirements
+# ================================
+
+# Web Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+starlette==0.41.2
+
+# Data Validation
+pydantic==2.9.2
+pydantic-settings==2.5.2
+email-validator>=2.0.0
+
+# Database
+falkordb==1.0.9
+
+# HTTP Client (for AI service)
+requests>=2.31.0
+httpx>=0.25.0
+
+# LangGraph for AI agent orchestration
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# Google A2A SDK for agent-to-agent protocol
+a2a-sdk>=0.3.22
+
+# Templates
+jinja2>=3.1.2
+aiofiles>=23.2.1
+
+# Utilities
+python-multipart>=0.0.6
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+httpx>=0.25.0
+
+# Linting/Formatting (optional)
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.1.0
+
+# Type checking (optional)
+mypy>=1.5.0

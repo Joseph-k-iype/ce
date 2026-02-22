@@ -1,0 +1,48 @@
+{
+  "name": "purposes",
+  "description": "Data processing purpose taxonomy",
+  "ontology_references": ["GDPR Art.6", "ISO 27701", "NIST Privacy Framework"],
+  "categories": {
+    "Contractual": {
+      "entries": [
+        "Service Delivery", "Contract Fulfillment", "Payment Processing",
+        "Order Management", "Warranty Administration", "Subscription Management",
+        "Account Servicing", "Product Delivery", "Service Level Monitoring",
+        "Invoice Generation"
+      ]
+    },
+    "Legal Obligation": {
+      "entries": [
+        "Tax Compliance", "Regulatory Reporting", "AML Compliance",
+        "KYC Verification", "Sanctions Screening", "Financial Reporting",
+        "Employment Law Compliance", "Health and Safety Reporting",
+        "Data Retention Compliance", "Audit Trail Maintenance"
+      ]
+    },
+    "Legitimate Interest": {
+      "entries": [
+        "Fraud Prevention", "Risk Management", "Internal Audit",
+        "Business Analytics", "Network Security", "IT Administration",
+        "Quality Assurance", "Product Improvement", "Customer Insights",
+        "Operational Efficiency"
+      ]
+    },
+    "Consent-based": {
+      "entries": [
+        "Marketing Analytics", "Targeted Advertising", "Newsletter Distribution",
+        "Customer Profiling", "Location-based Services", "Cookie Tracking",
+        "Third Party Sharing", "Research Participation", "Behavioral Analysis",
+        "Personalization", "Consent Management"
+      ]
+    },
+    "Vital Interest": {
+      "entries": [
+        "Emergency Response", "Health Monitoring", "Safety Alerts",
+        "Crisis Management", "Disaster Recovery Support",
+        "Public Health Reporting", "Epidemic Surveillance",
+        "Medical Emergency Processing", "Life Safety Systems",
+        "Critical Infrastructure Protection"
+      ]
+    }
+  }
+}

@@ -1,0 +1,71 @@
+id,name,definition,gdpr_category_name
+full_name,Full Name,Complete legal name of a natural person,Personal Identifiers
+date_of_birth,Date of Birth,Date on which a person was born,Personal Identifiers
+national_id,National ID,Government-issued national identification number,Personal Identifiers
+passport_number,Passport Number,Travel document identification number,Personal Identifiers
+social_security_number,Social Security Number,Government-issued social security or insurance number,Personal Identifiers
+email_address,Email Address,Electronic mail address,Personal Identifiers
+phone_number,Phone Number,Telephone or mobile contact number,Personal Identifiers
+ip_address,IP Address,Internet Protocol address assigned to a device,Personal Identifiers
+device_identifier,Device Identifier,Unique hardware or software device identifier,Personal Identifiers
+employee_id,Employee ID,Internal employee identification number,Personal Identifiers
+tax_identification_number,Tax Identification Number,Tax authority issued identification number,Personal Identifiers
+driver_license_number,Driver License Number,Government-issued driving license number,Personal Identifiers
+bank_account_number,Bank Account Number,Financial institution account number,Financial Data
+credit_card_number,Credit Card Number,Payment card number,Financial Data
+income_details,Income Details,Information about earnings and income sources,Financial Data
+credit_score,Credit Score,Numerical credit rating or score,Financial Data
+investment_portfolio,Investment Portfolio,Investment holdings and asset allocations,Financial Data
+loan_details,Loan Details,Loan terms amounts and repayment information,Financial Data
+transaction_history,Transaction History,Record of financial transactions,Financial Data
+tax_records,Tax Records,Tax filings returns and related documents,Financial Data
+insurance_policy,Insurance Policy,Insurance coverage terms and claims,Financial Data
+pension_details,Pension Details,Pension scheme membership and entitlements,Financial Data
+salary_information,Salary Information,Compensation and salary details,Financial Data
+billing_address,Billing Address,Address used for billing purposes,Financial Data
+medical_records,Medical Records,Health and medical treatment records,Health Data
+diagnoses,Diagnoses,Medical diagnosis information,Health Data
+prescriptions,Prescriptions,Medication and prescription records,Health Data
+lab_results,Lab Results,Laboratory test results and reports,Health Data
+mental_health_records,Mental Health Records,Psychological and psychiatric records,Health Data
+disability_status,Disability Status,Information about physical or mental disabilities,Health Data
+genetic_data,Genetic Data,DNA and genetic testing results,Health Data
+vaccination_records,Vaccination Records,Immunization and vaccination history,Health Data
+fingerprint,Fingerprint,Fingerprint biometric data,Biometric Data
+facial_recognition_data,Facial Recognition Data,Facial geometry and recognition patterns,Biometric Data
+voice_print,Voice Print,Voice biometric characteristics,Biometric Data
+iris_scan,Iris Scan,Iris pattern biometric data,Biometric Data
+retina_pattern,Retina Pattern,Retinal blood vessel pattern data,Biometric Data
+palm_print,Palm Print,Palm geometry biometric data,Biometric Data
+gait_analysis,Gait Analysis,Walking pattern biometric data,Biometric Data
+keystroke_dynamics,Keystroke Dynamics,Typing pattern biometric data,Biometric Data
+gps_coordinates,GPS Coordinates,Global positioning system location data,Location Data
+home_address,Home Address,Residential address information,Location Data
+work_address,Work Address,Business or employment address,Location Data
+travel_history,Travel History,Record of travel and movement,Location Data
+check_in_data,Check-in Data,Location check-in records,Location Data
+geofence_data,Geofence Data,Geographic boundary tracking data,Location Data
+cell_tower_data,Cell Tower Data,Mobile network cell tower location data,Location Data
+wi_fi_location_data,Wi-Fi Location Data,Wi-Fi network based location data,Location Data
+job_title,Job Title,Employment position or role title,Employment Data
+employment_history,Employment History,Record of past and current employment,Employment Data
+performance_reviews,Performance Reviews,Employee performance evaluation records,Employment Data
+disciplinary_records,Disciplinary Records,Employee disciplinary action records,Employment Data
+training_records,Training Records,Employee training and certification records,Employment Data
+attendance_records,Attendance Records,Employee attendance and timekeeping data,Employment Data
+leave_records,Leave Records,Employee leave and absence records,Employment Data
+compensation_history,Compensation History,Historical compensation and benefit data,Employment Data
+email_content,Email Content,Content of electronic mail messages,Communication Data
+chat_messages,Chat Messages,Instant messaging and chat records,Communication Data
+call_records,Call Records,Telephone and voice call records,Communication Data
+video_conference_data,Video Conference Data,Video meeting recordings and metadata,Communication Data
+social_media_posts,Social Media Posts,Social media activity and content,Communication Data
+correspondence_records,Correspondence Records,Written correspondence and letter records,Communication Data
+browsing_history,Browsing History,Web browsing activity records,Behavioral Data
+purchase_history,Purchase History,Product and service purchase records,Behavioral Data
+app_usage_data,App Usage Data,Application usage patterns and statistics,Behavioral Data
+search_queries,Search Queries,Search engine and application query records,Behavioral Data
+click_patterns,Click Patterns,User interface click and interaction patterns,Behavioral Data
+content_preferences,Content Preferences,Content consumption and preference data,Behavioral Data
+subscription_history,Subscription History,Service subscription and renewal records,Behavioral Data
+loyalty_program_data,Loyalty Program Data,Loyalty program membership and activity,Behavioral Data

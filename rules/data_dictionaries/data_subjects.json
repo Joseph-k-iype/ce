@@ -1,0 +1,37 @@
+{
+  "name": "data_subjects",
+  "description": "Data subject category taxonomy",
+  "ontology_references": ["GDPR Art.4", "ISO 27701"],
+  "categories": {
+    "Internal": {
+      "entries": [
+        "Employees", "Contractors", "Interns", "Board Members",
+        "Executive Officers", "Temporary Staff", "Volunteers",
+        "Former Employees", "Retirees", "Applicants",
+        "Trainees", "Secondees", "Consultants",
+        "Agency Workers", "Part-time Workers", "Remote Workers",
+        "Expatriates"
+      ]
+    },
+    "External": {
+      "entries": [
+        "Customers", "Prospects", "Beneficiaries", "Dependents",
+        "Account Holders", "Cardholders", "Loan Applicants",
+        "Policyholders", "Claimants", "Guarantors",
+        "Patients", "Students", "Minors",
+        "Vulnerable Persons", "Power of Attorney Holders",
+        "Joint Account Holders", "Authorized Representatives"
+      ]
+    },
+    "Third Party": {
+      "entries": [
+        "Suppliers", "Vendors", "Agents", "Brokers",
+        "Shareholders", "Regulators", "Auditors",
+        "Legal Representatives", "Witnesses", "Referees",
+        "Emergency Contacts", "Next of Kin", "Business Partners",
+        "Correspondent Banks", "Intermediaries", "Sub-processors",
+        "Service Providers"
+      ]
+    }
+  }
+}

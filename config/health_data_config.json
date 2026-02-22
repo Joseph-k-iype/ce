@@ -1,0 +1,115 @@
+{
+  "name": "health_data",
+  "description": "Health data detection configuration for compliance rules",
+  "version": "1.0.0",
+  "enabled": true,
+
+  "keywords": [
+    "patient", "diagnosis", "treatment", "medication", "prescription",
+    "symptom", "disease", "illness", "condition", "medical",
+    "health", "clinical", "hospital", "doctor", "physician",
+    "nurse", "healthcare", "therapy", "surgery", "surgical",
+    "medical_record", "health_record", "ehr", "emr", "phi",
+    "protected_health_information", "hipaa", "health_insurance",
+    "blood", "vital", "heart_rate", "blood_pressure", "bmi",
+    "weight", "height", "temperature", "pulse", "respiratory",
+    "mental_health", "psychiatric", "psychology", "anxiety",
+    "depression", "counseling", "psychotherapy",
+    "lab_result", "test_result", "biopsy", "mri", "xray",
+    "ct_scan", "ultrasound", "imaging", "radiology",
+    "allergy", "immunization", "vaccine", "vaccination",
+    "genetic", "dna", "genome", "hereditary", "genomic",
+    "pharmacy", "pharmacist", "drug", "dosage", "adverse_reaction",
+    "outpatient", "inpatient", "emergency", "icu", "intensive_care",
+    "oncology", "cardiology", "neurology", "pediatrics", "geriatrics",
+    "orthopedic", "dermatology", "ophthalmology", "gastroenterology",
+    "pulmonology", "nephrology", "endocrinology", "rheumatology",
+    "hematology", "pathology", "anesthesiology", "radiology",
+    "primary_care", "specialist", "referral", "consultation",
+    "prognosis", "chronic", "acute", "terminal", "palliative",
+    "rehabilitation", "physical_therapy", "occupational_therapy",
+    "speech_therapy", "respiratory_therapy",
+    "dental", "dentist", "orthodontic", "periodontal",
+    "optometry", "optometrist", "vision", "eyecare",
+    "audiology", "hearing", "audiologist",
+    "chiropractor", "chiropractic", "acupuncture",
+    "nursing_home", "assisted_living", "hospice", "home_health",
+    "insurance_claim", "medical_billing", "healthcare_provider",
+    "clinical_trial", "research_subject", "informed_consent",
+    "organ_donor", "transplant", "dialysis",
+    "ambulance", "emergency_room", "trauma", "triage"
+  ],
+
+  "patterns": [
+    "ICD[-_]?\\d+",
+    "ICD[-_]?10",
+    "ICD[-_]?9",
+    "CPT[-_]?\\d+",
+    "HCPCS[-_]?\\d+",
+    "NDC[-_]?\\d+",
+    "NPI[-_]?\\d+",
+    "patient[-_]?id",
+    "medical[-_]?record[-_]?number",
+    "mrn[-_]?\\d+",
+    "health[-_]?data",
+    "clinical[-_]?data",
+    "medical[-_]?data",
+    "patient[-_]?data",
+    "PHI[-_]?\\d*",
+    "HIPAA[-_]?compliant",
+    "HL7[-_]?\\d*",
+    "FHIR[-_]?resource",
+    "diagnosis[-_]?code",
+    "procedure[-_]?code",
+    "rx[-_]?number",
+    "prescription[-_]?id",
+    "lab[-_]?order",
+    "test[-_]?order",
+    "vital[-_]?sign",
+    "blood[-_]?type"
+  ],
+
+  "categories": [
+    "health",
+    "medical",
+    "clinical",
+    "patient",
+    "healthcare",
+    "hospital",
+    "pharmacy",
+    "laboratory",
+    "diagnostic",
+    "therapeutic",
+    "insurance_health",
+    "mental_health",
+    "dental",
+    "vision",
+    "wellness",
+    "fitness"
+  ],
+
+  "examples": {
+    "positive": [
+      "patient medical records",
+      "diagnosis codes ICD-10",
+      "health insurance claims",
+      "prescription medication",
+      "blood test results",
+      "mental health assessment",
+      "hospital discharge summary"
+    ],
+    "negative": [
+      "customer purchase history",
+      "employee salary data",
+      "marketing preferences",
+      "website analytics"
+    ]
+  },
+
+  "detection_settings": {
+    "case_sensitive": false,
+    "word_boundaries": true,
+    "min_confidence": 0.3,
+    "require_multiple_matches": false
+  }
+}

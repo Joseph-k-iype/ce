@@ -1,0 +1,52 @@
+id,name,definition
+employees,Employees,Current employees of the organization
+contractors,Contractors,Independent contractors and consultants engaged by the organization
+interns,Interns,Individuals participating in internship programs
+board_members,Board Members,Members of the board of directors
+executive_officers,Executive Officers,Senior executive and C-suite officers
+temporary_staff,Temporary Staff,Temporary or seasonal workers
+volunteers,Volunteers,Unpaid volunteers working with the organization
+former_employees,Former Employees,Previous employees who have left the organization
+retirees,Retirees,Former employees receiving retirement benefits
+applicants,Applicants,Job applicants and candidates
+trainees,Trainees,Individuals undergoing training programs
+secondees,Secondees,Employees on secondment from other entities
+consultants,Consultants,External consultants providing advisory services
+agency_workers,Agency Workers,Workers employed through staffing agencies
+part_time_workers,Part-time Workers,Employees working part-time hours
+remote_workers,Remote Workers,Employees working remotely
+expatriates,Expatriates,Employees working in a country other than their home country
+customers,Customers,Current customers and clients of the organization
+prospects,Prospects,Potential customers and sales leads
+beneficiaries,Beneficiaries,Beneficiaries of financial products and services
+dependents,Dependents,Dependents of employees or customers
+account_holders,Account Holders,Individuals holding accounts with the organization
+cardholders,Cardholders,Holders of payment cards issued by the organization
+loan_applicants,Loan Applicants,Individuals applying for loans
+policyholders,Policyholders,Holders of insurance policies
+claimants,Claimants,Individuals making claims against policies
+guarantors,Guarantors,Individuals providing financial guarantees
+patients,Patients,Individuals receiving healthcare services
+students,Students,Students and educational program participants
+minors,Minors,Individuals under the age of legal majority
+vulnerable_persons,Vulnerable Persons,Individuals in vulnerable circumstances
+power_of_attorney_holders,Power of Attorney Holders,Individuals holding power of attorney
+joint_account_holders,Joint Account Holders,Co-holders of joint accounts
+authorized_representatives,Authorized Representatives,Individuals authorized to act on behalf of others
+suppliers,Suppliers,Organizations and individuals supplying goods
+vendors,Vendors,Third party vendors providing services
+agents,Agents,Authorized agents and intermediaries
+brokers,Brokers,Financial brokers and intermediaries
+shareholders,Shareholders,Shareholders and equity holders
+regulators,Regulators,Regulatory authority personnel
+auditors,Auditors,Internal and external auditors
+legal_representatives,Legal Representatives,Legal counsel and representatives
+witnesses,Witnesses,Witnesses in legal or compliance proceedings
+referees,Referees,Professional and personal references
+emergency_contacts,Emergency Contacts,Designated emergency contact persons
+next_of_kin,Next of Kin,Nearest family members or relatives
+business_partners,Business Partners,Business partnership entities and individuals
+correspondent_banks,Correspondent Banks,Correspondent banking relationship entities
+intermediaries,Intermediaries,Financial and business intermediaries
+sub_processors,Sub-processors,Third party data sub-processors
+service_providers,Service Providers,External service providers

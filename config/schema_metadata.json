@@ -1,0 +1,204 @@
+{
+  "nodeTypes": [
+    {
+      "label": "Rule",
+      "laneId": "rule",
+      "reactFlowType": "ruleNode",
+      "properties": ["name", "rule_id", "description", "priority", "odrl_type", "has_pii_required", "origin_match_type", "receiving_match_type", "rule_type", "priority_order", "outcome", "odrl_action", "odrl_target", "requires_any_data", "requires_personal_data", "enabled"],
+      "primary": true,
+      "order": 2
+    },
+    {
+      "label": "CountryGroup",
+      "laneId": "originCountry",
+      "reactFlowType": "countryGroupNode",
+      "properties": ["name"],
+      "primary": true,
+      "order": 0
+    },
+    {
+      "label": "Country",
+      "laneId": "originCountry",
+      "reactFlowType": "countryNode",
+      "properties": ["name", "iso_code", "iso2", "iso3", "rtn_code"],
+      "primary": true,
+      "order": 0
+    },
+    {
+      "label": "DataCategory",
+      "laneId": "dataCategory",
+      "reactFlowType": "dataCategoryNode",
+      "properties": ["name", "description", "gdpr_category_name"],
+      "primary": true,
+      "order": 3
+    },
+    {
+      "label": "Purpose",
+      "laneId": "purpose",
+      "reactFlowType": "purposeNode",
+      "properties": ["name", "description"],
+      "primary": true,
+      "order": 4
+    },
+    {
+      "label": "GDC",
+      "laneId": "gdc",
+      "reactFlowType": "gdcNode",
+      "properties": ["name", "description", "level", "data_domain", "data_privacy_indicator", "gdc_level_2", "gdc_level_3", "category"],
+      "primary": false,
+      "order": 7
+    },
+    {
+      "label": "Process",
+      "laneId": "processes",
+      "reactFlowType": "processNode",
+      "properties": ["name", "category", "description", "definition", "global_business_function", "process_level_indicator", "level_1_name", "level_2_name", "level_3_name", "l1", "l2", "l3"],
+      "primary": true,
+      "order": 5
+    },
+    {
+      "label": "Action",
+      "laneId": "processes",
+      "reactFlowType": "processNode",
+      "properties": ["name", "description"],
+      "primary": true,
+      "order": 5
+    },
+    {
+      "label": "Duty",
+      "laneId": "caseModule",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "description", "module", "value"],
+      "primary": true,
+      "order": 6
+    },
+    {
+      "label": "Permission",
+      "laneId": "permission",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "description"],
+      "primary": false,
+      "order": 10
+    },
+    {
+      "label": "Prohibition",
+      "laneId": "prohibition",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "description"],
+      "primary": false,
+      "order": 11
+    },
+    {
+      "label": "LegalEntity",
+      "laneId": "legalEntity",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "description"],
+      "primary": false,
+      "order": 8
+    },
+    {
+      "label": "DataSubject",
+      "laneId": "dataSubject",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "description"],
+      "primary": false,
+      "order": 9
+    },
+    {
+      "label": "Attribute",
+      "laneId": "attribute",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "description"],
+      "primary": false,
+      "order": 12
+    },
+    {
+      "label": "Authority",
+      "laneId": "authority",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "country_code"],
+      "primary": false,
+      "order": 13
+    },
+    {
+      "label": "Regulator",
+      "laneId": "regulator",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "country_code", "region", "regulator", "regulator_type", "regulator_definition", "regulator_address", "regulator_original_name", "notification_m", "notification_nm", "approval_m", "approval_nm", "approval_time", "internal_engagement", "automated_notification"],
+      "primary": false,
+      "order": 14
+    },
+    {
+      "label": "GlobalBusinessFunction",
+      "laneId": "globalBusinessFunction",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "rtn_code", "gbgf_level_1", "privacy_notice", "gbgf_level_2"],
+      "primary": false,
+      "order": 15
+    },
+    {
+      "label": "PurposeOfProcessing",
+      "laneId": "purposeOfProcessing",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "description"],
+      "primary": false,
+      "order": 16
+    },
+    {
+      "label": "SensitiveDataCategory",
+      "laneId": "sensitiveDataCategory",
+      "reactFlowType": "caseModuleNode",
+      "properties": ["name", "country_code", "definition", "sensitive_data_category_name"],
+      "primary": false,
+      "order": 17
+    }
+  ],
+  "lanes": [
+    {"id": "originCountry", "label": "Originating Country", "order": 0, "primary": true},
+    {"id": "receivingCountry", "label": "Receiving Country", "order": 1, "primary": true},
+    {"id": "rule", "label": "Rule", "order": 2, "primary": true},
+    {"id": "dataCategory", "label": "Data Category", "order": 3, "primary": true},
+    {"id": "purpose", "label": "Purpose of Processing", "order": 4, "primary": true},
+    {"id": "processes", "label": "Processes", "order": 5, "primary": true},
+    {"id": "caseModule", "label": "Case Module", "order": 6, "primary": true},
+    {"id": "gdc", "label": "GDC", "order": 7, "primary": false},
+    {"id": "legalEntity", "label": "Legal Entity", "order": 8, "primary": false},
+    {"id": "dataSubject", "label": "Data Subject", "order": 9, "primary": false},
+    {"id": "permission", "label": "Permission", "order": 10, "primary": false},
+    {"id": "prohibition", "label": "Prohibition", "order": 11, "primary": false},
+    {"id": "attribute", "label": "Attribute", "order": 12, "primary": false},
+    {"id": "authority", "label": "Authority", "order": 13, "primary": false},
+    {"id": "regulator", "label": "Regulator", "order": 14, "primary": false},
+    {"id": "globalBusinessFunction", "label": "Global Business Function", "order": 15, "primary": false},
+    {"id": "purposeOfProcessing", "label": "Purpose of Processing (Detail)", "order": 16, "primary": false},
+    {"id": "sensitiveDataCategory", "label": "Sensitive Data Category", "order": 17, "primary": false}
+  ],
+  "relationshipTypes": [
+    {"type": "TRIGGERED_BY_ORIGIN", "from": "Rule", "to": "CountryGroup", "protected": true},
+    {"type": "TRIGGERED_BY_ORIGIN", "from": "Rule", "to": "Country", "protected": true},
+    {"type": "TRIGGERED_BY_RECEIVING", "from": "Rule", "to": "CountryGroup", "protected": true},
+    {"type": "TRIGGERED_BY_RECEIVING", "from": "Rule", "to": "Country", "protected": true},
+    {"type": "BELONGS_TO", "from": "Country", "to": "CountryGroup", "protected": true},
+    {"type": "EXCLUDES_RECEIVING", "from": "Rule", "to": "CountryGroup", "protected": true},
+    {"type": "HAS_DATA_CATEGORY", "from": "Rule", "to": "DataCategory", "protected": false},
+    {"type": "HAS_PURPOSE", "from": "Rule", "to": "Purpose", "protected": false},
+    {"type": "HAS_GDC", "from": "Rule", "to": "GDC", "protected": false},
+    {"type": "HAS_PROCESS", "from": "Rule", "to": "Process", "protected": false},
+    {"type": "HAS_ACTION", "from": "Rule", "to": "Action", "protected": false},
+    {"type": "HAS_DUTY", "from": "Rule", "to": "Duty", "protected": false},
+    {"type": "HAS_PERMISSION", "from": "Rule", "to": "Permission", "protected": false},
+    {"type": "HAS_PROHIBITION", "from": "Rule", "to": "Prohibition", "protected": false},
+    {"type": "HAS_ATTRIBUTE", "from": "Rule", "to": "Attribute", "protected": false},
+    {"type": "HAS_DATA_SUBJECT", "from": "Rule", "to": "DataSubject", "protected": false},
+    {"type": "HAS_LEGAL_ENTITY", "from": "Country", "to": "LegalEntity", "protected": false},
+    {"type": "LINKED_TO", "from": "Rule", "to": "GDC", "protected": false},
+    {"type": "LINKED_TO", "from": "Rule", "to": "Regulator", "protected": false},
+    {"type": "HAS_AUTHORITY", "from": "Country", "to": "Authority", "protected": false},
+    {"type": "HAS_GBGF", "from": "Country", "to": "GlobalBusinessFunction", "protected": false},
+    {"type": "HAS_REGULATOR", "from": "Country", "to": "Regulator", "protected": false},
+    {"type": "HAS_SENSITIVE_DATA_CATEGORY", "from": "Country", "to": "SensitiveDataCategory", "protected": false},
+    {"type": "CAN_HAVE_DUTY", "from": "Permission", "to": "Duty", "protected": false},
+    {"type": "BELONGS_TO_GBGF", "from": "Process", "to": "GlobalBusinessFunction", "protected": false},
+    {"type": "HAS_SUBPROCESS", "from": "Process", "to": "Process", "protected": false}
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "version": "1.0.0",
+  "description": "Metadata detection configuration for compliance rules",
+
+  "detection_categories": {
+    "financial_data": {
+      "enabled": true,
+      "keywords": [
+        "bank_account", "account_number", "routing_number",
+        "credit_card", "debit_card", "card_number", "cvv", "cvc",
+        "financial", "payment", "transaction", "balance",
+        "loan", "mortgage", "investment", "portfolio",
+        "salary", "income", "tax", "revenue", "profit",
+        "bank", "banking", "credit", "debit", "wire_transfer",
+        "iban", "swift", "bic", "ach", "sepa",
+        "stock", "bond", "mutual_fund", "etf",
+        "cryptocurrency", "bitcoin", "ethereum", "wallet",
+        "payroll", "compensation", "bonus", "commission"
+      ],
+      "patterns": [
+        "\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b",
+        "\\b[A-Z]{2}\\d{2}[A-Z0-9]{4,}\\b",
+        "account[-_]?num",
+        "routing[-_]?num",
+        "card[-_]?number",
+        "tax[-_]?id"
+      ],
+      "categories": ["financial", "banking", "payment", "tax"],
+      "case_sensitive": false,
+      "word_boundaries": true
+    },
+
+    "biometric_data": {
+      "enabled": true,
+      "keywords": [
+        "fingerprint", "facial_recognition", "face_scan",
+        "retina", "iris", "iris_scan", "voice_print",
+        "voiceprint", "biometric", "palm_print", "hand_geometry",
+        "gait", "keystroke_dynamics", "dna", "genetic",
+        "face_id", "touch_id", "biometric_authentication"
+      ],
+      "patterns": [
+        "biometric[-_]?id",
+        "finger[-_]?print",
+        "face[-_]?id",
+        "touch[-_]?id",
+        "voice[-_]?recognition"
+      ],
+      "categories": ["biometric", "identity", "authentication"],
+      "case_sensitive": false,
+      "word_boundaries": true
+    },
+
+    "location_data": {
+      "enabled": true,
+      "keywords": [
+        "gps", "geolocation", "coordinates", "latitude", "longitude",
+        "location", "address", "postal_code", "zip_code",
+        "city", "region", "country", "place", "venue",
+        "tracking", "whereabouts", "position", "geo"
+      ],
+      "patterns": [
+        "lat[-_]?long",
+        "geo[-_]?location",
+        "\\b-?\\d{1,3}\\.\\d+,\\s*-?\\d{1,3}\\.\\d+\\b"
+      ],
+      "categories": ["location", "geographic", "tracking"],
+      "case_sensitive": false,
+      "word_boundaries": true
+    },
+
+    "genetic_data": {
+      "enabled": true,
+      "keywords": [
+        "dna", "genetic", "genome", "genomic", "hereditary",
+        "gene", "chromosome", "mutation", "allele",
+        "genetic_testing", "ancestry", "genealogy",
+        "snp", "sequencing", "genotype", "phenotype"
+      ],
+      "patterns": [
+        "dna[-_]?sequence",
+        "genetic[-_]?test",
+        "genome[-_]?data"
+      ],
+      "categories": ["genetic", "genomic", "hereditary"],
+      "case_sensitive": false,
+      "word_boundaries": true
+    },
+
+    "political_data": {
+      "enabled": false,
+      "keywords": [
+        "political_affiliation", "party_membership", "voting_record",
+        "political_opinion", "political_belief"
+      ],
+      "patterns": [],
+      "categories": ["political"],
+      "case_sensitive": false,
+      "word_boundaries": true
+    },
+
+    "religious_data": {
+      "enabled": false,
+      "keywords": [
+        "religion", "religious_belief", "faith", "denomination",
+        "religious_affiliation", "church_membership"
+      ],
+      "patterns": [],
+      "categories": ["religious", "faith"],
+      "case_sensitive": false,
+      "word_boundaries": true
+    },
+
+    "sexual_orientation_data": {
+      "enabled": false,
+      "keywords": [
+        "sexual_orientation", "gender_identity", "lgbtq"
+      ],
+      "patterns": [],
+      "categories": ["sensitive_personal"],
+      "case_sensitive": false,
+      "word_boundaries": true
+    },
+
+    "criminal_data": {
+      "enabled": true,
+      "keywords": [
+        "criminal_record", "conviction", "arrest", "offense",
+        "criminal_history", "background_check", "court_record",
+        "felony", "misdemeanor", "probation", "parole"
+      ],
+      "patterns": [
+        "criminal[-_]?record",
+        "background[-_]?check"
+      ],
+      "categories": ["criminal", "legal"],
+      "case_sensitive": false,
+      "word_boundaries": true
+    }
+  },
+
+  "global_settings": {
+    "default_case_sensitive": false,
+    "default_word_boundaries": true,
+    "min_confidence_threshold": 0.3,
+    "max_matched_terms_to_return": 10
+  }
+}

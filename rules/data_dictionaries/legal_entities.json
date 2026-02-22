@@ -1,0 +1,140 @@
+{
+  "name": "legal_entities",
+  "description": "Country to Legal Entity mapping for privacy policy evaluation",
+  "entities": {
+    "United Kingdom": [
+      "HSBC Holdings plc",
+      "HSBC Bank plc",
+      "HSBC UK Bank plc",
+      "HSBC Global Services (UK) Limited"
+    ],
+    "United States": [
+      "HSBC Bank USA, N.A.",
+      "HSBC Finance Corporation",
+      "HSBC North America Holdings Inc.",
+      "HSBC Securities (USA) Inc."
+    ],
+    "United States of America": [
+      "HSBC Bank USA, N.A.",
+      "HSBC Finance Corporation",
+      "HSBC North America Holdings Inc.",
+      "HSBC Securities (USA) Inc."
+    ],
+    "Hong Kong": [
+      "The Hongkong and Shanghai Banking Corporation Limited",
+      "Hang Seng Bank Limited",
+      "HSBC Global Asset Management (Hong Kong) Limited"
+    ],
+    "France": [
+      "HSBC Continental Europe",
+      "HSBC France"
+    ],
+    "Germany": [
+      "HSBC Continental Europe S.A., Germany",
+      "HSBC Trinkaus & Burkhardt GmbH"
+    ],
+    "Singapore": [
+      "HSBC Bank (Singapore) Limited",
+      "The Hongkong and Shanghai Banking Corporation Limited, Singapore Branch"
+    ],
+    "India": [
+      "HSBC Bank India",
+      "The Hongkong and Shanghai Banking Corporation Limited, India"
+    ],
+    "China": [
+      "HSBC Bank (China) Company Limited",
+      "HSBC (China) Investment Management Limited"
+    ],
+    "Canada": [
+      "HSBC Bank Canada",
+      "HSBC Securities (Canada) Inc."
+    ],
+    "Australia": [
+      "HSBC Bank Australia Limited"
+    ],
+    "Japan": [
+      "HSBC Securities (Japan) Limited"
+    ],
+    "Switzerland": [
+      "HSBC Private Bank (Suisse) SA",
+      "HSBC Bank plc, Zurich Branch"
+    ],
+    "Ireland": [
+      "HSBC Securities Services (Ireland) DAC"
+    ],
+    "Luxembourg": [
+      "HSBC Continental Europe, Luxembourg"
+    ],
+    "Mexico": [
+      "HSBC Mexico, S.A."
+    ],
+    "Malaysia": [
+      "HSBC Bank Malaysia Berhad",
+      "HSBC Amanah Malaysia Berhad"
+    ],
+    "United Arab Emirates": [
+      "HSBC Bank Middle East Limited"
+    ],
+    "Saudi Arabia": [
+      "HSBC Saudi Arabia",
+      "Saudi British Bank (SABB)"
+    ],
+    "Jersey": [
+      "HSBC Bank plc, Jersey Branch"
+    ],
+    "Guernsey": [
+      "HSBC Bank plc, Guernsey Branch"
+    ],
+    "Isle of Man": [
+      "HSBC Bank plc, Isle of Man Branch"
+    ],
+    "Bermuda": [
+      "HSBC Bank Bermuda Limited"
+    ],
+    "Macao": [
+      "HSBC Bank (Macao) Limited"
+    ],
+    "Taiwan": [
+      "HSBC Bank (Taiwan) Limited"
+    ],
+    "South Africa": [
+      "HSBC Bank plc, Johannesburg Branch"
+    ],
+    "Bahrain": [
+      "HSBC Bank Middle East Limited, Bahrain Branch"
+    ],
+    "Qatar": [
+      "HSBC Bank Middle East Limited, Qatar Branch"
+    ],
+    "Kuwait": [
+      "HSBC Bank Middle East Limited, Kuwait Branch"
+    ],
+    "Oman": [
+      "HSBC Bank Oman SAOG"
+    ],
+    "Egypt": [
+      "HSBC Bank Egypt S.A.E."
+    ],
+    "Philippines": [
+      "The Hongkong and Shanghai Banking Corporation Limited, Philippine Branch"
+    ],
+    "Indonesia": [
+      "PT Bank HSBC Indonesia"
+    ],
+    "Vietnam": [
+      "HSBC Bank (Vietnam) Limited"
+    ],
+    "Thailand": [
+      "The Hongkong and Shanghai Banking Corporation Limited, Bangkok Branch"
+    ],
+    "Sri Lanka": [
+      "HSBC Sri Lanka"
+    ],
+    "Bangladesh": [
+      "The Hongkong and Shanghai Banking Corporation Limited, Bangladesh"
+    ],
+    "New Zealand": [
+      "The Hongkong and Shanghai Banking Corporation Limited, New Zealand Branch"
+    ]
+  }
+}

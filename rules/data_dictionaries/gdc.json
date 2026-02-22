@@ -1,0 +1,65 @@
+{
+  "name": "gdc",
+  "description": "Global Data Categories — types of data being processed",
+  "ontology_references": ["FIBO", "HL7 FHIR", "BIAN", "ISO 22745"],
+  "categories": {
+    "Personal Identifiers": {
+      "entries": [
+        "Full Name", "Date of Birth", "National ID", "Passport Number",
+        "Social Security Number", "Email Address", "Phone Number",
+        "IP Address", "Device Identifier", "Employee ID",
+        "Tax Identification Number", "Driver License Number"
+      ]
+    },
+    "Financial Data": {
+      "entries": [
+        "Bank Account Number", "Credit Card Number", "Income Details",
+        "Credit Score", "Investment Portfolio", "Loan Details",
+        "Transaction History", "Tax Records", "Insurance Policy",
+        "Pension Details", "Salary Information", "Billing Address"
+      ]
+    },
+    "Health Data": {
+      "entries": [
+        "Medical Records", "Diagnoses", "Prescriptions",
+        "Lab Results", "Mental Health Records", "Disability Status",
+        "Genetic Data", "Vaccination Records"
+      ]
+    },
+    "Biometric Data": {
+      "entries": [
+        "Fingerprint", "Facial Recognition Data", "Voice Print",
+        "Iris Scan", "Retina Pattern", "Palm Print",
+        "Gait Analysis", "Keystroke Dynamics"
+      ]
+    },
+    "Location Data": {
+      "entries": [
+        "GPS Coordinates", "Home Address", "Work Address",
+        "Travel History", "Check-in Data", "Geofence Data",
+        "Cell Tower Data", "Wi-Fi Location Data"
+      ]
+    },
+    "Employment Data": {
+      "entries": [
+        "Job Title", "Employment History", "Performance Reviews",
+        "Disciplinary Records", "Training Records", "Attendance Records",
+        "Leave Records", "Compensation History"
+      ]
+    },
+    "Communication Data": {
+      "entries": [
+        "Email Content", "Chat Messages", "Call Records",
+        "Video Conference Data", "Social Media Posts",
+        "Correspondence Records"
+      ]
+    },
+    "Behavioral Data": {
+      "entries": [
+        "Browsing History", "Purchase History", "App Usage Data",
+        "Search Queries", "Click Patterns", "Content Preferences",
+        "Subscription History", "Loyalty Program Data"
+      ]
+    }
+  }
+}

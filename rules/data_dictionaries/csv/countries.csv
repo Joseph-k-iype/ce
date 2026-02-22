@@ -1,0 +1,67 @@
+id,country_name,iso_2,iso_3,legal_entity_id,legal_entity_name,rtn_code
+uk,United Kingdom,GB,GBR,hsbc_holdings,HSBC Holdings plc,UK001
+us,United States,US,USA,hsbc_usa,HSBC Bank USA N.A.,US001
+hk,Hong Kong,HK,HKG,hsbc_hk,The Hongkong and Shanghai Banking Corporation Limited,HK001
+fr,France,FR,FRA,hsbc_fr,HSBC Continental Europe,FR001
+de,Germany,DE,DEU,hsbc_de,HSBC Continental Europe S.A. Germany,DE001
+sg,Singapore,SG,SGP,hsbc_sg,HSBC Bank (Singapore) Limited,SG001
+in,India,IN,IND,hsbc_in,HSBC Bank India,IN001
+cn,China,CN,CHN,hsbc_cn,HSBC Bank (China) Company Limited,CN001
+ca,Canada,CA,CAN,hsbc_ca,HSBC Bank Canada,CA001
+au,Australia,AU,AUS,hsbc_au,HSBC Bank Australia Limited,AU001
+jp,Japan,JP,JPN,hsbc_jp,HSBC Securities (Japan) Limited,JP001
+ch,Switzerland,CH,CHE,hsbc_ch,HSBC Private Bank (Suisse) SA,CH001
+ie,Ireland,IE,IRL,hsbc_ie,HSBC Securities Services (Ireland) DAC,IE001
+lu,Luxembourg,LU,LUX,hsbc_lu,HSBC Continental Europe Luxembourg,LU001
+mx,Mexico,MX,MEX,hsbc_mx,HSBC Mexico S.A.,MX001
+my,Malaysia,MY,MYS,hsbc_my,HSBC Bank Malaysia Berhad,MY001
+ae,United Arab Emirates,AE,ARE,hsbc_ae,HSBC Bank Middle East Limited,AE001
+sa,Saudi Arabia,SA,SAU,hsbc_sa,HSBC Saudi Arabia,SA001
+je,Jersey,JE,JEY,hsbc_je,HSBC Bank plc Jersey Branch,JE001
+gg,Guernsey,GG,GGY,hsbc_gg,HSBC Bank plc Guernsey Branch,GG001
+im,Isle of Man,IM,IMN,hsbc_im,HSBC Bank plc Isle of Man Branch,IM001
+bm,Bermuda,BM,BMU,hsbc_bm,HSBC Bank Bermuda Limited,BM001
+mo,Macao,MO,MAC,hsbc_mo,HSBC Bank (Macao) Limited,MO001
+tw,Taiwan,TW,TWN,hsbc_tw,HSBC Bank (Taiwan) Limited,TW001
+za,South Africa,ZA,ZAF,hsbc_za,HSBC Bank plc Johannesburg Branch,ZA001
+bh,Bahrain,BH,BHR,hsbc_bh,HSBC Bank Middle East Limited Bahrain Branch,BH001
+qa,Qatar,QA,QAT,hsbc_qa,HSBC Bank Middle East Limited Qatar Branch,QA001
+kw,Kuwait,KW,KWT,hsbc_kw,HSBC Bank Middle East Limited Kuwait Branch,KW001
+om,Oman,OM,OMN,hsbc_om,HSBC Bank Oman SAOG,OM001
+eg,Egypt,EG,EGY,hsbc_eg,HSBC Bank Egypt S.A.E.,EG001
+ph,Philippines,PH,PHL,hsbc_ph,The Hongkong and Shanghai Banking Corporation Limited Philippine Branch,PH001
+id,Indonesia,ID,IDN,hsbc_id,PT Bank HSBC Indonesia,ID001
+vn,Vietnam,VN,VNM,hsbc_vn,HSBC Bank (Vietnam) Limited,VN001
+th,Thailand,TH,THA,hsbc_th,The Hongkong and Shanghai Banking Corporation Limited Bangkok Branch,TH001
+lk,Sri Lanka,LK,LKA,hsbc_lk,HSBC Sri Lanka,LK001
+bd,Bangladesh,BD,BGD,hsbc_bd,The Hongkong and Shanghai Banking Corporation Limited Bangladesh,BD001
+nz,New Zealand,NZ,NZL,hsbc_nz,The Hongkong and Shanghai Banking Corporation Limited New Zealand Branch,NZ001
+nl,Netherlands,NL,NLD,,,,NL001
+se,Sweden,SE,SWE,,,,SE001
+no,Norway,NO,NOR,,,,NO001
+dk,Denmark,DK,DNK,,,,DK001
+fi,Finland,FI,FIN,,,,FI001
+at,Austria,AT,AUT,,,,AT001
+be,Belgium,BE,BEL,,,,BE001
+it,Italy,IT,ITA,,,,IT001
+es,Spain,ES,ESP,,,,ES001
+pt,Portugal,PT,PRT,,,,PT001
+pl,Poland,PL,POL,,,,PL001
+ro,Romania,RO,ROU,,,,RO001
+bg,Bulgaria,BG,BGR,,,,BG001
+hr,Croatia,HR,HRV,,,,HR001
+cy,Cyprus,CY,CYP,,,,CY001
+cz,Czechia,CZ,CZE,,,,CZ001
+ee,Estonia,EE,EST,,,,EE001
+gr,Greece,GR,GRC,,,,GR001
+hu,Hungary,HU,HUN,,,,HU001
+lv,Latvia,LV,LVA,,,,LV001
+lt,Lithuania,LT,LTU,,,,LT001
+mt,Malta,MT,MLT,,,,MT001
+sk,Slovakia,SK,SVK,,,,SK001
+si,Slovenia,SI,SVN,,,,SI001
+is,Iceland,IS,ISL,,,,IS001
+li,Liechtenstein,LI,LIE,,,,LI001
+br,Brazil,BR,BRA,,,,BR001
+kr,Republic of Korea,KR,KOR,,,,KR001
+tr,Turkiye,TR,TUR,,,,TR001

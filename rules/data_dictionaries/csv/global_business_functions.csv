@@ -1,0 +1,11 @@
+id,name,rtn_code,gbgf_level_1,privacy_notice,gbgf_level_2
+fin_ops,Financial Operations,FO001,Financial Operations,Financial Services Privacy Notice,Payment Services
+hr,Human Resources,HR001,Human Resources,Employee Privacy Notice,HR Operations
+cust_mgmt,Customer Management,CM001,Customer Management,Customer Privacy Notice,Client Services
+tech_ops,Technology Operations,TO001,Technology Operations,Technology Privacy Notice,IT Services
+compliance_legal,Compliance and Legal,CL001,Compliance and Legal,Legal Privacy Notice,Regulatory Affairs
+wealth_mgmt,Wealth Management,WM001,Wealth Management,Wealth Management Privacy Notice,Investment Services
+insurance,Insurance,IN001,Insurance,Insurance Privacy Notice,Underwriting
+commercial_banking,Commercial Banking,CB001,Commercial Banking,Commercial Banking Privacy Notice,Business Banking
+retail_banking,Retail Banking,RB001,Retail Banking,Retail Banking Privacy Notice,Personal Banking
+global_markets,Global Markets,GM001,Global Markets,Markets Privacy Notice,Trading

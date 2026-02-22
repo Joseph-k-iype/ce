@@ -1,0 +1,46 @@
+{
+  "name": "processes",
+  "description": "Business process taxonomy for data transfer classification",
+  "ontology_references": ["APQC PCF", "BIAN", "COBIT"],
+  "categories": {
+    "Financial Operations": {
+      "entries": [
+        "Payment Processing", "Credit Assessment", "Loan Origination",
+        "Account Management", "Treasury Operations", "Trade Settlement",
+        "Risk Assessment", "Fraud Detection", "Anti-Money Laundering",
+        "Regulatory Reporting", "Tax Calculation", "Invoice Processing"
+      ]
+    },
+    "Human Resources": {
+      "entries": [
+        "Recruitment", "Onboarding", "Payroll Processing",
+        "Performance Management", "Benefits Administration",
+        "Employee Relations", "Talent Acquisition", "Workforce Planning",
+        "Compensation Management", "Training and Development"
+      ]
+    },
+    "Customer Management": {
+      "entries": [
+        "Customer Onboarding", "KYC Verification", "Account Opening",
+        "Customer Service", "Complaint Handling", "Relationship Management",
+        "Customer Analytics", "Loyalty Management", "Cross-selling",
+        "Customer Communication"
+      ]
+    },
+    "Technology Operations": {
+      "entries": [
+        "Data Migration", "System Integration", "Cloud Hosting",
+        "Disaster Recovery", "Security Monitoring", "Access Management",
+        "Software Development", "Testing", "Deployment", "Incident Management"
+      ]
+    },
+    "Compliance and Legal": {
+      "entries": [
+        "Privacy Impact Assessment", "Regulatory Compliance",
+        "Audit Management", "Contract Management", "Legal Review",
+        "Data Subject Requests", "Consent Management",
+        "Breach Notification", "Policy Management", "Third Party Due Diligence"
+      ]
+    }
+  }
+}

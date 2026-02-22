@@ -1,0 +1,21 @@
+{
+  "name": "purpose_of_processing",
+  "description": "Standard purposes of processing for privacy policy evaluation",
+  "purposes": [
+    "Prevention of Financial Crime",
+    "Risk Management",
+    "Customer Due Diligence",
+    "Regulatory Reporting",
+    "Tax Compliance",
+    "Audit and Assurance",
+    "HR and Employee Management",
+    "Marketing and Communications",
+    "Product and Service Delivery",
+    "Credit Risk Assessment",
+    "Fraud Detection and Prevention",
+    "Legal and Compliance",
+    "Information Technology and Security",
+    "Business Continuity and Disaster Recovery",
+    "Research and Analytics"
+  ]
+}

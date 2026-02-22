@@ -1,0 +1,34 @@
+id,name,country_code_iso_2
+fca,Financial Conduct Authority,GB
+pra,Prudential Regulation Authority,GB
+boe,Bank of England,GB
+sec,Securities and Exchange Commission,US
+fed,Federal Reserve,US
+occ,Office of the Comptroller of the Currency,US
+fdic,Federal Deposit Insurance Corporation,US
+cfpb,Consumer Financial Protection Bureau,US
+fincen,Financial Crimes Enforcement Network,US
+hkma,Hong Kong Monetary Authority,HK
+sfc,Securities and Futures Commission,HK
+amf,Autorite des Marches Financiers,FR
+acpr,Autorite de Controle Prudentiel et de Resolution,FR
+bafin,Federal Financial Supervisory Authority,DE
+mas,Monetary Authority of Singapore,SG
+rbi,Reserve Bank of India,IN
+sebi,Securities and Exchange Board of India,IN
+pboc,People's Bank of China,CN
+cbirc,China Banking and Insurance Regulatory Commission,CN
+csrc,China Securities Regulatory Commission,CN
+apra,Australian Prudential Regulation Authority,AU
+asic,Australian Securities and Investments Commission,AU
+fsa,Financial Services Agency,JP
+osfi,Office of the Superintendent of Financial Institutions,CA
+cbu,Central Bank of the UAE,AE
+sama,Saudi Arabian Monetary Authority,SA
+bnm,Bank Negara Malaysia,MY
+bsp,Bangko Sentral ng Pilipinas,PH
+ojk,Otoritas Jasa Keuangan,ID
+bot,Bank of Thailand,TH
+ecb,European Central Bank,EU
+eba,European Banking Authority,EU
+esma,European Securities and Markets Authority,EU

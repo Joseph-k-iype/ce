@@ -1,0 +1,55 @@
+id,name,definition,data_domain,data_privacy_indicator,gdc_level_2,gdc_level_3
+full_name,Full Name,Complete legal name of a natural person,Personal Identifiers,PII,Identity Data,Name Data
+date_of_birth,Date of Birth,Date on which a person was born,Personal Identifiers,PII,Identity Data,Birth Data
+national_id,National ID,Government-issued national identification number,Personal Identifiers,PII,Identity Data,Government ID
+passport_number,Passport Number,Travel document identification number,Personal Identifiers,PII,Identity Data,Travel Documents
+social_security_number,Social Security Number,Government-issued social security or insurance number,Personal Identifiers,Sensitive PII,Identity Data,Government ID
+email_address,Email Address,Electronic mail address,Personal Identifiers,PII,Contact Data,Digital Contact
+phone_number,Phone Number,Telephone or mobile contact number,Personal Identifiers,PII,Contact Data,Telephone
+ip_address,IP Address,Internet Protocol address,Personal Identifiers,PII,Technical Data,Network Identifiers
+device_identifier,Device Identifier,Unique hardware or software device identifier,Personal Identifiers,PII,Technical Data,Device Data
+employee_id,Employee ID,Internal employee identification number,Personal Identifiers,PII,Employment Data,Employee Identifiers
+tax_id,Tax Identification Number,Tax authority issued identification number,Personal Identifiers,Sensitive PII,Financial Data,Tax Data
+driver_license,Driver License Number,Government-issued driving license number,Personal Identifiers,PII,Identity Data,Government ID
+bank_account,Bank Account Number,Financial institution account number,Financial Data,Sensitive PII,Financial Data,Account Data
+credit_card,Credit Card Number,Payment card number,Financial Data,Sensitive PII,Financial Data,Payment Data
+income,Income Details,Information about earnings and income sources,Financial Data,PII,Financial Data,Income Data
+credit_score,Credit Score,Numerical credit rating or score,Financial Data,PII,Financial Data,Credit Data
+investment,Investment Portfolio,Investment holdings and asset allocations,Financial Data,PII,Financial Data,Investment Data
+loan,Loan Details,Loan terms amounts and repayment information,Financial Data,PII,Financial Data,Lending Data
+transactions,Transaction History,Record of financial transactions,Financial Data,PII,Financial Data,Transaction Data
+tax_records,Tax Records,Tax filings returns and related documents,Financial Data,Sensitive PII,Financial Data,Tax Data
+insurance,Insurance Policy,Insurance coverage terms and claims,Financial Data,PII,Financial Data,Insurance Data
+pension,Pension Details,Pension scheme membership and entitlements,Financial Data,PII,Financial Data,Pension Data
+salary,Salary Information,Compensation and salary details,Financial Data,PII,Employment Data,Compensation Data
+billing_address,Billing Address,Address used for billing purposes,Financial Data,PII,Contact Data,Address Data
+medical_records,Medical Records,Health and medical treatment records,Health Data,Sensitive PII,Health Data,Medical Records
+diagnoses,Diagnoses,Medical diagnosis information,Health Data,Sensitive PII,Health Data,Clinical Data
+prescriptions,Prescriptions,Medication and prescription records,Health Data,Sensitive PII,Health Data,Pharmacy Data
+lab_results,Lab Results,Laboratory test results and reports,Health Data,Sensitive PII,Health Data,Clinical Data
+mental_health,Mental Health Records,Psychological and psychiatric records,Health Data,Sensitive PII,Health Data,Mental Health Data
+disability,Disability Status,Information about physical or mental disabilities,Health Data,Sensitive PII,Health Data,Disability Data
+genetic,Genetic Data,DNA and genetic testing results,Health Data,Sensitive PII,Health Data,Genetic Data
+vaccination,Vaccination Records,Immunization and vaccination history,Health Data,PII,Health Data,Immunization Data
+fingerprint,Fingerprint,Fingerprint biometric data,Biometric Data,Sensitive PII,Biometric Data,Physical Biometrics
+facial_recognition,Facial Recognition Data,Facial geometry and recognition patterns,Biometric Data,Sensitive PII,Biometric Data,Physical Biometrics
+voice_print,Voice Print,Voice biometric characteristics,Biometric Data,Sensitive PII,Biometric Data,Behavioral Biometrics
+iris_scan,Iris Scan,Iris pattern biometric data,Biometric Data,Sensitive PII,Biometric Data,Physical Biometrics
+gps,GPS Coordinates,Global positioning system location data,Location Data,PII,Location Data,Geolocation
+home_address,Home Address,Residential address information,Location Data,PII,Contact Data,Address Data
+work_address,Work Address,Business or employment address,Location Data,PII,Contact Data,Address Data
+travel_history,Travel History,Record of travel and movement,Location Data,PII,Location Data,Travel Data
+job_title,Job Title,Employment position or role title,Employment Data,PII,Employment Data,Role Data
+employment_history,Employment History,Record of past and current employment,Employment Data,PII,Employment Data,Career Data
+performance_reviews,Performance Reviews,Employee performance evaluation records,Employment Data,PII,Employment Data,Performance Data
+disciplinary,Disciplinary Records,Employee disciplinary action records,Employment Data,PII,Employment Data,HR Records
+training,Training Records,Employee training and certification records,Employment Data,PII,Employment Data,Development Data
+attendance,Attendance Records,Employee attendance and timekeeping data,Employment Data,PII,Employment Data,Time Data
+leave,Leave Records,Employee leave and absence records,Employment Data,PII,Employment Data,Time Data
+compensation_hist,Compensation History,Historical compensation and benefit data,Employment Data,PII,Employment Data,Compensation Data
+email_content,Email Content,Content of electronic mail messages,Communication Data,PII,Communication Data,Digital Communication
+chat_messages,Chat Messages,Instant messaging and chat records,Communication Data,PII,Communication Data,Digital Communication
+call_records,Call Records,Telephone and voice call records,Communication Data,PII,Communication Data,Voice Communication
+browsing_history,Browsing History,Web browsing activity records,Behavioral Data,PII,Behavioral Data,Digital Activity
+purchase_history,Purchase History,Product and service purchase records,Behavioral Data,PII,Behavioral Data,Transaction Activity
+app_usage,App Usage Data,Application usage patterns and statistics,Behavioral Data,PII,Behavioral Data,Digital Activity
