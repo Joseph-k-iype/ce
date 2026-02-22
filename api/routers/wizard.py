@@ -142,9 +142,9 @@ async def submit_step(session_id: str, submission: WizardStepSubmission):
         asyncio.create_task(_run_workflow_background(session, session_id))
 
     elif step == 2:
-        # Step 2: AI analysis complete → advance to metadata
-        # No data to submit — frontend just polls session status
-        session.current_step = 3
+        # Step 2: AI analysis complete → advance to metadata or review
+        # If in agentic mode, we can skip metadata configuration
+        session.current_step = 4 if session.agentic_mode else 3
 
     elif step == 3:
         # Step 3: Metadata (user-edited, possibly pre-filled from AI)

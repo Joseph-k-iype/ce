@@ -5,7 +5,7 @@ import gsap from 'gsap';
 
 export function Step2AIAnalysis() {
   const { sessionId, isProcessing, analysisResult, error } = useWizardStore();
-  const { events } = useAgentEvents(isProcessing ? sessionId : null);
+  const { events } = useAgentEvents(sessionId); // Always listen if sessionId is present
   const progressRef = useRef<HTMLDivElement>(null);
 
   // Calculate progress
@@ -17,11 +17,13 @@ export function Step2AIAnalysis() {
       }
     }
     const completed = eventList.filter(e => e.event_type === 'agent_completed').length;
-    return Math.min(100, Math.round((completed / 6) * 100));
+    const isWorkflowComplete = eventList.some(e => e.event_type === 'workflow_complete');
+    if (isWorkflowComplete) return 100;
+    return Math.min(95, Math.round((completed / 6) * 100));
   }, [events]);
 
-  const isComplete = !isProcessing && !!analysisResult;
-  const hasFailed = !isProcessing && !!error;
+  const hasResult = !!analysisResult;
+  const hasFailed = !!error;
 
   // Animate progress bar
   useEffect(() => {
@@ -44,8 +46,8 @@ export function Step2AIAnalysis() {
           Step 2: AI Analysis
         </h3>
         <p className="text-xs text-gray-400">
-          {isComplete
-            ? 'Analysis complete. Review the results below, then proceed to configure metadata.'
+          {hasResult
+            ? 'Analysis complete. Advancing to the next step...'
             : hasFailed
               ? 'Analysis failed. Go back to edit your rule text and try again.'
               : 'AI agents are analyzing your rule text and generating a machine-readable definition...'
@@ -53,11 +55,13 @@ export function Step2AIAnalysis() {
         </p>
       </div>
 
-      {/* Progress display */}
-      {isProcessing && (
+      {/* Progress display - show until we have a result OR if still processing */}
+      {(isProcessing || !hasResult) && !hasFailed && (
         <div className="card-dark p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-white">AI Agent Processing</span>
+            <span className="text-sm font-semibold text-white">
+              {progressPct === 100 ? 'Analysis Finalized' : 'AI Agent Processing'}
+            </span>
             <span className="text-xs text-gray-400">{progressPct}%</span>
           </div>
 
@@ -75,13 +79,13 @@ export function Step2AIAnalysis() {
         </div>
       )}
 
-      {/* Analysis results (read-only) */}
-      {isComplete && analysisResult && (
+      {/* Analysis results (read-only) - show even if processing the transition */}
+      {hasResult && (
         <div className="space-y-3">
           <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
             <p className="text-sm font-medium text-green-800">Analysis Complete</p>
             <p className="text-xs text-green-600 mt-0.5">
-              AI has generated a rule definition. Metadata fields on the next step will be pre-filled with suggestions.
+              AI has generated a rule definition. Preparing the next step...
             </p>
           </div>
 
