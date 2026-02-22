@@ -107,14 +107,32 @@ Verify you have:
 
 ### Step 2: RULE DEFINITION VALIDATION
 
-Check each field:
-- `rule_id`: Non-empty string (preferably starts with "RULE_")
-- `rule_type`: Must be "attribute" or "case_matching"
-- `priority`: Must be "high", "medium", or "low" (string, NOT integer)
-- `outcome`: Must be "permission" or "prohibition"
-- `odrl_type`: Must match outcome ("Permission" ↔ "permission", "Prohibition" ↔ "prohibition")
-- Countries: Should be real country names or group references
-- For attribute rules: `attribute_keywords` should be present (WARNING if missing, not ERROR)
+**IMPORTANT — Extensible Schema Rule:**
+The rule_definition schema is INTENTIONALLY EXTENSIBLE.  Extra fields are VALID and must
+NEVER be flagged as errors.  The following are ALL VALID optional fields — treat them as
+informational, not as problems:
+
+> `data_categories`, `purposes_of_processing`, `processes`, `gdc`, `regulators`,
+> `authorities`, `data_subjects`, `sensitive_data_categories`, `global_business_functions`,
+> `requires_personal_data`, `requires_any_data`, `requires_pii`,
+> `suggested_linked_entities`, `case_matching_module`, `attribute_name`,
+> `attribute_keywords`, `attribute_patterns`, `valid_until`, `description`,
+> `priority`, `required_actions`, `odrl_action`, `odrl_target`,
+> `origin_countries`, `receiving_countries`, `origin_group`, `receiving_group`
+
+**Only the following fields have BLOCKING validation rules:**
+- `rule_id`: Non-empty string (must be present — ERROR if missing or empty)
+- `rule_type`: Must be "attribute" or "case_matching" — ERROR if neither
+- `outcome`: Must be "permission" or "prohibition" — ERROR if neither
+- `odrl_type`: Must be "Permission" or "Prohibition" and must match `outcome` — ERROR if mismatched
+
+**All other fields are OPTIONAL.  Do NOT flag them as errors even if you think they could
+be more complete.  Use `warnings` for improvement suggestions only.**
+
+Additional checks (WARNING only, never ERROR):
+- `priority`: Should be "high", "medium", or "low" (string, NOT integer) — WARNING if integer
+- Countries: Should be real country names or group references — WARNING if uncertain
+- For attribute rules: `attribute_keywords` should be present — WARNING if missing
 
 ### Step 3: CYPHER QUERY VALIDATION
 

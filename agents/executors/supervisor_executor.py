@@ -23,6 +23,43 @@ from agents.ai_service import AIRequestError
 
 logger = logging.getLogger(__name__)
 
+# Max times the supervisor is allowed to fail JSON parsing before we switch to
+# deterministic routing.  Keeps the workflow alive even when the LLM response
+# is malformed or the prompt is too long to produce clean JSON.
+MAX_SUPERVISOR_PARSE_FAILURES = 2
+
+
+def _deterministic_next_agent(state: dict) -> str:
+    """State-based routing used when the supervisor LLM can't produce valid JSON.
+
+    Inspects what has already been produced and routes to the logical next step,
+    guaranteeing forward progress without requiring another LLM call.
+
+    CRITICAL: once validation_result exists (even failed) we go STRAIGHT to
+    rule_tester — never back to cypher_generator.  Routing cypher→supervisor→cypher
+    creates an infinite loop because cypher succeeds every time and the
+    _route_after_cypher returns "supervisor" on iteration > 0.
+    """
+    has_rule_def = bool(state.get("rule_definition"))
+    has_cypher   = bool(state.get("cypher_queries"))
+    has_val      = bool(state.get("validation_result"))
+
+    # Nothing done yet — start from scratch
+    if not has_rule_def:
+        return "rule_analyzer"
+
+    # Have rule_def but missing cypher — generate it
+    if not has_cypher:
+        return "cypher_generator"
+
+    # Have cypher but haven't validated yet — validate
+    if not has_val:
+        return "validator"
+
+    # Validation attempted (pass or fail) — move forward to testing.
+    # Do NOT route back to cypher_generator; that creates a tight loop.
+    return "rule_tester"
+
 
 def _compress_agent_outputs(agent_outputs: dict) -> dict:
     """Compress agent outputs to summary-only for retry iterations.
@@ -146,12 +183,30 @@ class SupervisorExecutor(ComplianceAgentExecutor):
                     f"step {state.get('graph_step', 0)}) - {reasoning}"
                 )
             else:
-                state["current_phase"] = "fail"
-                state["error_message"] = "Supervisor failed to produce valid response"
+                # LLM response was not valid JSON — don't immediately fail.
+                # Track consecutive parse failures and switch to deterministic
+                # routing once the threshold is exceeded, so the workflow can
+                # always make forward progress.
+                parse_failures = state.get("supervisor_parse_failures", 0) + 1
+                state["supervisor_parse_failures"] = parse_failures
+
+                fallback_route = _deterministic_next_agent(state)
+                logger.warning(
+                    f"Supervisor JSON parse failure #{parse_failures} "
+                    f"— using deterministic fallback route: '{fallback_route}'"
+                )
+                state["current_phase"] = fallback_route
 
         except AIRequestError as e:
-            logger.error(f"Supervisor error: {e}")
-            state["current_phase"] = "fail"
-            state["error_message"] = str(e)
+            # AI call failed (network, auth, rate-limit) — use deterministic
+            # fallback routing rather than immediately terminating the workflow.
+            parse_failures = state.get("supervisor_parse_failures", 0) + 1
+            state["supervisor_parse_failures"] = parse_failures
+            fallback_route = _deterministic_next_agent(state)
+            logger.error(
+                f"Supervisor AI request error (#{parse_failures}): {e} "
+                f"— deterministic fallback: '{fallback_route}'"
+            )
+            state["current_phase"] = fallback_route
 
         await self.emit_completed(event_queue, ctx)

@@ -33,8 +33,19 @@ def classify_failure(error: str) -> FailureCategory:
     """Classify an error string into a failure category."""
     error_lower = error.lower()
 
-    # Auth patterns
-    if any(kw in error_lower for kw in ("401", "403", "auth", "token", "unauthorized", "forbidden")):
+    # Auth patterns — use precise tokens only.
+    # NEVER use bare "auth" here: it substring-matches "authorities", "data_categorisation",
+    # "authorized" fields in validation error messages, causing LOGIC failures to be
+    # misclassified as AUTH (which has only 2 retries vs 3 for LOGIC).
+    auth_exact_tokens = ("401", "403")
+    auth_phrases = (
+        "unauthorized", "forbidden", "authentication failed", "authentication error",
+        "api key invalid", "api key expired", "invalid token", "token expired",
+        "token invalid", "access denied", "permission denied", "not authorized",
+    )
+    if any(kw in error_lower for kw in auth_exact_tokens) or any(
+        phrase in error_lower for phrase in auth_phrases
+    ):
         return FailureCategory.AUTH
 
     # Transient patterns

@@ -49,6 +49,18 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
     sse = get_sse_manager()
 
     try:
+        # Non-agentic mode must always use the deterministic "standard" pipeline
+        # (no supervisor LLM calls). The "autonomous" mode depends on the supervisor
+        # agent to produce valid JSON on every iteration; when it fails the entire
+        # workflow terminates. Standard mode has its own retry/skip logic that is
+        # robust to individual agent failures without any supervisor involvement.
+        # Agentic mode keeps "autonomous" so the supervisor can guide multi-step reasoning.
+        effective_mode = (
+            "standard"
+            if not session.agentic_mode
+            else getattr(session, "processing_mode", "autonomous")
+        )
+
         result = await asyncio.to_thread(
             run_rule_ingestion,
             origin_country=session.origin_country,
@@ -59,7 +71,7 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
             is_pii_related=session.is_pii_related,
             thread_id=session_id,
             agentic_mode=session.agentic_mode,
-            processing_mode=getattr(session, "processing_mode", "autonomous"),
+            processing_mode=effective_mode,
         )
 
         session.analysis_result = result.analysis_result

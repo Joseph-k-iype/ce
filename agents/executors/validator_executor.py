@@ -34,6 +34,68 @@ logger = logging.getLogger(__name__)
 # After this many consecutive validation failures, skip and proceed
 MAX_VALIDATION_RETRIES = 3
 
+# ── False-positive filter ───────────────────────────────────────────────────
+# The validator LLM often "invents" errors by cross-referencing the graph
+# schema shown in its system prompt against the rule_definition.  It flags
+# valid OPTIONAL fields (e.g. "requires_personal_data", "authorities") as
+# missing or incorrect — these are not real schema violations.
+#
+# Strategy: an error is a TRUE BLOCKING error only if it references a
+# REQUIRED field or a Cypher/syntax issue.  Errors that merely name a
+# known optional field are demoted to warnings so they don't block.
+_REQUIRED_FIELDS = frozenset({
+    "rule_id", "name", "rule_type", "outcome", "odrl_type",
+})
+_CYPHER_KEYWORDS = frozenset({
+    "cypher", "syntax", "blocklist", "exists subquery", "union", "foreach",
+    "delete", "semicolon", "parameter", "param", "query", "merge", "match",
+    "missing cypher", "missing rule", "node type", "relationship type",
+    "schema compliance",
+})
+# Known-valid optional fields — errors mentioning only these are false positives
+_OPTIONAL_FIELDS = frozenset({
+    "requires_personal_data", "requires_any_data", "requires_pii",
+    "data_categories", "data_categorisation", "purposes_of_processing",
+    "processes", "gdc", "regulators", "authorities", "data_subjects",
+    "sensitive_data_categories", "global_business_functions",
+    "suggested_linked_entities", "case_matching_module",
+    "attribute_name", "attribute_keywords", "attribute_patterns",
+    "valid_until", "description", "priority", "required_actions",
+    "odrl_action", "odrl_target", "origin_countries", "receiving_countries",
+    "origin_group", "receiving_group",
+})
+
+
+def _split_errors(errors: list) -> tuple[list, list]:
+    """Separate truly blocking errors from false positives.
+
+    Returns (blocking_errors, demoted_warnings).
+    An error is blocking only if it references a required field or a Cypher
+    syntax problem.  Errors that only reference known optional fields are
+    demoted to warnings so validation does not block on them.
+    """
+    blocking: list = []
+    demoted: list = []
+    for err in errors:
+        err_str = str(err).lower()
+
+        # Always keep errors about required fields or Cypher issues
+        is_required_violation = any(f in err_str for f in _REQUIRED_FIELDS)
+        is_cypher_issue       = any(kw in err_str for kw in _CYPHER_KEYWORDS)
+
+        if is_required_violation or is_cypher_issue:
+            blocking.append(err)
+            continue
+
+        # Demote if the only named field is an optional one
+        references_optional = any(f in err_str for f in _OPTIONAL_FIELDS)
+        if references_optional:
+            demoted.append(f"[auto-demoted to warning] {err}")
+        else:
+            blocking.append(err)
+
+    return blocking, demoted
+
 
 class ValidatorExecutor(ComplianceAgentExecutor):
     """Validator agent executor - comprehensive validation with fallback skip."""
@@ -165,6 +227,35 @@ class ValidatorExecutor(ComplianceAgentExecutor):
                 suggested_fixes=[str(f) for f in (parsed.get("suggested_fixes") or []) if f],
             )
 
+            # ── False-positive filtering ──────────────────────────────────
+            # The validator LLM sometimes flags valid optional fields
+            # (e.g. "requires_personal_data / data_categorisation") as errors
+            # because it cross-references the graph schema in its prompt.
+            # Demote those to warnings so they don't block the workflow.
+            blocking_errors, demoted = _split_errors(validated.errors)
+            if demoted:
+                logger.info(
+                    f"Validator: demoted {len(demoted)} false-positive error(s) "
+                    f"to warnings: {demoted[:2]}"
+                )
+                # Rebuild the model with corrected error/warning lists.
+                # After filtering: overall_valid is True iff no BLOCKING errors remain.
+                # (The LLM may have set overall_valid=False solely because of the
+                # false-positive errors we just demoted — recalculate from the
+                # cleaned error list.)
+                all_warnings = list(validated.warnings) + demoted
+                validated = ValidationResultModel(
+                    overall_valid=len(blocking_errors) == 0,
+                    confidence_score=validated.confidence_score,
+                    rule_definition_valid=validated.rule_definition_valid,
+                    cypher_valid=validated.cypher_valid,
+                    logical_valid=validated.logical_valid,
+                    errors=blocking_errors,
+                    warnings=all_warnings,
+                    suggested_fixes=validated.suggested_fixes,
+                )
+            # ─────────────────────────────────────────────────────────────
+
             state["validation_result"] = validated.model_dump()
             duration = (time.time() - start_time) * 1000
 
@@ -172,8 +263,8 @@ class ValidatorExecutor(ComplianceAgentExecutor):
             if self.db_service and validated.overall_valid:
                 self._run_test_queries(state, session_id)
 
-            # Accept if: overall_valid=True, or no real errors (only warnings), or confidence >= 0.5
-            has_blocking_errors = len(validated.errors) > 0
+            # Accept if: overall_valid=True, or no BLOCKING errors (only warnings), or confidence >= 0.5
+            has_blocking_errors = len(blocking_errors) > 0
             is_acceptable = (validated.overall_valid or not has_blocking_errors) and validated.confidence_score >= 0.4
 
             if is_acceptable:

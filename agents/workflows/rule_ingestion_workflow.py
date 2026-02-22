@@ -209,6 +209,22 @@ def route_from_supervisor(state: WizardAgentState) -> str:
         logger.warning(f"Circuit breaker: iteration={iteration} >= max={max_iterations}")
         return "fail"
 
+    # ── Breaker 2b: supervisor parse-failure escape valve ──
+    # When the supervisor has failed to produce JSON multiple times in a row,
+    # the workflow should not stay stuck in a supervisor→agent→supervisor loop.
+    # Once the threshold is exceeded and we already have a rule_definition,
+    # skip straight to review_proposal (complete) rather than calling the
+    # supervisor again.
+    supervisor_parse_failures = state.get("supervisor_parse_failures", 0)
+    if supervisor_parse_failures >= 3 and phase not in ("complete", "fail"):
+        if state.get("rule_definition"):
+            logger.warning(
+                f"Circuit breaker: supervisor_parse_failures={supervisor_parse_failures}, "
+                f"forcing complete to avoid infinite supervisor loop"
+            )
+            # Return "complete" — the edge map routes "complete" → review_proposal node
+            return "complete"
+
     # ── Breaker 3: validation retry exhaustion ──
     retry_count = state.get("validation_retry_count", 0)
     if retry_count >= 3 and phase not in ("complete", "fail", "rule_tester"):
@@ -340,12 +356,19 @@ def _standard_route_after_cypher(state: WizardAgentState) -> str:
 
 
 def _standard_route_after_validator(state: WizardAgentState) -> str:
-    """Standard mode: after validator, go to tester or complete."""
+    """Standard mode: after validator, go to tester or skip on repeated failures.
+
+    Failure counting: record_failure() increments agent_failure_counts["validator"]
+    on each call.  We allow exactly ONE retry (failure_count == 1 → re-run).
+    After two failures we give up and proceed to rule_tester so the workflow
+    is never stuck in an infinite validator ↔ validator loop.
+    """
     v_result = state.get("validation_result", {})
     if v_result.get("overall_valid") or v_result.get("skipped"):
         return "rule_tester"
-    # One retry on validation failure
-    if state.get("agent_failure_counts", {}).get("validator", 0) >= 1:
+    failure_count = state.get("agent_failure_counts", {}).get("validator", 0)
+    # Allow exactly one retry (first failure → retry; second failure → skip)
+    if failure_count >= 2:
         return "rule_tester"
     return "validator"
 
@@ -490,8 +513,18 @@ def build_rule_ingestion_graph(with_interrupt: bool = True, processing_mode: str
             return "supervisor"
 
         def _route_after_cypher(state: WizardAgentState) -> str:
-            """Fast path: go straight to validator after cypher in round 0."""
+            """Fast path: go straight to validator after cypher in round 0.
+            In later rounds, honor the phase set by the supervisor (or its
+            deterministic fallback) rather than looping back to supervisor
+            unconditionally — that creates a cypher→supervisor→cypher loop
+            when the supervisor keeps failing to produce valid JSON.
+            """
             if state.get("agentic_mode") and state.get("iteration", 0) == 0:
+                return "validator"
+            # If the supervisor used a deterministic fallback that set the
+            # phase to "validator" explicitly, honour it.
+            phase = state.get("current_phase", "supervisor")
+            if phase == "validator":
                 return "validator"
             return "supervisor"
 
