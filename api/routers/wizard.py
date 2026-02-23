@@ -121,6 +121,10 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
                 session.sensitive_data_categories = _merge_to_session(
                     session.sensitive_data_categories, rule_def['sensitive_data_categories']
                 )
+            if rule_def.get('data_subjects'):
+                session.data_subjects = _merge_to_session(
+                    session.data_subjects, rule_def['data_subjects']
+                )
             # ─────────────────────────────────────────────────────────────────
 
             if result.dictionary_result and not session.edited_terms_dictionary:
@@ -240,6 +244,7 @@ async def submit_step(session_id: str, submission: WizardStepSubmission):
         session.sensitive_data_categories = data.get("sensitive_data_categories", [])
         session.regulators = data.get("regulators", [])
         session.authorities = data.get("authorities", [])
+        session.data_subjects = data.get("data_subjects", [])
         session.valid_until = data.get("valid_until")
         session.current_step = 4
 
@@ -290,6 +295,7 @@ async def get_session(session_id: str):
         sensitive_data_categories=session.sensitive_data_categories,
         regulators=session.regulators,
         authorities=session.authorities,
+        data_subjects=session.data_subjects,
         valid_until=session.valid_until,
         rule_text=session.rule_text,
         analysis_result=session.analysis_result,
@@ -379,6 +385,9 @@ async def load_sandbox(session_id: str):
         if session.sensitive_data_categories:
             existing = rule_def.get('sensitive_data_categories') or []
             rule_def['sensitive_data_categories'] = list(dict.fromkeys(existing + session.sensitive_data_categories))
+        if session.data_subjects:
+            existing = rule_def.get('data_subjects') or []
+            rule_def['data_subjects'] = list(dict.fromkeys(existing + session.data_subjects))
 
         graph_name = sandbox.create_sandbox(session_id)
         success = sandbox.add_rule_to_sandbox(
@@ -466,6 +475,7 @@ async def sandbox_evaluate(session_id: str, request: dict):
                 metadata=request.get("metadata"),
                 regulators=session.regulators or None,
                 authorities=session.authorities or None,
+                data_subjects=session.data_subjects or None,
             )
             all_results.append(result)
 
@@ -526,6 +536,9 @@ async def approve_rule(session_id: str, request: WizardApprovalRequest):
         if session.sensitive_data_categories:
             existing = rule_def.get('sensitive_data_categories') or []
             rule_def['sensitive_data_categories'] = list(dict.fromkeys(existing + session.sensitive_data_categories))
+        if session.data_subjects:
+            existing = rule_def.get('data_subjects') or []
+            rule_def['data_subjects'] = list(dict.fromkeys(existing + session.data_subjects))
 
         success = sandbox.promote_to_main(
             graph_name=session.sandbox_graph_name or "",
@@ -610,6 +623,10 @@ async def resume_session(session_id: str):
             process_l2=session.process_l2,
             process_l3=session.process_l3,
             group_data_categories=session.group_data_categories,
+            sensitive_data_categories=session.sensitive_data_categories,
+            regulators=session.regulators,
+            authorities=session.authorities,
+            data_subjects=session.data_subjects,
             valid_until=session.valid_until,
             rule_text=session.rule_text,
             analysis_result=session.analysis_result,
@@ -651,6 +668,7 @@ async def resume_session(session_id: str):
         sensitive_data_categories=session.sensitive_data_categories,
         regulators=session.regulators,
         authorities=session.authorities,
+        data_subjects=session.data_subjects,
         valid_until=session.valid_until,
         rule_text=session.rule_text,
         analysis_result=session.analysis_result,
@@ -692,3 +710,43 @@ async def cancel_session(session_id: str):
     session.updated_at = datetime.now().isoformat()
 
     return {"message": "Session cancelled", "session_id": session_id}
+
+
+@router.get("/session/{session_id}/trigger-logic")
+async def get_trigger_logic(session_id: str) -> dict:
+    """Return structured trigger conditions for display as deterministic logic.
+
+    Shows users exactly what conditions will fire the rule before they approve.
+    OR logic: any single dimension match triggers the rule.
+    """
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    rule_def = session.edited_rule_definition or {}
+
+    all_processes = (
+        (session.process_l1 or []) +
+        (session.process_l2 or []) +
+        (session.process_l3 or [])
+    )
+
+    return {
+        "origin_group": rule_def.get("origin_group"),
+        "origin_countries": rule_def.get("origin_countries") or [],
+        "receiving_group": rule_def.get("receiving_group"),
+        "receiving_countries": rule_def.get("receiving_countries") or [],
+        "logic": "OR",
+        "dimensions": {
+            "data_categories": session.data_categories or rule_def.get("data_categories") or [],
+            "purposes": session.purposes_of_processing or rule_def.get("purposes_of_processing") or [],
+            "processes": all_processes or rule_def.get("processes") or [],
+            "gdc": session.group_data_categories or rule_def.get("gdc") or [],
+            "regulators": session.regulators or rule_def.get("regulators") or [],
+            "authorities": session.authorities or rule_def.get("authorities") or [],
+            "data_subjects": session.data_subjects or rule_def.get("data_subjects") or [],
+            "sensitive_data_categories": session.sensitive_data_categories or rule_def.get("sensitive_data_categories") or [],
+        },
+        "attribute_keywords_count": len(rule_def.get("attribute_keywords") or []),
+        "requires_pii": rule_def.get("requires_pii", False),
+    }

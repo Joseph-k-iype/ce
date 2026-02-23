@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWizardStore } from '../../../stores/wizardStore';
-import { editRule, editTerms } from '../../../services/wizardApi';
+import { editRule, editTerms, getTriggerLogic } from '../../../services/wizardApi';
+import type { TriggerLogicResponse } from '../../../types/wizard';
 
 export function Step4Review() {
   const {
@@ -8,6 +9,8 @@ export function Step4Review() {
     editedTermsDictionary,
     dictionaryResult,
     sessionId,
+    dataCategories, purposesOfProcessing, processL1, processL2, processL3,
+    groupDataCategories, sensitiveDataCategories, regulators, authorities, dataSubjects,
     setEditedRuleDefinition,
     setEditedTermsDictionary,
   } = useWizardStore();
@@ -36,9 +39,20 @@ export function Step4Review() {
   // Dictionary editing state — each entry is a JSON string the user can edit
   const [editableTerms, setEditableTerms] = useState<Record<string, string>>({});
 
+  // Trigger logic state
+  const [triggerLogic, setTriggerLogic] = useState<TriggerLogicResponse | null>(null);
+
   // UI state
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Fetch trigger logic from backend
+  useEffect(() => {
+    if (!sessionId) return;
+    getTriggerLogic(sessionId)
+      .then(setTriggerLogic)
+      .catch(() => { /* trigger logic is optional — ignore errors */ });
+  }, [sessionId]);
 
   // Initialize rule fields from the rule definition
   useEffect(() => {
@@ -280,6 +294,121 @@ export function Step4Review() {
           </div>
         </div>
       </div>
+
+      {/* Entity Mapping Grid — AI suggestions vs. user confirmed */}
+      <div className="card-dark p-5 space-y-3">
+        <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Entity Mapping Review</h4>
+        <p className="text-[10px] text-gray-500">AI-suggested entity mappings compared to your confirmed selections from Step 3.</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="text-left py-2 pr-4 text-gray-400 font-semibold w-36">Dimension</th>
+                <th className="text-left py-2 pr-4 text-gray-400 font-semibold">AI Suggested</th>
+                <th className="text-left py-2 text-gray-300 font-semibold">User Confirmed</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {[
+                { label: 'Data Categories', ai: (rule?.data_categories as string[]) || [], confirmed: dataCategories },
+                { label: 'Purposes', ai: (rule?.purposes_of_processing as string[]) || [], confirmed: purposesOfProcessing },
+                { label: 'Process L1', ai: (rule?.processes as string[]) || [], confirmed: processL1 },
+                { label: 'Process L2', ai: [], confirmed: processL2 },
+                { label: 'Process L3', ai: [], confirmed: processL3 },
+                { label: 'GDC', ai: (rule?.gdc as string[]) || [], confirmed: groupDataCategories },
+                { label: 'Regulators', ai: (rule?.regulators as string[]) || [], confirmed: regulators },
+                { label: 'Authorities', ai: (rule?.authorities as string[]) || [], confirmed: authorities },
+                { label: 'Data Subjects', ai: (rule?.data_subjects as string[]) || [], confirmed: dataSubjects },
+                { label: 'Sensitive Data', ai: (rule?.sensitive_data_categories as string[]) || [], confirmed: sensitiveDataCategories },
+              ].map(({ label, ai, confirmed }) => (
+                <tr key={label} className="hover:bg-gray-800/30">
+                  <td className="py-2 pr-4 text-gray-400 font-medium">{label}</td>
+                  <td className="py-2 pr-4 text-gray-500">
+                    {ai.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {ai.map(v => (
+                          <span key={v} className="px-1.5 py-0.5 bg-blue-900/40 text-blue-300 rounded text-[10px]">{v}</span>
+                        ))}
+                      </div>
+                    ) : <span className="text-gray-600 italic">—</span>}
+                  </td>
+                  <td className="py-2">
+                    {confirmed.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {confirmed.map(v => (
+                          <span key={v} className="px-1.5 py-0.5 bg-green-900/40 text-green-300 rounded text-[10px]">{v}</span>
+                        ))}
+                      </div>
+                    ) : <span className="text-gray-600 italic">not selected</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Trigger Logic — deterministic conditions display */}
+      {triggerLogic && (
+        <div className="card-dark p-5 space-y-3">
+          <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Rule Trigger Logic</h4>
+          <p className="text-[10px] text-gray-500">
+            This rule will fire when all geographic conditions match AND any one of the following entity dimensions matches.
+          </p>
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-xs space-y-1.5">
+            {/* Geography */}
+            <div className="text-gray-300">
+              <span className="text-yellow-400 font-semibold">WHEN</span>
+              {' '}Origin:
+              {triggerLogic.origin_countries.length > 0
+                ? <span className="text-white ml-1">[{triggerLogic.origin_countries.join(', ')}]</span>
+                : <span className="text-gray-500 ml-1">any</span>}
+              {triggerLogic.origin_group && (
+                <span className="text-gray-400 ml-1">(group: {triggerLogic.origin_group})</span>
+              )}
+            </div>
+            <div className="text-gray-300 pl-4">
+              <span className="text-yellow-400 font-semibold">AND</span>
+              {' '}Receiving:
+              {triggerLogic.receiving_countries.length > 0
+                ? <span className="text-white ml-1">[{triggerLogic.receiving_countries.join(', ')}]</span>
+                : <span className="text-gray-500 ml-1">any</span>}
+              {triggerLogic.receiving_group && (
+                <span className="text-gray-400 ml-1">(group: {triggerLogic.receiving_group})</span>
+              )}
+            </div>
+            {/* Entity dimensions — OR logic */}
+            <div className="text-gray-300 pl-4">
+              <span className="text-yellow-400 font-semibold">AND ANY OF:</span>
+            </div>
+            {Object.entries(triggerLogic.dimensions).map(([key, values]) =>
+              values.length > 0 ? (
+                <div key={key} className="pl-8 text-gray-400">
+                  <span className="text-blue-400">●</span>
+                  {' '}<span className="text-gray-300">{key.replace(/_/g, ' ')}</span>
+                  {' '}<span className="text-gray-500">is one of:</span>
+                  {' '}<span className="text-green-300">[{values.join(', ')}]</span>
+                </div>
+              ) : null
+            )}
+            {triggerLogic.attribute_keywords_count > 0 && (
+              <div className="pl-8 text-gray-400">
+                <span className="text-blue-400">●</span>
+                {' '}<span className="text-gray-300">attribute keywords</span>
+                {' '}<span className="text-gray-500">matched</span>
+                {' '}<span className="text-green-300">({triggerLogic.attribute_keywords_count} keywords)</span>
+              </div>
+            )}
+            {/* PII requirement */}
+            <div className="text-gray-400 pl-4">
+              <span className="text-yellow-400 font-semibold">PII required:</span>
+              {' '}<span className={triggerLogic.requires_pii ? 'text-orange-300' : 'text-gray-500'}>
+                {triggerLogic.requires_pii ? 'yes' : 'no'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Data Dictionaries — Fully Editable */}
       {Object.keys(editableTerms).length > 0 && (

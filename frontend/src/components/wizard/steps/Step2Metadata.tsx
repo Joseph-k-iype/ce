@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useDropdownData } from '../../../hooks/useDropdownData';
 import { useWizardStore } from '../../../stores/wizardStore';
 import { LoadingSpinner } from '../../common/LoadingSpinner';
@@ -7,35 +7,79 @@ export function Step2Metadata() {
   const { data: dropdowns, isLoading } = useDropdownData();
   const {
     dataCategories, purposesOfProcessing, processL1, processL2, processL3,
-    groupDataCategories, sensitiveDataCategories, regulators, authorities,
+    groupDataCategories, sensitiveDataCategories, regulators, authorities, dataSubjects,
     validUntil, editedRuleDefinition,
     setDataCategories, setPurposesOfProcessing, setProcessL1, setProcessL2, setProcessL3,
     setGroupDataCategories, setSensitiveDataCategories, setRegulators, setAuthorities,
-    setValidUntil,
+    setDataSubjects, setValidUntil,
   } = useWizardStore();
 
-  const [dataCatInput, setDataCatInput] = useState(dataCategories.join(', '));
-  const [gdcInput, setGdcInput] = useState(groupDataCategories.join(', '));
-
-  // Pre-populate AI-suggested fields from the rule definition when it becomes available
+  // Pre-populate all AI-suggested fields from the rule definition when it becomes available
   useEffect(() => {
     if (!editedRuleDefinition) return;
     const ruleDef = editedRuleDefinition as Record<string, unknown>;
 
-    if (sensitiveDataCategories.length === 0) {
-      const aiSdc = (ruleDef.sensitive_data_categories as string[]) || [];
-      if (aiSdc.length > 0) setSensitiveDataCategories(aiSdc);
+    // data_categories — cross-reference with dropdown to filter valid values
+    if ((ruleDef.data_categories as string[])?.length && dataCategories.length === 0) {
+      const aiCats = ruleDef.data_categories as string[];
+      const validCats = dropdowns?.data_categories
+        ? aiCats.filter(v => dropdowns.data_categories!.some(d => d.name === v || (d as unknown as string) === v))
+        : aiCats;
+      if (validCats.length > 0) setDataCategories(validCats);
+      else if (aiCats.length > 0) setDataCategories(aiCats);
     }
-    if (regulators.length === 0) {
-      const aiReg = (ruleDef.regulators as string[]) || [];
-      if (aiReg.length > 0) setRegulators(aiReg);
+
+    // purposes_of_processing
+    if ((ruleDef.purposes_of_processing as string[])?.length && purposesOfProcessing.length === 0) {
+      setPurposesOfProcessing(ruleDef.purposes_of_processing as string[]);
     }
-    if (authorities.length === 0) {
-      const aiAuth = (ruleDef.authorities as string[]) || [];
-      if (aiAuth.length > 0) setAuthorities(aiAuth);
+
+    // processes — split into L1/L2/L3 by cross-referencing dropdowns
+    if ((ruleDef.processes as string[])?.length) {
+      const aiProcs = ruleDef.processes as string[];
+      if (dropdowns?.processes) {
+        const l1Items = aiProcs.filter(p => dropdowns.processes.l1?.includes(p));
+        const l2Items = aiProcs.filter(p => dropdowns.processes.l2?.includes(p));
+        const l3Items = aiProcs.filter(p => dropdowns.processes.l3?.includes(p));
+        const unmatched = aiProcs.filter(
+          p => !l1Items.includes(p) && !l2Items.includes(p) && !l3Items.includes(p)
+        );
+        if (l1Items.length > 0 && processL1.length === 0) setProcessL1(l1Items);
+        if (l2Items.length > 0 && processL2.length === 0) setProcessL2(l2Items);
+        if (l3Items.length > 0 && processL3.length === 0) setProcessL3(l3Items);
+        // Unmatched items go to L1 as fallback
+        if (unmatched.length > 0 && processL1.length === 0 && l1Items.length === 0) setProcessL1(unmatched);
+      } else if (processL1.length === 0) {
+        setProcessL1(aiProcs);
+      }
+    }
+
+    // group_data_categories (GDC)
+    if ((ruleDef.gdc as string[])?.length && groupDataCategories.length === 0) {
+      setGroupDataCategories(ruleDef.gdc as string[]);
+    }
+
+    // sensitive_data_categories
+    if ((ruleDef.sensitive_data_categories as string[])?.length && sensitiveDataCategories.length === 0) {
+      setSensitiveDataCategories(ruleDef.sensitive_data_categories as string[]);
+    }
+
+    // regulators
+    if ((ruleDef.regulators as string[])?.length && regulators.length === 0) {
+      setRegulators(ruleDef.regulators as string[]);
+    }
+
+    // authorities
+    if ((ruleDef.authorities as string[])?.length && authorities.length === 0) {
+      setAuthorities(ruleDef.authorities as string[]);
+    }
+
+    // data_subjects
+    if ((ruleDef.data_subjects as string[])?.length && dataSubjects.length === 0) {
+      setDataSubjects(ruleDef.data_subjects as string[]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editedRuleDefinition]);
+  }, [editedRuleDefinition, dropdowns]);
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -43,40 +87,45 @@ export function Step2Metadata() {
     ? dropdowns.purpose_of_processing
     : (dropdowns?.purposes || []);
 
-  const handleDataCatBlur = () => {
-    const cats = dataCatInput.split(',').map(s => s.trim()).filter(Boolean);
-    setDataCategories(cats);
-  };
-
-  const handleGdcBlur = () => {
-    const gdc = gdcInput.split(',').map(s => s.trim()).filter(Boolean);
-    setGroupDataCategories(gdc);
-  };
+  const dataCatOptions = dropdowns?.data_categories || [];
+  const gdcOptions = dropdowns?.group_data_categories || [];
+  const dataSubjectOptions = dropdowns?.data_subjects || [];
 
   return (
     <div className="space-y-5">
       <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-900">Step 3: Metadata</h3>
 
       <div className="card-dark p-5 space-y-5">
-        {/* Data Categories - REQUIRED */}
+        {/* Data Categories — multiselect with AI pre-fill */}
         <div>
           <label className="block text-sm font-semibold text-white mb-2">
             Data Categories <span className="text-red-400">*</span>
+            {dataCategories.length > 0 && editedRuleDefinition && (
+              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+            )}
           </label>
-          <input
-            type="text"
-            value={dataCatInput}
-            onChange={(e) => setDataCatInput(e.target.value)}
-            onBlur={handleDataCatBlur}
-            placeholder="e.g., Financial Data, Customer PII, Transaction Records"
-            className="input-dark"
-          />
-          <p className="text-xs text-gray-400 mt-1">Comma-separated list of data categories</p>
+          <select
+            multiple
+            value={dataCategories}
+            onChange={(e) => setDataCategories(Array.from(e.target.selectedOptions, o => o.value))}
+            className="input-dark h-24"
+          >
+            {dataCatOptions.map((c: any) => {
+              const val = typeof c === 'string' ? c : c.name;
+              return <option key={val} value={val}>{val}</option>;
+            })}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
         </div>
 
         {/* Purpose of Processing */}
         <div>
-          <label className="block text-sm font-semibold text-white mb-2">Purpose of Processing</label>
+          <label className="block text-sm font-semibold text-white mb-2">
+            Purpose of Processing
+            {purposesOfProcessing.length > 0 && editedRuleDefinition && (
+              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+            )}
+          </label>
           <select
             multiple
             value={purposesOfProcessing}
@@ -94,7 +143,12 @@ export function Step2Metadata() {
         {/* Processes L1, L2, L3 */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-white mb-2">Process L1</label>
+            <label className="block text-sm font-semibold text-white mb-2">
+              Process L1
+              {processL1.length > 0 && editedRuleDefinition && (
+                <span className="ml-1 text-xs text-blue-400 font-normal">(AI)</span>
+              )}
+            </label>
             <select
               multiple
               value={processL1}
@@ -105,7 +159,12 @@ export function Step2Metadata() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-white mb-2">Process L2</label>
+            <label className="block text-sm font-semibold text-white mb-2">
+              Process L2
+              {processL2.length > 0 && editedRuleDefinition && (
+                <span className="ml-1 text-xs text-blue-400 font-normal">(AI)</span>
+              )}
+            </label>
             <select
               multiple
               value={processL2}
@@ -116,7 +175,12 @@ export function Step2Metadata() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-white mb-2">Process L3</label>
+            <label className="block text-sm font-semibold text-white mb-2">
+              Process L3
+              {processL3.length > 0 && editedRuleDefinition && (
+                <span className="ml-1 text-xs text-blue-400 font-normal">(AI)</span>
+              )}
+            </label>
             <select
               multiple
               value={processL3}
@@ -128,25 +192,33 @@ export function Step2Metadata() {
           </div>
         </div>
 
-        {/* Group Data Categories */}
+        {/* Group Data Categories (GDC) — multiselect */}
         <div>
-          <label className="block text-sm font-semibold text-white mb-2">Group Data Categories</label>
-          <input
-            type="text"
-            value={gdcInput}
-            onChange={(e) => setGdcInput(e.target.value)}
-            onBlur={handleGdcBlur}
-            placeholder="e.g., Sensitive, Non-Sensitive"
-            className="input-dark"
-          />
-          <p className="text-xs text-gray-400 mt-1">Comma-separated (optional)</p>
+          <label className="block text-sm font-semibold text-white mb-2">
+            Group Data Categories
+            {groupDataCategories.length > 0 && editedRuleDefinition && (
+              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+            )}
+          </label>
+          <select
+            multiple
+            value={groupDataCategories}
+            onChange={(e) => setGroupDataCategories(Array.from(e.target.selectedOptions, o => o.value))}
+            className="input-dark h-20"
+          >
+            {gdcOptions.map((g: any) => {
+              const val = typeof g === 'string' ? g : g.name;
+              return <option key={val} value={val}>{val}</option>;
+            })}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple. (Optional)</p>
         </div>
 
         {/* Sensitive Data Categories — AI-suggested, user-confirmable */}
         <div>
           <label className="block text-sm font-semibold text-white mb-2">
             Sensitive Data Categories
-            <span className="ml-2 text-xs text-blue-400 font-normal">(AI-suggested)</span>
+            <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
           </label>
           <select
             multiple
@@ -162,12 +234,12 @@ export function Step2Metadata() {
           <p className="text-xs text-gray-400 mt-1">Pre-filled from AI analysis. Hold Ctrl/Cmd to adjust.</p>
         </div>
 
-        {/* Regulator & Authority — AI-suggested, user-confirmable */}
+        {/* Regulator, Authority & Data Subjects — AI-suggested, user-confirmable */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-white mb-2">
               Regulator
-              <span className="ml-2 text-xs text-blue-400 font-normal">(AI-suggested)</span>
+              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
             </label>
             <select
               multiple
@@ -185,7 +257,7 @@ export function Step2Metadata() {
           <div>
             <label className="block text-sm font-semibold text-white mb-2">
               Authority
-              <span className="ml-2 text-xs text-blue-400 font-normal">(AI-suggested)</span>
+              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
             </label>
             <select
               multiple
@@ -200,6 +272,26 @@ export function Step2Metadata() {
             </select>
             <p className="text-xs text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
           </div>
+        </div>
+
+        {/* Data Subjects — AI-suggested */}
+        <div>
+          <label className="block text-sm font-semibold text-white mb-2">
+            Data Subjects
+            <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+          </label>
+          <select
+            multiple
+            value={dataSubjects}
+            onChange={(e) => setDataSubjects(Array.from(e.target.selectedOptions, o => o.value))}
+            className="input-dark h-24"
+          >
+            {dataSubjectOptions.map((ds: any) => {
+              const val = typeof ds === 'string' ? ds : ds.name;
+              return <option key={val} value={val}>{val}</option>;
+            })}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Pre-filled from AI analysis. Hold Ctrl/Cmd to adjust.</p>
         </div>
 
         {/* Valid Until */}

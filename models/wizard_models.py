@@ -90,6 +90,7 @@ class WizardSessionState(BaseModel):
     sensitive_data_categories: List[str] = Field(default_factory=list)
     regulators: List[str] = Field(default_factory=list)
     authorities: List[str] = Field(default_factory=list)
+    data_subjects: List[str] = Field(default_factory=list)
     valid_until: Optional[str] = None
 
     # Step 3: Rule text input
@@ -152,6 +153,7 @@ class WizardSessionResponse(BaseModel):
     sensitive_data_categories: List[str] = Field(default_factory=list)
     regulators: List[str] = Field(default_factory=list)
     authorities: List[str] = Field(default_factory=list)
+    data_subjects: List[str] = Field(default_factory=list)
     valid_until: Optional[str] = None
     rule_text: Optional[str] = None
     analysis_result: Optional[Dict[str, Any]] = None
@@ -191,6 +193,7 @@ class SandboxEvaluationRequest(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     origin_legal_entity: Optional[List[str]] = None
     receiving_legal_entity: Optional[str] = None
+    data_subjects: Optional[List[str]] = None
 
 
 class WizardApprovalRequest(BaseModel):

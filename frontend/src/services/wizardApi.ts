@@ -1,5 +1,5 @@
 import api from './api';
-import type { WizardSession, WizardStepData, SavedSession } from '../types/wizard';
+import type { WizardSession, WizardStepData, SavedSession, TriggerLogicResponse } from '../types/wizard';
 
 export async function startWizardSession(userId = 'anonymous'): Promise<{ session_id: string }> {
   const { data } = await api.post('/wizard/start-session', { user_id: userId });
@@ -64,5 +64,10 @@ export async function resumeWizardSession(sessionId: string): Promise<WizardSess
 
 export async function deleteSavedSession(sessionId: string) {
   const { data } = await api.delete(`/wizard/saved-session/${sessionId}`);
+  return data;
+}
+
+export async function getTriggerLogic(sessionId: string): Promise<TriggerLogicResponse> {
+  const { data } = await api.get<TriggerLogicResponse>(`/wizard/session/${sessionId}/trigger-logic`);
   return data;
 }

@@ -962,14 +962,16 @@ class RulesEvaluator:
                 dimension_results.append(False)
                 logger.debug(f"Tier 1: authorities dimension NOT matched")
 
-        # If rule specifies structured dimensions: AND across all
+        # If rule specifies structured dimensions: OR across all
+        # Any single dimension match is sufficient to trigger the rule.
+        # TIA/PIA/HRPR rules use case_matching (separate path) and are not affected.
         if dimension_results:
-            if all(dimension_results):
-                logger.debug(f"Tier 1: all {len(dimension_results)} dimension(s) matched — rule triggers")
+            if any(dimension_results):
+                logger.debug(f"Tier 1: any of {len(dimension_results)} dimension(s) matched — rule triggers")
                 context.triggered_node_mappings[rule_id] = current_matches
                 return True
             else:
-                logger.debug(f"Tier 1: not all dimensions matched ({dimension_results}) — checking Tier 2")
+                logger.debug(f"Tier 1: no dimensions matched ({dimension_results}) — checking Tier 2")
                 # Don't return False yet — fall through to Tier 2 for linked_attrs
 
         # ── Tier 2: Fuzzy match on free-text fields only ──
@@ -2339,14 +2341,16 @@ class RulesEvaluator:
                 dimension_results.append(False)
                 logger.debug(f"Tier 1: authorities dimension NOT matched")
 
-        # If rule specifies structured dimensions: AND across all
+        # If rule specifies structured dimensions: OR across all
+        # Any single dimension match is sufficient to trigger the rule.
+        # TIA/PIA/HRPR rules use case_matching (separate path) and are not affected.
         if dimension_results:
-            if all(dimension_results):
-                logger.debug(f"Tier 1: all {len(dimension_results)} dimension(s) matched — rule triggers")
+            if any(dimension_results):
+                logger.debug(f"Tier 1: any of {len(dimension_results)} dimension(s) matched — rule triggers")
                 context.triggered_node_mappings[rule_id] = current_matches
                 return True
             else:
-                logger.debug(f"Tier 1: not all dimensions matched ({dimension_results}) — checking Tier 2")
+                logger.debug(f"Tier 1: no dimensions matched ({dimension_results}) — checking Tier 2")
                 # Don't return False yet — fall through to Tier 2 for linked_attrs
 
         # ── Tier 2: Fuzzy match on free-text fields only ──

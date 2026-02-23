@@ -19,6 +19,7 @@ interface WizardState {
   sensitiveDataCategories: string[];
   regulators: string[];
   authorities: string[];
+  dataSubjects: string[];
   validUntil: string;
   // Step 3
   ruleText: string;
@@ -56,6 +57,7 @@ interface WizardState {
   setSensitiveDataCategories: (s: string[]) => void;
   setRegulators: (r: string[]) => void;
   setAuthorities: (a: string[]) => void;
+  setDataSubjects: (s: string[]) => void;
   setValidUntil: (d: string) => void;
   setRuleText: (t: string) => void;
   setIsPiiRelated: (p: boolean) => void;
@@ -95,6 +97,7 @@ const initialState = {
   sensitiveDataCategories: [] as string[],
   regulators: [] as string[],
   authorities: [] as string[],
+  dataSubjects: [] as string[],
   validUntil: '',
   ruleText: '',
   isPiiRelated: false,
@@ -130,6 +133,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
   setSensitiveDataCategories: (s) => set({ sensitiveDataCategories: s }),
   setRegulators: (r) => set({ regulators: r }),
   setAuthorities: (a) => set({ authorities: a }),
+  setDataSubjects: (s) => set({ dataSubjects: s }),
   setValidUntil: (d) => set({ validUntil: d }),
   setRuleText: (t) => set({ ruleText: t }),
   setIsPiiRelated: (p) => set({ isPiiRelated: p }),
@@ -169,6 +173,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       sensitiveDataCategories: session.sensitive_data_categories as string[] || [],
       regulators: session.regulators as string[] || [],
       authorities: session.authorities as string[] || [],
+      dataSubjects: session.data_subjects as string[] || [],
       validUntil: session.valid_until as string || '',
       ruleText: session.rule_text as string || '',
       analysisResult: session.analysis_result as Record<string, unknown> || null,
@@ -202,6 +207,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       sensitiveDataCategories: state.sensitiveDataCategories,
       regulators: state.regulators,
       authorities: state.authorities,
+      dataSubjects: state.dataSubjects,
       validUntil: state.validUntil,
       ruleText: state.ruleText,
       editedRuleDefinition: state.editedRuleDefinition,

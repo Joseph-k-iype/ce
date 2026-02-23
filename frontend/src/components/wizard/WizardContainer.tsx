@@ -129,6 +129,7 @@ export function WizardContainer() {
             sensitive_data_categories: state.sensitiveDataCategories,
             regulators: state.regulators,
             authorities: state.authorities,
+            data_subjects: state.dataSubjects,
             valid_until: state.validUntil || null,
           },
         });

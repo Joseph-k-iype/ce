@@ -153,6 +153,7 @@ class SandboxService:
         metadata: Optional[dict] = None,
         regulators: Optional[list] = None,
         authorities: Optional[list] = None,
+        data_subjects: Optional[list] = None,
     ) -> Dict[str, Any]:
         """
         Run evaluation against the sandbox graph.
@@ -180,6 +181,7 @@ class SandboxService:
                 metadata=metadata,
                 regulators=regulators,
                 authorities=authorities,
+                data_subjects=data_subjects,
             )
             return result if isinstance(result, dict) else result.model_dump() if hasattr(result, 'model_dump') else {"result": str(result)}
 
