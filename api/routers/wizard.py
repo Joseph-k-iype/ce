@@ -80,6 +80,49 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
 
         if result.success:
             session.edited_rule_definition = result.rule_definition
+            rule_def = result.rule_definition or {}
+
+            # ── Sync AI-extracted entity lists → session metadata fields ──────
+            # This ensures the Step 3 metadata UI shows AI-extracted entities
+            # pre-populated so the user can review and adjust them.
+            # Uses merge (not overwrite) so any prior user selections are kept.
+            def _merge_to_session(session_field: list, rule_values: list) -> list:
+                if not rule_values:
+                    return session_field or []
+                existing = session_field or []
+                return list(dict.fromkeys(existing + rule_values))
+
+            if rule_def.get('data_categories'):
+                session.data_categories = _merge_to_session(
+                    session.data_categories, rule_def['data_categories']
+                )
+            if rule_def.get('purposes_of_processing'):
+                session.purposes_of_processing = _merge_to_session(
+                    session.purposes_of_processing, rule_def['purposes_of_processing']
+                )
+            if rule_def.get('processes'):
+                # Flat process list → session.process_l1 (L1 receives all)
+                session.process_l1 = _merge_to_session(
+                    session.process_l1, rule_def['processes']
+                )
+            if rule_def.get('gdc'):
+                session.group_data_categories = _merge_to_session(
+                    session.group_data_categories, rule_def['gdc']
+                )
+            if rule_def.get('regulators'):
+                session.regulators = _merge_to_session(
+                    session.regulators, rule_def['regulators']
+                )
+            if rule_def.get('authorities'):
+                session.authorities = _merge_to_session(
+                    session.authorities, rule_def['authorities']
+                )
+            if rule_def.get('sensitive_data_categories'):
+                session.sensitive_data_categories = _merge_to_session(
+                    session.sensitive_data_categories, rule_def['sensitive_data_categories']
+                )
+            # ─────────────────────────────────────────────────────────────────
+
             if result.dictionary_result and not session.edited_terms_dictionary:
                 session.edited_terms_dictionary = result.dictionary_result
             if session.valid_until and session.edited_rule_definition:
@@ -301,13 +344,20 @@ async def load_sandbox(session_id: str):
     sandbox = get_sandbox_service()
 
     try:
-        # Inject session metadata into rule definition for graph linking
+        # Inject session metadata into rule definition for graph linking.
+        # Uses `or []` to handle both None and [] from Pydantic model_dump()
+        # so session selections always override/extend the AI defaults.
+        # NOTE: setdefault() is intentionally NOT used here — model_dump() includes
+        # all field keys (even with None values), so setdefault() is always a no-op.
         rule_def = dict(session.edited_rule_definition)
+
         if session.data_categories:
-            rule_def.setdefault('data_categories', session.data_categories)
+            existing = rule_def.get('data_categories') or []
+            rule_def['data_categories'] = list(dict.fromkeys(existing + session.data_categories))
         if session.purposes_of_processing:
-            rule_def.setdefault('purposes_of_processing', session.purposes_of_processing)
-        # Inject processes from all levels
+            existing = rule_def.get('purposes_of_processing') or []
+            rule_def['purposes_of_processing'] = list(dict.fromkeys(existing + session.purposes_of_processing))
+        # Inject processes from all levels (L1, L2, L3)
         session_processes = []
         for lvl in [session.process_l1, session.process_l2, session.process_l3]:
             if lvl:
@@ -443,13 +493,18 @@ async def approve_rule(session_id: str, request: WizardApprovalRequest):
     sandbox = get_sandbox_service()
 
     try:
-        # Ensure session metadata is in rule definition for graph linking
+        # Ensure session metadata is fully merged into rule definition for graph linking.
+        # Uses `or []` — setdefault() cannot be used here because model_dump() includes
+        # all field keys (even as None), making setdefault() always a no-op.
         rule_def = dict(session.edited_rule_definition)
+
         if session.data_categories:
-            rule_def.setdefault('data_categories', session.data_categories)
+            existing = rule_def.get('data_categories') or []
+            rule_def['data_categories'] = list(dict.fromkeys(existing + session.data_categories))
         if session.purposes_of_processing:
-            rule_def.setdefault('purposes_of_processing', session.purposes_of_processing)
-        # Inject processes from all levels
+            existing = rule_def.get('purposes_of_processing') or []
+            rule_def['purposes_of_processing'] = list(dict.fromkeys(existing + session.purposes_of_processing))
+        # Inject processes from all levels (L1, L2, L3)
         session_processes = []
         for lvl in [session.process_l1, session.process_l2, session.process_l3]:
             if lvl:
