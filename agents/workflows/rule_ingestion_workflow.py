@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 from langgraph.graph import StateGraph, END
@@ -309,11 +309,15 @@ def route_from_supervisor(state: WizardAgentState) -> str:
     return "fail"
 
 
-def entry_point_router(state: WizardAgentState) -> Union[str, List[str]]:
-    """Determine initial nodes based on processing mode.
+def entry_point_router(state: WizardAgentState) -> str:
+    """Determine initial node based on processing mode.
 
-    - standard mode: deterministic pipeline, no supervisor
-    - autonomous mode: LLM-supervised with parallel start
+    Always starts with rule_analyzer only (sequential pipeline).
+    data_dictionary runs AFTER rule_analyzer completes, ensuring it has
+    the full rule_definition context before generating keyword dictionaries.
+
+    - standard mode: deterministic sequential pipeline, no supervisor
+    - autonomous mode: LLM-supervised, still sequential start
     - legacy (non-agentic): sequential through supervisor
     """
     mode = state.get("processing_mode", "autonomous")
@@ -326,24 +330,40 @@ def entry_point_router(state: WizardAgentState) -> Union[str, List[str]]:
     except Exception as e:
         logger.debug(f"Graph schema pre-warm failed (non-critical): {e}")
 
-    if mode == "standard":
-        # Deterministic pipeline: start with parallel analyzer + dictionary
-        return ["rule_analyzer", "data_dictionary"]
-    elif state.get("agentic_mode"):
-        return ["rule_analyzer", "data_dictionary"]
+    if mode == "standard" or state.get("agentic_mode"):
+        # Sequential pipeline: always start with rule_analyzer only.
+        # data_dictionary is wired to run after rule_analyzer succeeds.
+        return "rule_analyzer"
     return "supervisor"
 
 
 # ── Standard mode routing functions ──────────────────────────────────────
 
-def _standard_route_after_initial(state: WizardAgentState) -> str:
-    """Standard mode: after analyzer+dictionary, go to cypher generator."""
+def _standard_route_after_rule_analyzer(state: WizardAgentState) -> str:
+    """Standard mode: after rule_analyzer, go to data_dictionary."""
     if state.get("rule_definition"):
-        return "cypher_generator"
-    # One retry: go back to analyzer
-    if state.get("agent_failure_counts", {}).get("rule_analyzer", 0) >= 1:
+        return "data_dictionary"
+    # Retry up to 2 times on genuine failure
+    if state.get("agent_failure_counts", {}).get("rule_analyzer", 0) >= 2:
         return "complete_with_warning"
     return "rule_analyzer"
+
+
+def _standard_route_after_data_dictionary(state: WizardAgentState) -> str:
+    """Standard mode: after data_dictionary, go to cypher_generator.
+
+    Data dictionary always runs (no skip by design). Retries up to 3 times on
+    genuine AI failures, then proceeds to cypher_generator with whatever is
+    available. This ensures the pipeline always makes forward progress.
+    """
+    if state.get("dictionary_result"):
+        return "cypher_generator"
+    failure_count = state.get("agent_failure_counts", {}).get("data_dictionary", 0)
+    if failure_count >= 3:
+        # After 3 genuine AI failures, proceed to cypher with whatever we have
+        logger.warning("Data dictionary failed 3 times, proceeding to cypher_generator")
+        return "cypher_generator"
+    return "data_dictionary"
 
 
 def _standard_route_after_cypher(state: WizardAgentState) -> str:
@@ -433,20 +453,19 @@ def build_rule_ingestion_graph(with_interrupt: bool = True, processing_mode: str
 
         workflow.add_conditional_edges(
             "rule_analyzer",
-            _standard_route_after_initial,
+            _standard_route_after_rule_analyzer,
             {
-                "cypher_generator": "cypher_generator",
+                "data_dictionary": "data_dictionary",
                 "rule_analyzer": "rule_analyzer",
                 "complete_with_warning": "complete_with_warning",
             }
         )
         workflow.add_conditional_edges(
             "data_dictionary",
-            _standard_route_after_initial,
+            _standard_route_after_data_dictionary,
             {
                 "cypher_generator": "cypher_generator",
-                "rule_analyzer": "rule_analyzer",
-                "complete_with_warning": "complete_with_warning",
+                "data_dictionary": "data_dictionary",
             }
         )
         workflow.add_conditional_edges(
@@ -504,13 +523,30 @@ def build_rule_ingestion_graph(with_interrupt: bool = True, processing_mode: str
         # AUTONOMOUS MODE: LLM-supervised with dynamic routing
         # ═══════════════════════════════════════════════════════════════════
 
-        def _route_after_initial_agents(state: WizardAgentState) -> str:
-            """After initial parallel nodes, join and move to cypher if both done."""
-            if state.get("agentic_mode") and not state.get("cypher_queries") and state.get("iteration", 0) == 0:
-                if state.get("rule_definition") and state.get("dictionary_result"):
-                    return "cypher_generator"
-                return "supervisor"
-            return "supervisor"
+        def _agentic_route_after_rule_analyzer(state: WizardAgentState) -> str:
+            """Autonomous mode: after rule_analyzer, always go to data_dictionary.
+
+            data_dictionary must always run after rule_analyzer succeeds so it
+            can use the full rule_definition context (entity suggestions, categories,
+            etc.) to generate comprehensive keyword dictionaries.
+            """
+            if state.get("rule_definition"):
+                return "data_dictionary"
+            return "supervisor"  # On failure, let supervisor decide retry
+
+        def _agentic_route_after_data_dictionary(state: WizardAgentState) -> str:
+            """Autonomous mode: after data_dictionary, go to cypher_generator.
+
+            Proceeds to cypher if dictionary is ready. After 3 genuine failures,
+            proceeds anyway. Otherwise routes to supervisor for retry decision.
+            """
+            if state.get("dictionary_result"):
+                return "cypher_generator"
+            failure_count = state.get("agent_failure_counts", {}).get("data_dictionary", 0)
+            if failure_count >= 3:
+                logger.warning("Data dictionary failed 3 times (autonomous), proceeding to cypher_generator")
+                return "cypher_generator"
+            return "supervisor"  # Supervisor handles retry decision
 
         def _route_after_cypher(state: WizardAgentState) -> str:
             """Fast path: go straight to validator after cypher in round 0.
@@ -541,9 +577,17 @@ def build_rule_ingestion_graph(with_interrupt: bool = True, processing_mode: str
             if phase == "fail": return "fail"
             return "supervisor"
 
-        # Parallel agent transitions
-        workflow.add_conditional_edges("rule_analyzer", _route_after_initial_agents, {"cypher_generator": "cypher_generator", "supervisor": "supervisor"})
-        workflow.add_conditional_edges("data_dictionary", _route_after_initial_agents, {"cypher_generator": "cypher_generator", "supervisor": "supervisor"})
+        # Sequential agent transitions: rule_analyzer → data_dictionary → cypher_generator
+        workflow.add_conditional_edges(
+            "rule_analyzer",
+            _agentic_route_after_rule_analyzer,
+            {"data_dictionary": "data_dictionary", "supervisor": "supervisor"}
+        )
+        workflow.add_conditional_edges(
+            "data_dictionary",
+            _agentic_route_after_data_dictionary,
+            {"cypher_generator": "cypher_generator", "supervisor": "supervisor"}
+        )
 
         workflow.add_conditional_edges("cypher_generator", _route_after_cypher, {"validator": "validator", "supervisor": "supervisor"})
 

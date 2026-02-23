@@ -127,8 +127,11 @@ class RuleAnalyzerExecutor(ComplianceAgentExecutor):
                     validated = RuleDefinitionModel(**rule_def)
                     state["rule_definition"] = validated.model_dump()
                     self.record_success(state)
-                    has_categories = bool(state.get("data_categories") or rule_def.get("data_categories"))
-                    state["current_phase"] = "data_dictionary" if has_categories else "cypher_generator"
+                    # Always route to data_dictionary — it runs after rule_analyzer
+                    # regardless of whether data_categories were explicitly provided.
+                    # The dictionary agent infers categories from rule_definition if
+                    # none are explicitly passed.
+                    state["current_phase"] = "data_dictionary"
 
                     duration = (time.time() - start_time) * 1000
                     self.event_store.append(

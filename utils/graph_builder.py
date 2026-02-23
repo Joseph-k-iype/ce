@@ -1090,10 +1090,19 @@ class RulesGraphBuilder:
                     MERGE (r)-[:HAS_GDC]->(g)
                     """, {"rule_id": rule_id, "name": gdc_name})
 
-            # LINKED_TO relationships for new entity types
+            # LINKED_TO relationships for reference entity types.
+            # Uses MERGE (not MATCH-only) so that AI-suggested names that don't
+            # exactly match CSV-loaded reference data still create stub nodes and
+            # the relationship is always established. This prevents silent failures
+            # when AI extracts "Information Commissioner's Office" but the graph
+            # only has "ICO" — both end up linked to the rule.
             for reg in (rule_def.get('regulators') or []):
                 reg_name = str(reg).strip()
                 if reg_name:
+                    self.graph.query(
+                        "MERGE (reg:Regulator {name: $name})",
+                        {"name": reg_name},
+                    )
                     self.graph.query("""
                     MATCH (r:Rule {rule_id: $rule_id})
                     MATCH (reg:Regulator {name: $name})
@@ -1103,6 +1112,10 @@ class RulesGraphBuilder:
             for auth in (rule_def.get('authorities') or []):
                 auth_name = str(auth).strip()
                 if auth_name:
+                    self.graph.query(
+                        "MERGE (auth:Authority {name: $name})",
+                        {"name": auth_name},
+                    )
                     self.graph.query("""
                     MATCH (r:Rule {rule_id: $rule_id})
                     MATCH (auth:Authority {name: $name})
@@ -1112,6 +1125,10 @@ class RulesGraphBuilder:
             for sdc in (rule_def.get('sensitive_data_categories') or []):
                 sdc_name = str(sdc).strip()
                 if sdc_name:
+                    self.graph.query(
+                        "MERGE (sdc:SensitiveDataCategory {name: $name})",
+                        {"name": sdc_name},
+                    )
                     self.graph.query("""
                     MATCH (r:Rule {rule_id: $rule_id})
                     MATCH (sdc:SensitiveDataCategory {name: $name})
@@ -1121,6 +1138,10 @@ class RulesGraphBuilder:
             for ds in (rule_def.get('data_subjects') or []):
                 ds_name = str(ds).strip()
                 if ds_name:
+                    self.graph.query(
+                        "MERGE (ds:DataSubject {name: $name})",
+                        {"name": ds_name},
+                    )
                     self.graph.query("""
                     MATCH (r:Rule {rule_id: $rule_id})
                     MATCH (ds:DataSubject {name: $name})
@@ -1130,14 +1151,19 @@ class RulesGraphBuilder:
             for gbgf in (rule_def.get('global_business_functions') or []):
                 gbgf_name = str(gbgf).strip()
                 if gbgf_name:
+                    self.graph.query(
+                        "MERGE (gbgf:GlobalBusinessFunction {name: $name})",
+                        {"name": gbgf_name},
+                    )
                     self.graph.query("""
                     MATCH (r:Rule {rule_id: $rule_id})
                     MATCH (gbgf:GlobalBusinessFunction {name: $name})
                     MERGE (r)-[:LINKED_TO]->(gbgf)
                     """, {"rule_id": rule_id, "name": gbgf_name})
 
-            # Attribute nodes from dictionary keywords — link to rule for graph-based discovery
-            for keyword in (rule_def.get('attribute_keywords') or [])[:50]:
+            # Attribute nodes from dictionary keywords — link to rule for graph-based discovery.
+            # No cap: all keywords from the data dictionary are ingested.
+            for keyword in (rule_def.get('attribute_keywords') or []):
                 kw_name = str(keyword).strip().lower()
                 if kw_name and len(kw_name) >= 3:
                     self.graph.query("MERGE (a:Attribute {name: $name})", {"name": kw_name})
