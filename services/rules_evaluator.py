@@ -737,13 +737,14 @@ class RulesEvaluator:
     _ISO_DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}')
 
     def _extract_metadata_values(self, obj) -> list:
-        """Extract only semantically meaningful VALUES from metadata.
+        """Extract only semantically meaningful text (keys AND values) from metadata.
         Skips non-string primitives, short strings, booleans, numbers,
         UUIDs, and ISO dates to prevent false-positive keyword matches.
         """
         values = []
         if isinstance(obj, dict):
-            for v in obj.values():
+            for k, v in obj.items():
+                values.extend(self._extract_metadata_values(k))
                 values.extend(self._extract_metadata_values(v))
         elif isinstance(obj, list):
             for item in obj:
