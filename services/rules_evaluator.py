@@ -294,6 +294,12 @@ class RulesEvaluator:
             or context.personal_data_names
             or context.metadata
         )
+        logger.info(
+            f"Entity context: data_categories={context.data_categories}, "
+            f"purposes={context.purposes}, regulators={context.regulators}, "
+            f"data_subjects={context.data_subjects}, authorities={context.authorities}, "
+            f"processes_l1={context.process_l1}, ctx_has_any_content_data={ctx_has_any_content_data}"
+        )
 
         # Post-filter and build triggered rules
         country_matched_rules = []
@@ -321,6 +327,13 @@ class RulesEvaluator:
                 or rule_row.get('linked_data_subjects')
                 or rule_row.get('linked_regulators')
                 or rule_row.get('linked_authorities')
+            )
+
+            logger.info(
+                f"Rule {rule_id} ({rule_type}): has_linked={has_linked}, "
+                f"has_keywords={has_keywords}, linked_cats={rule_row.get('linked_data_categories')}, "
+                f"linked_regs={rule_row.get('linked_regulators')}, "
+                f"linked_purps={rule_row.get('linked_purposes')}"
             )
 
             # Determine if this rule requires content matching

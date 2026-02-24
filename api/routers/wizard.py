@@ -461,6 +461,14 @@ async def sandbox_evaluate(session_id: str, request: dict):
         req_authorities = request.get("authorities") or None
         req_data_subjects = request.get("data_subjects") or None
 
+        logger.info(
+            f"Sandbox evaluate: origin={request.get('origin_country')}, "
+            f"receiving={receiving_list}, pii={request.get('pii')}, "
+            f"data_categories={req_categories}, purposes={req_purposes}, "
+            f"regulators={req_regulators}, data_subjects={req_data_subjects}, "
+            f"authorities={req_authorities}, process_l1={req_proc_l1}"
+        )
+
         # Evaluate for each receiving country (or once with empty string)
         all_results = []
         targets = receiving_list if receiving_list else [""]
