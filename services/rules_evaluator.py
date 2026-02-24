@@ -787,49 +787,58 @@ class RulesEvaluator:
         rule_id = rule_row.get('rule_id', 'unknown')
         current_matches: Dict[str, List[str]] = {}
 
-        # ── Tier 1: AND-across-dimensions, OR-within-dimension ──
-        # For each dimension the rule specifies, check if input matches ANY value.
-        # Rule triggers only if ALL specified dimensions match.
+        # ── Tier 1: Check dimensions the USER actually provided values for ──
+        # For each dimension the rule specifies AND the user provided values:
+        #   - If the values match → dimension passes (True)
+        #   - If the values DON'T match → dimension fails (False, wrong entity)
+        # If the user provided NO values for a dimension → SKIP it entirely.
+        # This way: selecting just one correct entity type fires the rule,
+        # but selecting a WRONG entity fails it.
         dimension_results = []
 
         # Data categories (normalized) — also check GDCs
         if linked_cats or linked_gdcs:
-            rule_cats_norm = {_normalize_text(str(c)) for c in linked_cats if c}
-            rule_gdcs_norm = {_normalize_text(str(g)) for g in linked_gdcs if g}
-            combined_rule_cats = (rule_cats_norm | rule_gdcs_norm) - {''}
             ctx_cats_norm = {_normalize_text(str(c)) for c in context.data_categories if c} - {''}
-            
-            matched_norm = combined_rule_cats & ctx_cats_norm
-            if matched_norm:
-                dimension_results.append(True)
-                # Recover original names for matched nodes
-                matched_originals = []
-                for c in linked_cats:
-                    if c and _normalize_text(str(c)) in matched_norm:
-                        matched_originals.append(str(c))
-                for g in linked_gdcs:
-                    if g and _normalize_text(str(g)) in matched_norm:
-                        matched_originals.append(str(g))
-                current_matches["DataCategory"] = list(set(matched_originals))
-                logger.debug(f"Tier 1: data_categories/GDC dimension matched: {matched_originals}")
+            if ctx_cats_norm:
+                # User provided data categories → check for overlap
+                rule_cats_norm = {_normalize_text(str(c)) for c in linked_cats if c}
+                rule_gdcs_norm = {_normalize_text(str(g)) for g in linked_gdcs if g}
+                combined_rule_cats = (rule_cats_norm | rule_gdcs_norm) - {''}
+
+                matched_norm = combined_rule_cats & ctx_cats_norm
+                if matched_norm:
+                    dimension_results.append(True)
+                    matched_originals = []
+                    for c in linked_cats:
+                        if c and _normalize_text(str(c)) in matched_norm:
+                            matched_originals.append(str(c))
+                    for g in linked_gdcs:
+                        if g and _normalize_text(str(g)) in matched_norm:
+                            matched_originals.append(str(g))
+                    current_matches["DataCategory"] = list(set(matched_originals))
+                    logger.debug(f"Tier 1: data_categories/GDC matched: {matched_originals}")
+                else:
+                    dimension_results.append(False)
+                    logger.debug(f"Tier 1: data_categories/GDC NOT matched (user values don't overlap)")
             else:
-                dimension_results.append(False)
-                logger.debug(f"Tier 1: data_categories/GDC dimension NOT matched")
+                logger.debug(f"Tier 1: data_categories/GDC — user provided none, skipping")
 
         # Purposes (normalized)
         if linked_purposes:
-            rule_purp_norm = {_normalize_text(str(p)) for p in linked_purposes if p} - {''}
             ctx_purp_norm = {_normalize_text(str(p)) for p in context.purposes if p} - {''}
-            
-            matched_norm = rule_purp_norm & ctx_purp_norm
-            if matched_norm:
-                dimension_results.append(True)
-                matched_originals = [p for p in linked_purposes if p and _normalize_text(str(p)) in matched_norm]
-                current_matches["Purpose"] = matched_originals
-                logger.debug(f"Tier 1: purposes dimension matched: {matched_originals}")
+            if ctx_purp_norm:
+                rule_purp_norm = {_normalize_text(str(p)) for p in linked_purposes if p} - {''}
+                matched_norm = rule_purp_norm & ctx_purp_norm
+                if matched_norm:
+                    dimension_results.append(True)
+                    matched_originals = [p for p in linked_purposes if p and _normalize_text(str(p)) in matched_norm]
+                    current_matches["Purpose"] = matched_originals
+                    logger.debug(f"Tier 1: purposes matched: {matched_originals}")
+                else:
+                    dimension_results.append(False)
+                    logger.debug(f"Tier 1: purposes NOT matched (user values don't overlap)")
             else:
-                dimension_results.append(False)
-                logger.debug(f"Tier 1: purposes dimension NOT matched")
+                logger.debug(f"Tier 1: purposes — user provided none, skipping")
 
         # Processes (hierarchical, normalized)
         if linked_processes:
@@ -849,13 +858,10 @@ class RulesEvaluator:
                     ctx_processes_raw.add(str(p).lower().strip())
             ctx_processes -= {''}
 
-            proc_matched = False
-            matched_originals = []
             if ctx_processes:
                 rule_proc_norm = {_normalize_text(str(p)) for p in linked_processes if p} - {''}
-                
+
                 # Build ancestor set for hierarchical matching
-                ancestor_to_children = {} # norm_ancestor -> [orig_child]
                 ancestor_set = set(ctx_processes)
                 for proc_name in list(ctx_processes_raw):
                     try:
@@ -867,79 +873,87 @@ class RulesEvaluator:
                         for row in ancestor_result:
                             a = row.get('ancestor_name')
                             if a:
-                                norm_a = _normalize_text(str(a))
-                                ancestor_set.add(norm_a)
-                                if norm_a not in ancestor_to_children:
-                                    ancestor_to_children[norm_a] = []
-                                ancestor_to_children[norm_a].append(proc_name)
+                                ancestor_set.add(_normalize_text(str(a)))
                     except Exception:
                         pass
                 ancestor_set -= {''}
-                
+
                 matched_norm = rule_proc_norm & ancestor_set
                 if matched_norm:
-                    proc_matched = True
+                    dimension_results.append(True)
                     matched_originals = [p for p in linked_processes if p and _normalize_text(str(p)) in matched_norm]
                     current_matches["Process"] = matched_originals
-
-            dimension_results.append(proc_matched)
-            logger.debug(f"Tier 1: processes dimension {'matched' if proc_matched else 'NOT matched'}: {matched_originals}")
+                    logger.debug(f"Tier 1: processes matched: {matched_originals}")
+                else:
+                    dimension_results.append(False)
+                    logger.debug(f"Tier 1: processes NOT matched")
+            else:
+                logger.debug(f"Tier 1: processes — user provided none, skipping")
 
         # Data subjects (normalized)
         if linked_data_subjects:
-            rule_ds_norm = {_normalize_text(str(d)) for d in linked_data_subjects if d} - {''}
             ctx_ds_norm = {_normalize_text(str(d)) for d in context.data_subjects if d} - {''}
-            matched_norm = rule_ds_norm & ctx_ds_norm
-            if matched_norm:
-                dimension_results.append(True)
-                matched_originals = [d for d in linked_data_subjects if d and _normalize_text(str(d)) in matched_norm]
-                current_matches["DataSubject"] = matched_originals
-                logger.debug(f"Tier 1: data_subjects dimension matched: {matched_originals}")
+            if ctx_ds_norm:
+                rule_ds_norm = {_normalize_text(str(d)) for d in linked_data_subjects if d} - {''}
+                matched_norm = rule_ds_norm & ctx_ds_norm
+                if matched_norm:
+                    dimension_results.append(True)
+                    matched_originals = [d for d in linked_data_subjects if d and _normalize_text(str(d)) in matched_norm]
+                    current_matches["DataSubject"] = matched_originals
+                    logger.debug(f"Tier 1: data_subjects matched: {matched_originals}")
+                else:
+                    dimension_results.append(False)
+                    logger.debug(f"Tier 1: data_subjects NOT matched")
             else:
-                dimension_results.append(False)
-                logger.debug(f"Tier 1: data_subjects dimension NOT matched")
+                logger.debug(f"Tier 1: data_subjects — user provided none, skipping")
 
         # Regulators (normalized)
         if linked_regulators:
-            rule_reg_norm = {_normalize_text(str(r)) for r in linked_regulators if r} - {''}
             ctx_reg_norm = {_normalize_text(str(r)) for r in context.regulators if r} - {''}
-            matched_norm = rule_reg_norm & ctx_reg_norm
-            if matched_norm:
-                dimension_results.append(True)
-                matched_originals = [r for r in linked_regulators if r and _normalize_text(str(r)) in matched_norm]
-                current_matches["Regulator"] = matched_originals
-                logger.debug(f"Tier 1: regulators dimension matched: {matched_originals}")
+            if ctx_reg_norm:
+                rule_reg_norm = {_normalize_text(str(r)) for r in linked_regulators if r} - {''}
+                matched_norm = rule_reg_norm & ctx_reg_norm
+                if matched_norm:
+                    dimension_results.append(True)
+                    matched_originals = [r for r in linked_regulators if r and _normalize_text(str(r)) in matched_norm]
+                    current_matches["Regulator"] = matched_originals
+                    logger.debug(f"Tier 1: regulators matched: {matched_originals}")
+                else:
+                    dimension_results.append(False)
+                    logger.debug(f"Tier 1: regulators NOT matched")
             else:
-                dimension_results.append(False)
-                logger.debug(f"Tier 1: regulators dimension NOT matched")
+                logger.debug(f"Tier 1: regulators — user provided none, skipping")
 
         # Authorities (normalized)
         if linked_authorities:
-            rule_auth_norm = {_normalize_text(str(a)) for a in linked_authorities if a} - {''}
-            ctx_auth_norm = {_normalize_text(str(a)) for a in context.authorities if a} - {''}
-            matched_norm = rule_auth_norm & ctx_auth_norm
-            if matched_norm:
-                dimension_results.append(True)
-                matched_originals = [a for a in linked_authorities if a and _normalize_text(str(a)) in matched_norm]
-                current_matches["Authority"] = matched_originals
-                logger.debug(f"Tier 1: authorities dimension matched: {matched_originals}")
+            ctx_auth_norm = {_normalize_text(str(a)) for a in linked_authorities if a} - {''}
+            if ctx_auth_norm:
+                rule_auth_norm = {_normalize_text(str(a)) for a in linked_authorities if a} - {''}
+                matched_norm = rule_auth_norm & ctx_auth_norm
+                if matched_norm:
+                    dimension_results.append(True)
+                    matched_originals = [a for a in linked_authorities if a and _normalize_text(str(a)) in matched_norm]
+                    current_matches["Authority"] = matched_originals
+                    logger.debug(f"Tier 1: authorities matched: {matched_originals}")
+                else:
+                    dimension_results.append(False)
+                    logger.debug(f"Tier 1: authorities NOT matched")
             else:
-                dimension_results.append(False)
-                logger.debug(f"Tier 1: authorities dimension NOT matched")
+                logger.debug(f"Tier 1: authorities — user provided none, skipping")
 
-        # If rule specifies structured dimensions: ALL must match (AND-across-dimensions).
-        # A rule linked to DataCategory:HealthData AND Regulator:ICO fires only
-        # when BOTH dimensions are present in the evaluation context.
+        # ── Tier 1 decision ──
+        # dimension_results only contains entries for dimensions the user
+        # actually provided values for. If empty → user provided no matching
+        # dimension data, fall through to Tier 2 fuzzy matching.
         if dimension_results:
             if all(dimension_results):
-                logger.debug(f"Tier 1: all {len(dimension_results)} dimension(s) matched — rule triggers")
+                logger.debug(f"Tier 1: all {len(dimension_results)} checked dimension(s) matched — rule triggers")
                 context.triggered_node_mappings[rule_id] = current_matches
                 return True
             else:
-                # STRICT: If ANY structured dimension was checked and FAILED,
-                # the rule does NOT fire. Tier 2 fuzzy matching CANNOT override
-                # failed structured dimension checks.
-                logger.debug(f"Tier 1: NOT all dimensions matched ({dimension_results}) — rule SKIPPED")
+                # User provided values for some dimensions but they didn't match.
+                # This is an actual mismatch (wrong entities) — rule does NOT fire.
+                logger.debug(f"Tier 1: dimension mismatch ({dimension_results}) — rule SKIPPED")
                 return False
 
         # ── Tier 2: Fuzzy match on free-text fields only ──

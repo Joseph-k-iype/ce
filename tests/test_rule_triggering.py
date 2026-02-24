@@ -145,12 +145,14 @@ class TestMatchGraphLinkedAttributes(unittest.TestCase):
     # ───────────────────────────────────────────────────────────────────
     # Scenario 5: Multi-dimension AND — one dimension has NO input → should NOT fire
     # ───────────────────────────────────────────────────────────────────
-    def test_multi_dimension_missing_dimension_fails(self):
+    def test_multi_dimension_missing_dimension_skipped(self):
         """Rule linked to DataCategory:HealthData AND Regulator:ICO,
-        context has HealthData but NO regulators at all → should NOT match."""
+        context has HealthData but NO regulators at all → regulator dimension
+        is SKIPPED (user didn't provide any), so the single matching
+        data_categories dimension fires the rule."""
         ctx = self._make_context(
             data_categories=['Health Data'],
-            regulators=[],  # No regulators provided
+            regulators=[],  # No regulators provided → dimension skipped
         )
         rule_row = {
             'rule_id': 'R5',
@@ -164,7 +166,7 @@ class TestMatchGraphLinkedAttributes(unittest.TestCase):
             'linked_authorities': [],
         }
         result = self.evaluator._match_graph_linked_attributes(ctx, rule_row)
-        self.assertFalse(result, "Should NOT match when one dimension is empty")
+        self.assertTrue(result, "Should match — unprovided dimensions are skipped, matching dim fires")
 
     # ───────────────────────────────────────────────────────────────────
     # Scenario 6: Three dimensions — all match → should fire
