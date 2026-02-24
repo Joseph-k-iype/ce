@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWizardStore } from '../../../stores/wizardStore';
+import { useDropdownData } from '../../../hooks/useDropdownData';
 import { editRule, editTerms, getTriggerLogic } from '../../../services/wizardApi';
 import type { TriggerLogicResponse } from '../../../types/wizard';
 
 export function Step4Review() {
+  const { data: dropdowns } = useDropdownData();
   const {
     editedRuleDefinition,
     editedTermsDictionary,
@@ -11,6 +13,8 @@ export function Step4Review() {
     sessionId,
     dataCategories, purposesOfProcessing, processL1, processL2, processL3,
     groupDataCategories, sensitiveDataCategories, regulators, authorities, dataSubjects,
+    setDataCategories, setPurposesOfProcessing, setProcessL1, setProcessL2, setProcessL3,
+    setGroupDataCategories, setSensitiveDataCategories, setRegulators, setAuthorities, setDataSubjects,
     setEditedRuleDefinition,
     setEditedTermsDictionary,
   } = useWizardStore();
@@ -41,6 +45,9 @@ export function Step4Review() {
 
   // Trigger logic state
   const [triggerLogic, setTriggerLogic] = useState<TriggerLogicResponse | null>(null);
+
+  // Entity editing state
+  const [editingEntities, setEditingEntities] = useState(false);
 
   // UI state
   const [saving, setSaving] = useState(false);
@@ -115,7 +122,7 @@ export function Step4Review() {
     if (!sessionId || !rule) return;
     setSaving(true);
     try {
-      // Build updated rule from all editable fields
+      // Build updated rule from all editable fields — include entity dimension changes
       const updatedRule: Record<string, unknown> = {
         ...rule,
         rule_id: ruleId,
@@ -134,6 +141,15 @@ export function Step4Review() {
         origin_countries: originCountries ? originCountries.split(',').map(s => s.trim()).filter(Boolean) : null,
         receiving_group: receivingGroup || null,
         receiving_countries: receivingCountries ? receivingCountries.split(',').map(s => s.trim()).filter(Boolean) : null,
+        // Sync confirmed entity dimensions back into the rule definition
+        data_categories: dataCategories,
+        purposes_of_processing: purposesOfProcessing,
+        processes: [...processL1, ...processL2, ...processL3].filter(Boolean),
+        gdc: groupDataCategories,
+        sensitive_data_categories: sensitiveDataCategories,
+        regulators,
+        authorities,
+        data_subjects: dataSubjects,
       };
 
       await editRule(sessionId, updatedRule);
@@ -293,6 +309,137 @@ export function Step4Review() {
             </label>
           </div>
         </div>
+      </div>
+
+      {/* Editable Entity Dimensions — collapsible */}
+      <div className="card-dark p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Entity Trigger Conditions</h4>
+          <button
+            onClick={() => setEditingEntities(prev => !prev)}
+            className="text-xs text-blue-400 hover:text-blue-300 underline"
+          >
+            {editingEntities ? 'Collapse' : 'Edit conditions'}
+          </button>
+        </div>
+        <p className="text-[10px] text-gray-500">
+          These are the entity dimensions that will trigger this rule. Editing here updates your confirmed selections.
+        </p>
+        {editingEntities && (
+          <div className="space-y-4 pt-2">
+            {/* Data Categories */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Data Categories</label>
+                <select multiple value={dataCategories}
+                  onChange={e => setDataCategories(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-20">
+                  {(dropdowns?.data_categories || []).map((c: any) => {
+                    const v = typeof c === 'string' ? c : c.name;
+                    return <option key={v} value={v}>{v}</option>;
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Purposes of Processing</label>
+                <select multiple value={purposesOfProcessing}
+                  onChange={e => setPurposesOfProcessing(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-20">
+                  {(dropdowns?.purpose_of_processing || dropdowns?.purposes || []).map((p: any) => {
+                    const v = typeof p === 'string' ? p : p.name;
+                    return <option key={v} value={v}>{v}</option>;
+                  })}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Process L1</label>
+                <select multiple value={processL1}
+                  onChange={e => setProcessL1(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-16">
+                  {(dropdowns?.processes?.l1 || []).map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Process L2</label>
+                <select multiple value={processL2}
+                  onChange={e => setProcessL2(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-16">
+                  {(dropdowns?.processes?.l2 || []).map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Process L3</label>
+                <select multiple value={processL3}
+                  onChange={e => setProcessL3(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-16">
+                  {(dropdowns?.processes?.l3 || []).map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Group Data Categories (GDC)</label>
+                <select multiple value={groupDataCategories}
+                  onChange={e => setGroupDataCategories(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-16">
+                  {(dropdowns?.group_data_categories || []).map((g: any) => {
+                    const v = typeof g === 'string' ? g : g.name;
+                    return <option key={v} value={v}>{v}</option>;
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Sensitive Data Categories</label>
+                <select multiple value={sensitiveDataCategories}
+                  onChange={e => setSensitiveDataCategories(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-16">
+                  {(dropdowns?.sensitive_data_categories || []).map((s: any) => {
+                    const v = typeof s === 'string' ? s : s.name;
+                    return <option key={v} value={v}>{v}</option>;
+                  })}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Regulators</label>
+                <select multiple value={regulators}
+                  onChange={e => setRegulators(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-16">
+                  {(dropdowns?.regulators || []).map((r: any) => {
+                    const v = typeof r === 'string' ? r : r.name;
+                    return <option key={v} value={v}>{v}</option>;
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Authorities</label>
+                <select multiple value={authorities}
+                  onChange={e => setAuthorities(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-16">
+                  {(dropdowns?.authorities || []).map((a: any) => {
+                    const v = typeof a === 'string' ? a : a.name;
+                    return <option key={v} value={v}>{v}</option>;
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Data Subjects</label>
+                <select multiple value={dataSubjects}
+                  onChange={e => setDataSubjects(Array.from(e.target.selectedOptions, o => o.value))}
+                  className="input-dark text-xs h-16">
+                  {(dropdowns?.data_subjects || []).map((ds: any) => {
+                    const v = typeof ds === 'string' ? ds : ds.name;
+                    return <option key={v} value={v}>{v}</option>;
+                  })}
+                </select>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-500">Changes take effect when you click "Save Changes" above.</p>
+          </div>
+        )}
       </div>
 
       {/* Entity Mapping Grid — AI suggestions vs. user confirmed */}

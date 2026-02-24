@@ -198,21 +198,32 @@ class DataDictionaryExecutor(ComplianceAgentExecutor):
                     ],
                 })
             else:
+                # Parse failed — log and continue gracefully to cypher_generator.
+                # The rule_definition already has entity mappings from rule_analyzer,
+                # so cypher_generator can proceed without a dictionary. Blocking the
+                # entire workflow on a dictionary parse failure is not worth it.
+                logger.warning(
+                    f"Data dictionary: failed to parse AI response — "
+                    f"continuing to cypher_generator with rule_definition keywords only"
+                )
                 self.record_failure(state, "Failed to parse response")
-                state["current_phase"] = "supervisor"
-                state["iteration"] = state.get("iteration", 0) + 1
+                state["current_phase"] = "cypher_generator"
                 self.event_store.append(
                     session_id=session_id,
                     event_type=AuditEventType.AGENT_FAILED,
                     agent_name=self.agent_name,
-                    error="Failed to parse response",
+                    error="Failed to parse response (continuing to cypher_generator)",
                 )
 
         except AIRequestError as e:
             logger.error(f"Data dictionary error: {e}")
+            # AI call failed — continue gracefully rather than blocking the pipeline
+            logger.warning(
+                f"Data dictionary: AI call failed ({e}) — "
+                f"continuing to cypher_generator without dictionary enrichment"
+            )
             self.record_failure(state, str(e))
-            state["current_phase"] = "supervisor"
-            state["iteration"] = state.get("iteration", 0) + 1
+            state["current_phase"] = "cypher_generator"
             self.event_store.append(
                 session_id=session_id,
                 event_type=AuditEventType.AGENT_FAILED,

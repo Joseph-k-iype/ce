@@ -365,6 +365,23 @@ class RulesEvaluator:
         all_graph_rules = self._query_all_applicable_rules(context)
         logger.info(f"Graph query returned {len(all_graph_rules)} applicable rule(s)")
 
+        # Contextual intelligence: determine whether the caller provided any entity data.
+        # If no entity data is provided (only countries), ONLY case_matching rules
+        # (TIA/PIA/HRPR) should fire. Attribute rules require at least one entity
+        # dimension so results are specific and meaningful, not just country-based.
+        ctx_has_any_content_data = bool(
+            context.data_categories
+            or context.purposes
+            or context.process_l1
+            or context.process_l2
+            or context.process_l3
+            or context.data_subjects
+            or context.regulators
+            or context.authorities
+            or context.personal_data_names
+            or context.metadata
+        )
+
         # Post-filter and build triggered rules
         country_matched_rules = []
         for rule_row in all_graph_rules:
@@ -400,6 +417,16 @@ class RulesEvaluator:
                 or has_patterns
                 or has_linked
             )
+
+            # If this rule needs content/entity matching but the evaluation context
+            # has NO entity data at all, skip it. With only origin+receiving country,
+            # only case_matching rules (TIA/PIA/HRPR) should apply.
+            if needs_content_match and not ctx_has_any_content_data:
+                logger.debug(
+                    f"Rule {rule_id} ({rule_type}) skipped: "
+                    f"needs entity context but none provided — TIA/PIA/HRPR rules only"
+                )
+                continue
 
             if needs_content_match:
                 matched = False
@@ -1749,6 +1776,23 @@ class RulesEvaluator:
         all_graph_rules = self._query_all_applicable_rules(context)
         logger.info(f"Graph query returned {len(all_graph_rules)} applicable rule(s)")
 
+        # Contextual intelligence: determine whether the caller provided any entity data.
+        # If no entity data is provided (only countries), ONLY case_matching rules
+        # (TIA/PIA/HRPR) should fire. Attribute rules require at least one entity
+        # dimension so results are specific and meaningful, not just country-based.
+        ctx_has_any_content_data = bool(
+            context.data_categories
+            or context.purposes
+            or context.process_l1
+            or context.process_l2
+            or context.process_l3
+            or context.data_subjects
+            or context.regulators
+            or context.authorities
+            or context.personal_data_names
+            or context.metadata
+        )
+
         # Post-filter and build triggered rules
         country_matched_rules = []
         for rule_row in all_graph_rules:
@@ -1784,6 +1828,16 @@ class RulesEvaluator:
                 or has_patterns
                 or has_linked
             )
+
+            # If this rule needs content/entity matching but the evaluation context
+            # has NO entity data at all, skip it. With only origin+receiving country,
+            # only case_matching rules (TIA/PIA/HRPR) should apply.
+            if needs_content_match and not ctx_has_any_content_data:
+                logger.debug(
+                    f"Rule {rule_id} ({rule_type}) skipped: "
+                    f"needs entity context but none provided — TIA/PIA/HRPR rules only"
+                )
+                continue
 
             if needs_content_match:
                 matched = False

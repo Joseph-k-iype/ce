@@ -71,23 +71,90 @@ def classify_failure(error: str) -> FailureCategory:
 
 
 def parse_json_response(response: str) -> dict | None:
-    """Parse JSON from LLM response, handling markdown code blocks."""
-    json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', response)
-    if json_match:
-        json_str = json_match.group(1)
-    else:
-        json_str = response
+    """Parse JSON from LLM response with multi-strategy extraction.
 
+    Strategies (in order):
+    1. Extract from markdown code block (```json ... ``` or ``` ... ```)
+    2. Direct parse of full response
+    3. Extract between outermost { } braces
+    4. Strip trailing non-JSON text after the last closing brace
+    5. Remove JavaScript-style comments (// ...) and trailing commas
+    """
+    if not response or not isinstance(response, str):
+        return None
+
+    # Strategy 1: Extract from markdown code block
+    code_block_match = re.search(r'```(?:json)?\s*\n?([\s\S]*?)\n?\s*```', response)
+    if code_block_match:
+        json_str = code_block_match.group(1).strip()
+    else:
+        json_str = response.strip()
+
+    # Strategy 2: Direct parse
     try:
-        return json.loads(json_str)
+        result = json.loads(json_str)
+        if isinstance(result, dict):
+            return result
     except json.JSONDecodeError:
-        start = json_str.find('{')
-        end = json_str.rfind('}') + 1
-        if start != -1 and end > start:
-            try:
-                return json.loads(json_str[start:end])
-            except json.JSONDecodeError:
-                pass
+        pass
+
+    # Strategy 3: Extract between outermost { }
+    start = json_str.find('{')
+    end = json_str.rfind('}') + 1
+    if start != -1 and end > start:
+        candidate = json_str[start:end]
+        try:
+            result = json.loads(candidate)
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
+
+        # Strategy 4: Remove JS-style line comments and trailing commas, then retry
+        cleaned = re.sub(r'//[^\n]*', '', candidate)          # strip // comments
+        cleaned = re.sub(r',\s*([}\]])', r'\1', cleaned)       # remove trailing commas
+        cleaned = re.sub(r'[\x00-\x1f\x7f]', ' ', cleaned)    # strip control chars
+        try:
+            result = json.loads(cleaned)
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
+
+    # Strategy 5: Find deepest valid JSON object by scanning from back
+    # Handles truncated responses by finding the last complete object
+    text = json_str[start:] if start != -1 else json_str
+    depth = 0
+    last_valid_end = -1
+    in_string = False
+    escape_next = False
+    for i, ch in enumerate(text):
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == '\\' and in_string:
+            escape_next = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if not in_string:
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    last_valid_end = i + 1
+                    break
+
+    if last_valid_end > 0:
+        try:
+            result = json.loads(text[:last_valid_end])
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
+
     return None
 
 
