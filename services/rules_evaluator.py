@@ -399,21 +399,17 @@ class RulesEvaluator:
                         keyword_matched = self._match_attribute_keywords(context, keywords, patterns)
 
                 # ─── Final decision ──────────────────────────────────────────────────
-                # STRICT RULE: If the rule has linked entities, those MUST match.
-                # Keywords alone NEVER bypass entity dimension requirements.
-                if has_linked and not entity_dims_ok:
-                    # Entity dimensions specified but not satisfied → ALWAYS skip
-                    logger.debug(
-                        f"Rule {rule_id} ({rule_type}) skipped: entity dimensions not matched"
-                    )
-                    continue
-                elif entity_dims_ok and has_linked:
-                    # Entity dimensions satisfied → rule fires (keywords are bonus)
+                # Based on user request, if ANY condition matched (entities OR keywords),
+                # the rule should trigger. This means keyword matches in metadata can 
+                # trigger the rule even if the entity selection from dropdowns was wrong.
+                if entity_dims_ok and has_linked:
                     matched = True
-                elif not has_linked and keyword_matched:
-                    # No entity dims on this rule, but keywords matched → fire
+                    logger.debug(f"Rule {rule_id} ({rule_type}) matched via entity dimensions")
+                elif keyword_matched:
                     matched = True
-
+                    logger.debug(f"Rule {rule_id} ({rule_type}) matched via keywords/patterns")
+                
+                # If neither matched, the rule fails
                 if not matched:
                     logger.debug(
                         f"Rule {rule_id} ({rule_type}) skipped: no keyword or graph match"
