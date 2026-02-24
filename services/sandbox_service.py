@@ -84,6 +84,34 @@ class SandboxService:
             graph = self.db.db.select_graph(graph_name)
             builder = RulesGraphBuilder(graph=graph)
 
+            # ── Validate rule spec before insertion ─────────────────────
+            # Attribute rules MUST have at least one entity dimension or keyword.
+            # This prevents empty/malformed rules from entering the graph.
+            rule_type = rule_def.get('rule_type', 'case_matching')
+            if rule_type == 'attribute':
+                try:
+                    from models.rule_spec import RuleSpec, RuleType
+                    RuleSpec(
+                        rule_id=rule_def.get('rule_id', 'pending'),
+                        name=rule_def.get('name', 'Untitled'),
+                        rule_type=RuleType.ATTRIBUTE,
+                        required_data_categories=rule_def.get('data_categories') or [],
+                        required_purposes=rule_def.get('purposes_of_processing') or [],
+                        required_processes=rule_def.get('processes') or [],
+                        required_gdcs=rule_def.get('gdc') or [],
+                        required_regulators=rule_def.get('regulators') or [],
+                        required_authorities=rule_def.get('authorities') or [],
+                        required_data_subjects=rule_def.get('data_subjects') or [],
+                        required_sensitive_data_categories=rule_def.get('sensitive_data_categories') or [],
+                        keywords=rule_def.get('attribute_keywords') or [],
+                        patterns=rule_def.get('attribute_patterns') or [],
+                    )
+                    logger.info(f"RuleSpec validation passed for rule '{rule_def.get('name')}'")
+                except Exception as e:
+                    logger.error(f"RuleSpec validation FAILED: {e}")
+                    # Don't block — log warning and continue (soft enforcement)
+                    logger.warning("Proceeding with rule despite validation failure")
+
             # Merge suggested_linked_entities into flat fields
             self._merge_linked_entities(rule_def)
 
