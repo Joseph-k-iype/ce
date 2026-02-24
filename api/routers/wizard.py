@@ -445,33 +445,21 @@ async def sandbox_evaluate(session_id: str, request: dict):
         else:
             receiving_list = []
 
-        # Merge data_categories from request and session
-        req_categories = request.get("data_categories") or []
-        session_categories = session.data_categories or []
-        merged_categories = list(set(req_categories + session_categories)) if (req_categories or session_categories) else None
-
-        # Merge purposes from request and session
-        req_purposes = request.get("purposes") or []
-        session_purposes = session.purposes_of_processing or []
-        merged_purposes = list(set(req_purposes + session_purposes)) if (req_purposes or session_purposes) else None
-
-        # Merge process_l1/l2/l3 from request and session
-        def _merge_proc(req_val, session_val):
-            req_list = req_val if isinstance(req_val, list) else ([req_val] if req_val else [])
-            combined = list(dict.fromkeys(req_list + (session_val or [])))
-            return combined or None
-        merged_proc_l1 = _merge_proc(request.get("process_l1"), session.process_l1)
-        merged_proc_l2 = _merge_proc(request.get("process_l2"), session.process_l2)
-        merged_proc_l3 = _merge_proc(request.get("process_l3"), session.process_l3)
-
-        # Merge entity dimensions from request and session
-        def _merge_list(req_val, session_val):
-            req_list = req_val if isinstance(req_val, list) else ([req_val] if req_val else [])
-            combined = list(dict.fromkeys(req_list + (session_val or [])))
-            return combined or None
-        merged_regulators = _merge_list(request.get("regulators"), session.regulators)
-        merged_authorities = _merge_list(request.get("authorities"), session.authorities)
-        merged_data_subjects = _merge_list(request.get("data_subjects"), session.data_subjects)
+        # ── STRICT: Only use entities the user EXPLICITLY provides ──────
+        # Do NOT merge session entities. The sandbox test should evaluate
+        # EXACTLY what the user sends — if they only send origin/receiving
+        # country, ONLY case_matching rules (TIA/PIA/HRPR) should fire.
+        # If they select specific entities, those entities determine which
+        # attribute rules fire. Merging session data defeats this purpose
+        # because the AI-mapped entities would always match the rule.
+        req_categories = request.get("data_categories") or None
+        req_purposes = request.get("purposes") or None
+        req_proc_l1 = request.get("process_l1") or None
+        req_proc_l2 = request.get("process_l2") or None
+        req_proc_l3 = request.get("process_l3") or None
+        req_regulators = request.get("regulators") or None
+        req_authorities = request.get("authorities") or None
+        req_data_subjects = request.get("data_subjects") or None
 
         # Evaluate for each receiving country (or once with empty string)
         all_results = []
@@ -482,16 +470,16 @@ async def sandbox_evaluate(session_id: str, request: dict):
                 origin_country=request.get("origin_country", ""),
                 receiving_country=rc,
                 pii=request.get("pii", False),
-                purposes=merged_purposes,
-                process_l1=merged_proc_l1,
-                process_l2=merged_proc_l2,
-                process_l3=merged_proc_l3,
+                purposes=req_purposes,
+                process_l1=req_proc_l1,
+                process_l2=req_proc_l2,
+                process_l3=req_proc_l3,
                 personal_data_names=request.get("personal_data_names"),
-                data_categories=merged_categories,
+                data_categories=req_categories,
                 metadata=request.get("metadata"),
-                regulators=merged_regulators,
-                authorities=merged_authorities,
-                data_subjects=merged_data_subjects,
+                regulators=req_regulators,
+                authorities=req_authorities,
+                data_subjects=req_data_subjects,
             )
             all_results.append(result)
 
