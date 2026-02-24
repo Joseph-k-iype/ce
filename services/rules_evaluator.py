@@ -319,6 +319,19 @@ class RulesEvaluator:
             if rule_id in evaluated_rule_ids:
                 continue
 
+            # Skip expired rules
+            valid_until_str = rule_row.get('valid_until')
+            if valid_until_str:
+                try:
+                    # simple string comparison works for ISO dates (YYYY-MM-DD)
+                    # Graph returns '2025-12-31'
+                    from datetime import datetime
+                    if valid_until_str < datetime.now().isoformat()[:10]:
+                        logger.info(f"Rule {rule_id} skipped: expired on {valid_until_str}")
+                        continue
+                except Exception as e:
+                    logger.warning(f"Error checking valid_until for {rule_id}: {e}")
+
             # For rules with attribute_keywords (any type), check keyword matching
             keywords_json = rule_row.get('attribute_keywords') or ''
             patterns_json = rule_row.get('attribute_patterns') or ''
@@ -934,7 +947,7 @@ class RulesEvaluator:
 
         # Authorities (normalized)
         if linked_authorities:
-            ctx_auth_norm = {_normalize_text(str(a)) for a in linked_authorities if a} - {''}
+            ctx_auth_norm = {_normalize_text(str(a)) for a in context.authorities if a} - {''}
             if ctx_auth_norm:
                 rule_auth_norm = {_normalize_text(str(a)) for a in linked_authorities if a} - {''}
                 matched_norm = rule_auth_norm & ctx_auth_norm
@@ -954,15 +967,29 @@ class RulesEvaluator:
         # actually provided values for. If empty → user provided no matching
         # dimension data, fall through to Tier 2 fuzzy matching.
         if dimension_results:
-            if all(dimension_results):
-                logger.debug(f"Tier 1: all {len(dimension_results)} checked dimension(s) matched — rule triggers")
-                context.triggered_node_mappings[rule_id] = current_matches
-                return True
+            matching_mode = rule_row.get('matching_mode', 'all_dimensions')
+            
+            # OR-logic: trigger if ANY dimension matched
+            if matching_mode == 'any_dimension':
+                if any(dimension_results):
+                    logger.debug(f"Tier 1: ANY_DIMENSION mode — at least one matched — rule triggers")
+                    context.triggered_node_mappings[rule_id] = current_matches
+                    return True
+                else:
+                    logger.debug(f"Tier 1: ANY_DIMENSION mode — NO dimensions matched — rule SKIPPED")
+                    return False
+            
+            # AND-logic: trigger only if ALL checked dimensions matched
             else:
-                # User provided values for some dimensions but they didn't match.
-                # This is an actual mismatch (wrong entities) — rule does NOT fire.
-                logger.debug(f"Tier 1: dimension mismatch ({dimension_results}) — rule SKIPPED")
-                return False
+                if all(dimension_results):
+                    logger.debug(f"Tier 1: ALL_DIMENSIONS mode — all {len(dimension_results)} checked matched — rule triggers")
+                    context.triggered_node_mappings[rule_id] = current_matches
+                    return True
+                else:
+                    # User provided values for some dimensions but they didn't match.
+                    # This is an actual mismatch (wrong entities) — rule does NOT fire.
+                    logger.debug(f"Tier 1: dimension mismatch ({dimension_results}) — rule SKIPPED")
+                    return False
 
         # ── Tier 2: Fuzzy match on free-text fields only ──
         if not linked_attrs:

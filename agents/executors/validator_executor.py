@@ -73,26 +73,38 @@ def _split_errors(errors: list) -> tuple[list, list]:
     An error is blocking only if it references a required field or a Cypher
     syntax problem.  Errors that only reference known optional fields are
     demoted to warnings so validation does not block on them.
+
+    Priority: if an error names a known OPTIONAL field explicitly, it is
+    always demoted — even if the error text also contains generic Cypher
+    keywords like 'query' or 'param'.  This prevents false positives like
+    "rule_insert / params / attribute_keywords: Missing" from blocking.
     """
     blocking: list = []
     demoted: list = []
     for err in errors:
         err_str = str(err).lower()
 
-        # Always keep errors about required fields or Cypher issues
+        # Always keep errors about required fields
         is_required_violation = any(f in err_str for f in _REQUIRED_FIELDS)
-        is_cypher_issue       = any(kw in err_str for kw in _CYPHER_KEYWORDS)
-
-        if is_required_violation or is_cypher_issue:
+        if is_required_violation:
             blocking.append(err)
             continue
 
-        # Demote if the only named field is an optional one
+        # Demote if the error explicitly names a known optional field
+        # (takes PRIORITY over cypher keyword matching)
         references_optional = any(f in err_str for f in _OPTIONAL_FIELDS)
         if references_optional:
             demoted.append(f"[auto-demoted to warning] {err}")
-        else:
+            continue
+
+        # Block if it's a genuine Cypher/syntax issue
+        is_cypher_issue = any(kw in err_str for kw in _CYPHER_KEYWORDS)
+        if is_cypher_issue:
             blocking.append(err)
+            continue
+
+        # Default: block
+        blocking.append(err)
 
     return blocking, demoted
 

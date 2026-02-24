@@ -72,6 +72,8 @@ RETURN DISTINCT
     r.requires_personal_data AS requires_personal_data,
     r.origin_match_type AS origin_match_type,
     r.receiving_match_type AS receiving_match_type,
+    coalesce(r.matching_mode, 'all_dimensions') AS matching_mode,
+    r.valid_until AS valid_until,
     r.required_actions AS required_actions,
     r.attribute_name AS attribute_name,
     r.attribute_keywords AS attribute_keywords,
