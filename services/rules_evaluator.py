@@ -365,14 +365,19 @@ class RulesEvaluator:
                         keyword_matched = self._match_attribute_keywords(context, keywords, patterns)
 
                 # ─── Final decision ──────────────────────────────────────────────────
+                # STRICT RULE: If the rule has linked entities, those MUST match.
+                # Keywords alone NEVER bypass entity dimension requirements.
                 if has_linked and not entity_dims_ok:
+                    # Entity dimensions specified but not satisfied → ALWAYS skip
                     logger.debug(
                         f"Rule {rule_id} ({rule_type}) skipped: entity dimensions not matched"
                     )
                     continue
                 elif entity_dims_ok and has_linked:
+                    # Entity dimensions satisfied → rule fires (keywords are bonus)
                     matched = True
-                elif keyword_matched:
+                elif not has_linked and keyword_matched:
+                    # No entity dims on this rule, but keywords matched → fire
                     matched = True
 
                 if not matched:
@@ -918,8 +923,11 @@ class RulesEvaluator:
                 context.triggered_node_mappings[rule_id] = current_matches
                 return True
             else:
-                logger.debug(f"Tier 1: NOT all dimensions matched ({dimension_results}) — checking Tier 2")
-                # Don't return False yet — fall through to Tier 2 for linked_attrs
+                # STRICT: If ANY structured dimension was checked and FAILED,
+                # the rule does NOT fire. Tier 2 fuzzy matching CANNOT override
+                # failed structured dimension checks.
+                logger.debug(f"Tier 1: NOT all dimensions matched ({dimension_results}) — rule SKIPPED")
+                return False
 
         # ── Tier 2: Fuzzy match on free-text fields only ──
         if not linked_attrs:
