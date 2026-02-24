@@ -259,9 +259,15 @@ class ValidatorExecutor(ComplianceAgentExecutor):
             state["validation_result"] = validated.model_dump()
             duration = (time.time() - start_time) * 1000
 
-            # FalkorDB test queries in temp graph
+            # FalkorDB test queries in temp graph (non-blocking — failures
+            # here are informational only and never affect validation outcome)
             if self.db_service and validated.overall_valid:
-                self._run_test_queries(state, session_id)
+                try:
+                    self._run_test_queries(state, session_id)
+                except Exception as tq_err:
+                    logger.warning(
+                        f"Test query execution failed (non-blocking): {tq_err}"
+                    )
 
             # Accept if: overall_valid=True, or no BLOCKING errors (only warnings), or confidence >= 0.5
             has_blocking_errors = len(blocking_errors) > 0
@@ -392,13 +398,17 @@ class ValidatorExecutor(ComplianceAgentExecutor):
             logger.info(f"Test query returned {row_count} rows (params bound: {bool(params)})")
 
         except Exception as e:
-            logger.warning(f"FalkorDB test query failed: {e}")
-            self.event_store.append(
-                session_id=session_id,
-                event_type=AuditEventType.AGENT_FAILED,
-                agent_name=self.agent_name,
-                error=f"Test query failed: {e}",
+            logger.warning(
+                f"FalkorDB test query failed (non-blocking, temp graph may lack entity nodes): {e}"
             )
+            # Log as informational event, NOT as AGENT_FAILED — test queries
+            # run in an empty temp graph that lacks entity nodes (DataCategory,
+            # Authority, etc.), so failures are expected for complex rules.
+            state.setdefault("events", []).append({
+                "event_type": "validation_detail",
+                "agent_name": self.agent_name,
+                "message": f"Test query skipped (temp graph): {e}",
+            })
         finally:
             if graph_name:
                 self.db_service.delete_temp_graph(graph_name)

@@ -18,6 +18,10 @@ export function Step5SandboxTest() {
     process_l1: [] as string[],
     process_l2: [] as string[],
     process_l3: [] as string[],
+    data_subjects: [] as string[],
+    regulators: [] as string[],
+    authorities: [] as string[],
+    sensitive_data_categories: [] as string[],
     personal_data_names: '' as string,
     metadata_json: '' as string,
   });
@@ -193,6 +197,68 @@ export function Step5SandboxTest() {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-white mb-1">Data Subjects</label>
+              <select
+                multiple
+                value={evalForm.data_subjects}
+                onChange={(e) => setEvalForm(f => ({ ...f, data_subjects: Array.from(e.target.selectedOptions, o => o.value) }))}
+                className="input-dark text-sm h-16"
+              >
+                {(dropdowns?.data_subjects || []).map((ds: any) => {
+                  const val = typeof ds === 'string' ? ds : ds.name;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white mb-1">Sensitive Data Categories</label>
+              <select
+                multiple
+                value={evalForm.sensitive_data_categories}
+                onChange={(e) => setEvalForm(f => ({ ...f, sensitive_data_categories: Array.from(e.target.selectedOptions, o => o.value) }))}
+                className="input-dark text-sm h-16"
+              >
+                {(dropdowns?.sensitive_data_categories || []).map((sdc: any) => {
+                  const val = typeof sdc === 'string' ? sdc : sdc.name;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-white mb-1">Regulators</label>
+              <select
+                multiple
+                value={evalForm.regulators}
+                onChange={(e) => setEvalForm(f => ({ ...f, regulators: Array.from(e.target.selectedOptions, o => o.value) }))}
+                className="input-dark text-sm h-16"
+              >
+                {(dropdowns?.regulators || []).map((reg: any) => {
+                  const val = typeof reg === 'string' ? reg : reg.name;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white mb-1">Authorities</label>
+              <select
+                multiple
+                value={evalForm.authorities}
+                onChange={(e) => setEvalForm(f => ({ ...f, authorities: Array.from(e.target.selectedOptions, o => o.value) }))}
+                className="input-dark text-sm h-16"
+              >
+                {(dropdowns?.authorities || []).map((auth: any) => {
+                  const val = typeof auth === 'string' ? auth : auth.name;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-white mb-1">Personal Data Names</label>
             <input
@@ -238,18 +304,16 @@ export function Step5SandboxTest() {
           {latestResult && (
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               {/* Transfer Status Banner */}
-              <div className={`rounded-lg p-3 ${
-                latestResult.transfer_status === 'ALLOWED' ? 'bg-green-50 border border-green-200' :
+              <div className={`rounded-lg p-3 ${latestResult.transfer_status === 'ALLOWED' ? 'bg-green-50 border border-green-200' :
                 latestResult.transfer_status === 'PROHIBITED' ? 'bg-red-50 border border-red-200' :
-                'bg-yellow-50 border border-yellow-200'
-              }`}>
+                  'bg-yellow-50 border border-yellow-200'
+                }`}>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-gray-900">Transfer Status</span>
-                  <span className={`text-sm font-bold ${
-                    latestResult.transfer_status === 'ALLOWED' ? 'text-green-600' :
+                  <span className={`text-sm font-bold ${latestResult.transfer_status === 'ALLOWED' ? 'text-green-600' :
                     latestResult.transfer_status === 'PROHIBITED' ? 'text-red-600' :
-                    'text-yellow-600'
-                  }`}>
+                      'text-yellow-600'
+                    }`}>
                     {latestResult.transfer_status}
                   </span>
                 </div>
@@ -328,6 +392,25 @@ export function Step5SandboxTest() {
                             ))}
                           </div>
                         )}
+
+                        {/* Matched Entities — shows WHY this rule triggered */}
+                        {rule.matched_entities && Object.keys(rule.matched_entities).length > 0 && (
+                          <div>
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase">Matched Entities</span>
+                            <div className="mt-0.5 space-y-1">
+                              {Object.entries(rule.matched_entities).map(([dimension, values]) => (
+                                <div key={dimension} className="flex items-start gap-1.5">
+                                  <span className="text-[10px] text-gray-500 font-medium min-w-[80px] shrink-0">{dimension}:</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {values.map((val, vi) => (
+                                      <span key={vi} className="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded text-[10px] font-medium">{val}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -345,9 +428,8 @@ export function Step5SandboxTest() {
                       const compliant = ac[`${key}_compliant`];
                       if (!required) return null;
                       return (
-                        <span key={key} className={`px-2 py-1 rounded text-xs font-semibold ${
-                          compliant ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
+                        <span key={key} className={`px-2 py-1 rounded text-xs font-semibold ${compliant ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
                           {key.toUpperCase()}: {compliant ? 'Compliant' : 'Required'}
                         </span>
                       );
@@ -355,10 +437,10 @@ export function Step5SandboxTest() {
                   </div>
                   {latestResult.assessment_compliance.missing_assessments &&
                     latestResult.assessment_compliance.missing_assessments.length > 0 && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Missing: {latestResult.assessment_compliance.missing_assessments.join(', ')}
-                    </p>
-                  )}
+                      <p className="text-xs text-red-600 mt-1">
+                        Missing: {latestResult.assessment_compliance.missing_assessments.join(', ')}
+                      </p>
+                    )}
                 </div>
               )}
 

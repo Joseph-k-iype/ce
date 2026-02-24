@@ -84,6 +84,9 @@ class SandboxService:
             graph = self.db.db.select_graph(graph_name)
             builder = RulesGraphBuilder(graph=graph)
 
+            # Merge suggested_linked_entities into flat fields
+            self._merge_linked_entities(rule_def)
+
             # Merge dictionary keywords if provided
             if dictionary_result:
                 merged = list(rule_def.get('attribute_keywords') or [])
@@ -109,6 +112,62 @@ class SandboxService:
         except Exception as e:
             logger.error(f"Failed to add rule to sandbox '{graph_name}': {e}")
             return False
+
+    @staticmethod
+    def _merge_linked_entities(rule_def: Dict[str, Any]):
+        """Merge suggested_linked_entities dict into flat rule_def fields.
+
+        The AI analyzer outputs entity mappings in two places:
+        1. Flat fields: rule_def['data_categories'], rule_def['regulators'], etc.
+        2. Nested dict: rule_def['suggested_linked_entities']['data_categories'], etc.
+
+        graph_builder.add_rule() reads from flat fields only.
+        This method ensures both sources are merged so no entity links are lost.
+        """
+        linked = rule_def.get('suggested_linked_entities')
+        if not linked or not isinstance(linked, dict):
+            return
+
+        # Mapping from suggested_linked_entities keys to flat rule_def keys
+        key_map = {
+            'data_categories': 'data_categories',
+            'purposes_of_processing': 'purposes_of_processing',
+            'purposes': 'purposes_of_processing',
+            'processes': 'processes',
+            'gdc': 'gdc',
+            'group_data_categories': 'gdc',
+            'regulators': 'regulators',
+            'authorities': 'authorities',
+            'data_subjects': 'data_subjects',
+            'sensitive_data_categories': 'sensitive_data_categories',
+            'global_business_functions': 'global_business_functions',
+        }
+
+        for linked_key, flat_key in key_map.items():
+            linked_values = linked.get(linked_key)
+            if not linked_values or not isinstance(linked_values, list):
+                continue
+
+            existing = rule_def.get(flat_key) or []
+            if not isinstance(existing, list):
+                existing = [existing] if existing else []
+
+            # Merge with deduplication (case-insensitive)
+            existing_lower = {str(v).lower().strip() for v in existing}
+            for val in linked_values:
+                val_str = str(val).strip()
+                if val_str and val_str.lower() not in existing_lower:
+                    existing.append(val_str)
+                    existing_lower.add(val_str.lower())
+
+            rule_def[flat_key] = existing
+
+        logger.debug(
+            f"Merged linked entities into rule_def: "
+            f"data_categories={len(rule_def.get('data_categories') or [])}, "
+            f"purposes={len(rule_def.get('purposes_of_processing') or [])}, "
+            f"regulators={len(rule_def.get('regulators') or [])}"
+        )
 
     def _extract_dictionary_keywords(self, dictionary_result: Dict[str, Any]) -> List[str]:
         """
@@ -202,6 +261,9 @@ class SandboxService:
         """
         try:
             main_builder = RulesGraphBuilder()
+
+            # Merge suggested_linked_entities into flat fields
+            self._merge_linked_entities(rule_def)
 
             # Merge dictionary keywords if available
             dictionary = self._sandbox_dictionaries.get(graph_name)

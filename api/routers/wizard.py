@@ -82,6 +82,13 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
             session.edited_rule_definition = result.rule_definition
             rule_def = result.rule_definition or {}
 
+            # ── Merge suggested_linked_entities → flat fields ────────────────
+            # The AI analyzer may output entities in both flat fields AND in
+            # the nested suggested_linked_entities dict. Merge before syncing
+            # to session so all entities appear in metadata UI and graph.
+            from services.sandbox_service import SandboxService
+            SandboxService._merge_linked_entities(rule_def)
+
             # ── Sync AI-extracted entity lists → session metadata fields ──────
             # This ensures the Step 3 metadata UI shows AI-extracted entities
             # pre-populated so the user can review and adjust them.
@@ -457,6 +464,15 @@ async def sandbox_evaluate(session_id: str, request: dict):
         merged_proc_l2 = _merge_proc(request.get("process_l2"), session.process_l2)
         merged_proc_l3 = _merge_proc(request.get("process_l3"), session.process_l3)
 
+        # Merge entity dimensions from request and session
+        def _merge_list(req_val, session_val):
+            req_list = req_val if isinstance(req_val, list) else ([req_val] if req_val else [])
+            combined = list(dict.fromkeys(req_list + (session_val or [])))
+            return combined or None
+        merged_regulators = _merge_list(request.get("regulators"), session.regulators)
+        merged_authorities = _merge_list(request.get("authorities"), session.authorities)
+        merged_data_subjects = _merge_list(request.get("data_subjects"), session.data_subjects)
+
         # Evaluate for each receiving country (or once with empty string)
         all_results = []
         targets = receiving_list if receiving_list else [""]
@@ -473,9 +489,9 @@ async def sandbox_evaluate(session_id: str, request: dict):
                 personal_data_names=request.get("personal_data_names"),
                 data_categories=merged_categories,
                 metadata=request.get("metadata"),
-                regulators=session.regulators or None,
-                authorities=session.authorities or None,
-                data_subjects=session.data_subjects or None,
+                regulators=merged_regulators,
+                authorities=merged_authorities,
+                data_subjects=merged_data_subjects,
             )
             all_results.append(result)
 

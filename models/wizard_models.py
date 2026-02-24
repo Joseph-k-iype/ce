@@ -194,6 +194,9 @@ class SandboxEvaluationRequest(BaseModel):
     origin_legal_entity: Optional[List[str]] = None
     receiving_legal_entity: Optional[str] = None
     data_subjects: Optional[List[str]] = None
+    regulators: Optional[List[str]] = None
+    authorities: Optional[List[str]] = None
+    sensitive_data_categories: Optional[List[str]] = None
 
 
 class WizardApprovalRequest(BaseModel):

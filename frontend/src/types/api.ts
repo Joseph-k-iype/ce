@@ -50,6 +50,7 @@ export interface TriggeredRule {
     name: string;
     description?: string;
   }[];
+  matched_entities?: Record<string, string[]>;
 }
 
 export interface CaseMatch {

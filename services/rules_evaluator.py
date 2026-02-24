@@ -497,7 +497,7 @@ class RulesEvaluator:
         # ── Build triggered rules ─────────────────────────────────
         for rule_row in country_matched_rules:
             rule_type = rule_row.get('rule_type', 'case_matching')
-            triggered_rules.append(self._build_triggered_rule_from_row(rule_row, rule_type))
+            triggered_rules.append(self._build_triggered_rule_from_row(rule_row, rule_type, context))
             for module in (rule_row.get('required_assessments') or []):
                 if module:
                     consolidated_duties.append(module)
@@ -1283,7 +1283,7 @@ class RulesEvaluator:
                         required[mapped] = True
         return required
 
-    def _build_triggered_rule_from_row(self, row: dict, rule_type: str) -> TriggeredRule:
+    def _build_triggered_rule_from_row(self, row: dict, rule_type: str, context: 'EvaluationContext' = None) -> TriggeredRule:
         """Build a TriggeredRule from a graph query result row."""
         outcome_str = row.get('outcome', 'permission')
         outcome = RuleOutcomeType.PROHIBITION if outcome_str == 'prohibition' else RuleOutcomeType.PERMISSION
@@ -1367,8 +1367,14 @@ class RulesEvaluator:
                 duties=duties,
             ))
 
+        # Populate matched_entities from context.triggered_node_mappings
+        rule_id_str = str(row.get('rule_id', ''))
+        matched_entities = {}
+        if context and hasattr(context, 'triggered_node_mappings'):
+            matched_entities = context.triggered_node_mappings.get(rule_id_str, {})
+
         return TriggeredRule(
-            rule_id=str(row.get('rule_id', '')),
+            rule_id=rule_id_str,
             rule_name=str(row.get('name', '')),
             rule_type=rule_type,
             priority=str(row.get('priority', 'medium')),
@@ -1382,6 +1388,7 @@ class RulesEvaluator:
             prohibitions=prohibitions,
             required_actions=req_actions,
             required_assessments=sorted(assessment_modules),
+            matched_entities=matched_entities,
         )
 
     # ─── Precedent case search (already graph-based on DataTransferGraph) ───
@@ -1905,7 +1912,7 @@ class RulesEvaluator:
         # ── Build triggered rules ─────────────────────────────────
         for rule_row in country_matched_rules:
             rule_type = rule_row.get('rule_type', 'case_matching')
-            triggered_rules.append(self._build_triggered_rule_from_row(rule_row, rule_type))
+            triggered_rules.append(self._build_triggered_rule_from_row(rule_row, rule_type, context))
             for module in (rule_row.get('required_assessments') or []):
                 if module:
                     consolidated_duties.append(module)
@@ -2537,7 +2544,7 @@ class RulesEvaluator:
                         required[mapped] = True
         return required
 
-    def _build_triggered_rule_from_row(self, row: dict, rule_type: str) -> TriggeredRule:
+    def _build_triggered_rule_from_row(self, row: dict, rule_type: str, context: 'EvaluationContext' = None) -> TriggeredRule:
         """Build a TriggeredRule from a graph query result row."""
         outcome_str = row.get('outcome', 'permission')
         outcome = RuleOutcomeType.PROHIBITION if outcome_str == 'prohibition' else RuleOutcomeType.PERMISSION
@@ -2621,8 +2628,14 @@ class RulesEvaluator:
                 duties=duties,
             ))
 
+        # Populate matched_entities from context.triggered_node_mappings
+        rule_id_str = str(row.get('rule_id', ''))
+        matched_entities = {}
+        if context and hasattr(context, 'triggered_node_mappings'):
+            matched_entities = context.triggered_node_mappings.get(rule_id_str, {})
+
         return TriggeredRule(
-            rule_id=str(row.get('rule_id', '')),
+            rule_id=rule_id_str,
             rule_name=str(row.get('name', '')),
             rule_type=rule_type,
             priority=str(row.get('priority', 'medium')),
@@ -2636,6 +2649,7 @@ class RulesEvaluator:
             prohibitions=prohibitions,
             required_actions=req_actions,
             required_assessments=sorted(assessment_modules),
+            matched_entities=matched_entities,
         )
 
     # ─── Precedent case search (already graph-based on DataTransferGraph) ───

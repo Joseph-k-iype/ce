@@ -210,6 +210,10 @@ class TriggeredRule(BaseModel):
     prohibitions: List[ProhibitionInfo] = Field(default_factory=list)
     required_assessments: List[str] = Field(default_factory=list)
     required_actions: List[str] = Field(default_factory=list)
+    matched_entities: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Entity dimensions that matched this rule, e.g. {'DataCategory': ['Health Data'], 'Regulator': ['ICO']}"
+    )
 
 
 class FieldMatch(BaseModel):
