@@ -278,6 +278,14 @@ class RulesEvaluator:
         all_graph_rules = self._query_all_applicable_rules(context)
         logger.info(f"Graph query returned {len(all_graph_rules)} applicable rule(s)")
 
+        # ── Metadata entity enrichment ───────────────────────────────────
+        # If the user provides metadata JSON with entity-like keys
+        # (e.g. {"data_category": "Financial Crime Data", "regulator": "FinCEN"}),
+        # extract those values and merge them into context dimensions so they
+        # participate in Tier 1 entity matching — not just keyword matching.
+        if context.metadata:
+            self._enrich_context_from_metadata(context)
+
         # Contextual intelligence: determine whether the caller provided any entity data.
         # If no entity data is provided (only countries), ONLY case_matching rules
         # (TIA/PIA/HRPR) should fire. Attribute rules require at least one entity
@@ -996,6 +1004,88 @@ class RulesEvaluator:
         return False
 
     # ─── Helpers ────────────────────────────────────────────────────────
+
+    # Mapping of common metadata key patterns to context dimension fields
+    _METADATA_ENTITY_KEYS = {
+        # data_categories
+        'data_category': 'data_categories',
+        'data_categories': 'data_categories',
+        'category': 'data_categories',
+        'categories': 'data_categories',
+        # purposes
+        'purpose': 'purposes',
+        'purposes': 'purposes',
+        'purpose_of_processing': 'purposes',
+        'purposes_of_processing': 'purposes',
+        'processing_purpose': 'purposes',
+        # regulators
+        'regulator': 'regulators',
+        'regulators': 'regulators',
+        'regulatory_body': 'regulators',
+        # authorities
+        'authority': 'authorities',
+        'authorities': 'authorities',
+        'supervisory_authority': 'authorities',
+        # data subjects
+        'data_subject': 'data_subjects',
+        'data_subjects': 'data_subjects',
+        'subject': 'data_subjects',
+        # processes
+        'process': 'process_l1',
+        'process_l1': 'process_l1',
+        'process_l2': 'process_l2',
+        'process_l3': 'process_l3',
+    }
+
+    def _enrich_context_from_metadata(self, context: EvaluationContext) -> None:
+        """Extract entity-like values from metadata JSON and merge into context.
+
+        When the user provides metadata like:
+            {"data_category": "Financial Crime Data", "regulator": "FinCEN"}
+        these values are added to context.data_categories and context.regulators
+        so that Tier 1 entity dimension matching can use them.
+        """
+        if not context.metadata or not isinstance(context.metadata, dict):
+            return
+
+        enriched: Dict[str, List[str]] = {}
+
+        for key, value in context.metadata.items():
+            key_lower = key.lower().strip().replace(' ', '_')
+            target_field = self._METADATA_ENTITY_KEYS.get(key_lower)
+            if not target_field:
+                continue
+
+            # Handle both single string and list values
+            if isinstance(value, str):
+                values = [value.strip()] if value.strip() else []
+            elif isinstance(value, list):
+                values = [str(v).strip() for v in value if v and str(v).strip()]
+            else:
+                continue
+
+            if not values:
+                continue
+
+            if target_field not in enriched:
+                enriched[target_field] = []
+            enriched[target_field].extend(values)
+
+        if not enriched:
+            return
+
+        # Merge into context dimensions (dedup case-insensitive)
+        for field_name, new_values in enriched.items():
+            existing = getattr(context, field_name, []) or []
+            existing_lower = {str(v).lower().strip() for v in existing}
+            for val in new_values:
+                if val.lower().strip() not in existing_lower:
+                    existing.append(val)
+                    existing_lower.add(val.lower().strip())
+            setattr(context, field_name, existing)
+
+        logger.info(f"Metadata enrichment: merged {enriched} into context dimensions")
+
 
     def _detect_attributes(self, context: EvaluationContext) -> list:
         combined_metadata = {
