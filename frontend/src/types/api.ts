@@ -175,6 +175,7 @@ export interface DropdownValues {
   global_business_functions?: DictionaryEntry[];
   sensitive_data_categories?: DictionaryEntry[];
   data_categories?: DictionaryEntry[];
+  country_groups?: string[];
 }
 
 export interface RuleTableRow {

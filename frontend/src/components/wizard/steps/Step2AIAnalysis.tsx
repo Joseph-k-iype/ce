@@ -1,6 +1,7 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { useWizardStore } from '../../../stores/wizardStore';
 import { useAgentEvents } from '../../../hooks/useAgentEvents';
+import { TerminalStream } from '../TerminalStream';
 import gsap from 'gsap';
 
 export function Step2AIAnalysis() {
@@ -69,13 +70,8 @@ export function Step2AIAnalysis() {
             <div ref={progressRef} className="progress-bar-fill" />
           </div>
 
-          <div className="max-h-48 overflow-y-auto space-y-1 font-mono text-xs">
-            {(events || []).filter(e => e.event_type !== 'heartbeat').map((event, i) => (
-              <div key={i} className="agent-text">
-                [{event.event_type}] {event.message || event.agent_name || ''}
-              </div>
-            ))}
-          </div>
+          {/* Event stream via synthetic CLI ink-like component */}
+          <TerminalStream events={events} maxHeight="16rem" />
         </div>
       )}
 

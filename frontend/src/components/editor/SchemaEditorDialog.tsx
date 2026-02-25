@@ -77,7 +77,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
             onClick={() => setTab('nodeType')}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === 'nodeType'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-purple-500 text-purple-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -87,7 +87,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
             onClick={() => setTab('relType')}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === 'relType'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-purple-500 text-purple-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -105,7 +105,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
                   value={ntLabel}
                   onChange={(e) => setNtLabel(e.target.value)}
                   placeholder="e.g. RiskCategory"
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
                   autoFocus
                 />
               </div>
@@ -115,7 +115,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
                 <select
                   value={ntLaneId}
                   onChange={(e) => setNtLaneId(e.target.value)}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
                 >
                   <option value="">Select a lane...</option>
                   {lanes.map((l) => (
@@ -135,7 +135,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
                     value={ntNewLaneName}
                     onChange={(e) => setNtNewLaneName(e.target.value)}
                     placeholder="e.g. Risk Categories"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
                   />
                 </div>
               )}
@@ -147,7 +147,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
                   value={ntProperties}
                   onChange={(e) => setNtProperties(e.target.value)}
                   placeholder="name, description"
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
                 />
               </div>
 
@@ -170,7 +170,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
                   value={rtType}
                   onChange={(e) => setRtType(e.target.value)}
                   placeholder="e.g. HAS_RISK_CATEGORY"
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
                   autoFocus
                 />
               </div>
@@ -180,7 +180,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
                 <select
                   value={rtFrom}
                   onChange={(e) => setRtFrom(e.target.value)}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
                 >
                   {nodeTypes.map((nt) => (
                     <option key={nt.label} value={nt.label}>
@@ -195,7 +195,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
                 <select
                   value={rtTo}
                   onChange={(e) => setRtTo(e.target.value)}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
                 >
                   <option value="">Select target type...</option>
                   {nodeTypes.map((nt) => (
@@ -219,7 +219,7 @@ export function SchemaEditorDialog({ onClose }: SchemaEditorDialogProps) {
           <button
             onClick={tab === 'nodeType' ? handleCreateNodeType : handleCreateRelType}
             disabled={creating || (tab === 'nodeType' ? !ntLabel.trim() || (!ntLaneId && !useNewLane) : !rtType.trim() || !rtTo)}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-purple-500 rounded-md hover:bg-purple-600 disabled:opacity-50 transition-colors"
           >
             {creating ? 'Creating...' : 'Create'}
           </button>

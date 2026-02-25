@@ -4,7 +4,7 @@ import { useEditorStore } from '../../stores/editorStore';
 const NODE_TYPE_COLORS: Record<string, string> = {
   Rule: 'bg-red-100 text-red-700',
   Country: 'bg-sky-100 text-sky-700',
-  CountryGroup: 'bg-blue-100 text-blue-700',
+  CountryGroup: 'bg-purple-100 text-purple-700',
   DataCategory: 'bg-emerald-100 text-emerald-700',
   Purpose: 'bg-amber-100 text-amber-700',
   Process: 'bg-cyan-100 text-cyan-700',
@@ -16,7 +16,7 @@ const NODE_TYPE_COLORS: Record<string, string> = {
   LegalEntity: 'bg-orange-100 text-orange-700',
   DataSubject: 'bg-pink-100 text-pink-700',
   Attribute: 'bg-violet-100 text-violet-700',
-  Authority: 'bg-indigo-100 text-indigo-700',
+  Authority: 'bg-purple-100 text-purple-700',
   Regulator: 'bg-rose-100 text-rose-700',
   GlobalBusinessFunction: 'bg-lime-100 text-lime-700',
   PurposeOfProcessing: 'bg-yellow-100 text-yellow-700',
@@ -267,7 +267,7 @@ function NodeDetailsSidebarInner() {
                   onChange={(e) =>
                     setEditValues((prev) => ({ ...prev, [key]: e.target.value }))
                   }
-                  className="text-xs text-gray-700 border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="text-xs text-gray-700 border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
                 />
               </div>
             ))}
@@ -277,7 +277,7 @@ function NodeDetailsSidebarInner() {
                   type="text"
                   placeholder="New key"
                   id="new-prop-key"
-                  className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:border-blue-400"
+                  className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:border-purple-400"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       const keyInput = e.currentTarget;
@@ -295,7 +295,7 @@ function NodeDetailsSidebarInner() {
                   type="text"
                   placeholder="Value"
                   id="new-prop-val"
-                  className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:border-blue-400"
+                  className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:border-purple-400"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       const valInput = e.currentTarget;
@@ -330,7 +330,7 @@ function NodeDetailsSidebarInner() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:opacity-50 transition-colors"
+              className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-purple-500 rounded-md hover:bg-purple-600 disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
@@ -404,7 +404,7 @@ function NodeDetailsSidebarInner() {
                         <li key={i} className="flex items-center justify-between group/item">
                           <button
                             onClick={() => navigateToNode(item.nodeId)}
-                            className="flex-1 text-left text-xs hover:bg-blue-50 rounded px-2 py-1 transition-colors truncate flex items-center gap-1.5"
+                            className="flex-1 text-left text-xs hover:bg-purple-50 rounded px-2 py-1 transition-colors truncate flex items-center gap-1.5"
                           >
                             <span className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${itemColor.split(' ')[0].replace('100', '400')}`} />
                             <span className="font-medium text-gray-700">{item.label}</span>

@@ -5,7 +5,7 @@ import { AddNodeDialog } from './AddNodeDialog';
 
 const LANE_HEADER_COLORS: Record<string, string> = {
   originCountry: 'bg-sky-500',
-  receivingCountry: 'bg-blue-500',
+  receivingCountry: 'bg-purple-500',
   rule: 'bg-red-500',
   dataCategory: 'bg-emerald-500',
   purpose: 'bg-amber-500',
@@ -17,7 +17,7 @@ const LANE_HEADER_COLORS: Record<string, string> = {
   permission: 'bg-green-500',
   prohibition: 'bg-red-400',
   attribute: 'bg-violet-500',
-  authority: 'bg-indigo-500',
+  authority: 'bg-purple-500',
   regulator: 'bg-rose-500',
   globalBusinessFunction: 'bg-lime-500',
   purposeOfProcessing: 'bg-yellow-500',
@@ -117,7 +117,7 @@ function KanbanColumnInner({
           <div className="px-3 pb-3 pt-1">
             <button
               onClick={(e) => { e.stopPropagation(); setShowAddNode(true); }}
-              className="w-full py-2 text-[10px] font-bold text-gray-400 hover:text-blue-600 hover:bg-blue-50/50 rounded-lg transition-all border border-dashed border-gray-200 hover:border-blue-200 uppercase tracking-widest"
+              className="w-full py-2 text-[10px] font-bold text-gray-400 hover:text-purple-600 hover:bg-purple-50/50 rounded-lg transition-all border border-dashed border-gray-200 hover:border-purple-200 uppercase tracking-widest"
             >
               + Create Entity
             </button>

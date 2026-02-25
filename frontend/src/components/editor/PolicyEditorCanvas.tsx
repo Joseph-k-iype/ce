@@ -297,7 +297,7 @@ export function PolicyEditorCanvas() {
       <div ref={containerRef} className="flex-1 relative">
         <LaneHeader />
         {addEdgeMode && (
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 z-20 bg-blue-600 text-white text-xs px-3 py-1 rounded-full shadow">
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 z-20 bg-purple-600 text-white text-xs px-3 py-1 rounded-full shadow">
             Click a target node to create an edge {addEdgeSource ? `from ${addEdgeSource}` : ''} — click canvas to cancel
           </div>
         )}
@@ -367,7 +367,7 @@ export function PolicyEditorCanvas() {
                 </button>
                 <button
                   onClick={handleRelTypeConfirm}
-                  className="flex-1 px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                  className="flex-1 px-3 py-1.5 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700"
                 >
                   Create
                 </button>

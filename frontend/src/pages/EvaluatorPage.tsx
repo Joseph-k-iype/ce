@@ -19,6 +19,7 @@ export function EvaluatorPage() {
   // Auto-switch to flow tab when results arrive with graph data
   useEffect(() => {
     if (result?.evaluation_graph?.nodes?.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab('flow');
     }
   }, [result]);
@@ -31,19 +32,17 @@ export function EvaluatorPage() {
         <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
           <button
             onClick={() => setActiveTab('form')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'form' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'form' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Evaluation Form
           </button>
           <button
             onClick={() => setActiveTab('flow')}
             disabled={!result}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'flow' ? 'bg-white text-gray-900 shadow-sm' :
-              !result ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'flow' ? 'bg-white text-gray-900 shadow-sm' :
+                !result ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Flow Diagram
           </button>

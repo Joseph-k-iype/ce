@@ -27,27 +27,27 @@ export function Step1RuleInput() {
             Describe the compliance rule and select the originating country. AI agents will analyze your rule and suggest metadata.
           </p>
         </div>
-        
+
         {/* Agentic Mode Toggle */}
-        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 flex items-center gap-3 relative group">
+        <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 flex items-center gap-3 relative group">
           <div className="text-right">
             <div className="flex items-center justify-end gap-1">
-              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-tight">Agentic Mode</p>
-              <div className="w-3 h-3 rounded-full bg-indigo-200 flex items-center justify-center text-[8px] text-indigo-600 font-bold cursor-help">?</div>
+              <p className="text-[10px] font-bold text-purple-600 uppercase tracking-tight">Agentic Mode</p>
+              <div className="w-3 h-3 rounded-full bg-purple-200 flex items-center justify-center text-[8px] text-purple-600 font-bold cursor-help">?</div>
             </div>
-            <p className="text-[9px] text-indigo-400">Full autonomy</p>
+            <p className="text-[9px] text-purple-400">Full autonomy</p>
           </div>
-          <button 
+          <button
             type="button"
             onClick={() => setAgenticMode(!agenticMode)}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${agenticMode ? 'bg-indigo-600' : 'bg-gray-200'}`}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${agenticMode ? 'bg-purple-600' : 'bg-gray-200'}`}
           >
             <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${agenticMode ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
 
           {/* Tooltip */}
           <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-xl border border-gray-700">
-            <p className="font-bold mb-1 text-indigo-300">What's the difference?</p>
+            <p className="font-bold mb-1 text-purple-300">What's the difference?</p>
             <ul className="list-disc ml-3 space-y-1 text-gray-300">
               <li><span className="text-white">Agentic Mode:</span> Agents operate autonomously, skipping manual metadata entry and only pausing if they encounter critical ambiguity. Recommended for speed.</li>
               <li><span className="text-white">Standard Mode:</span> Allows you to review and edit AI-suggested metadata before generating the rule. Recommended for precise control.</li>
@@ -150,15 +150,15 @@ export function Step1RuleInput() {
             onChange={(e) => setReceivingLegalEntity(Array.from(e.target.selectedOptions, o => o.value))}
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm h-[80px] focus:outline-none focus:border-gray-400 transition-colors"
           >
-             {receivingCountries.length > 0 ? (
-               receivingCountries.flatMap(c => dropdowns?.legal_entities?.[c] || []).map(le => (
-                 <option key={le} value={le}>{le}</option>
-               ))
-             ) : (
-               Object.values(dropdowns?.legal_entities || {}).flat().map(le => (
-                 <option key={le} value={le}>{le}</option>
-               ))
-             )}
+            {receivingCountries.length > 0 ? (
+              receivingCountries.flatMap(c => dropdowns?.legal_entities?.[c] || []).map(le => (
+                <option key={le} value={le}>{le}</option>
+              ))
+            ) : (
+              Object.values(dropdowns?.legal_entities || {}).flat().map(le => (
+                <option key={le} value={le}>{le}</option>
+              ))
+            )}
           </select>
           <p className="text-[10px] text-gray-300 mt-0.5">Based on selected receiving countries (or all if none).</p>
         </div>

@@ -101,7 +101,7 @@ export function Step2Metadata() {
           <label className="block text-sm font-semibold text-white mb-2">
             Data Categories <span className="text-red-400">*</span>
             {dataCategories.length > 0 && editedRuleDefinition && (
-              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+              <span className="ml-2 text-xs text-purple-400 font-normal">(AI suggested)</span>
             )}
           </label>
           <select
@@ -123,7 +123,7 @@ export function Step2Metadata() {
           <label className="block text-sm font-semibold text-white mb-2">
             Purpose of Processing
             {purposesOfProcessing.length > 0 && editedRuleDefinition && (
-              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+              <span className="ml-2 text-xs text-purple-400 font-normal">(AI suggested)</span>
             )}
           </label>
           <select
@@ -146,7 +146,7 @@ export function Step2Metadata() {
             <label className="block text-sm font-semibold text-white mb-2">
               Process L1
               {processL1.length > 0 && editedRuleDefinition && (
-                <span className="ml-1 text-xs text-blue-400 font-normal">(AI)</span>
+                <span className="ml-1 text-xs text-purple-400 font-normal">(AI)</span>
               )}
             </label>
             <select
@@ -162,7 +162,7 @@ export function Step2Metadata() {
             <label className="block text-sm font-semibold text-white mb-2">
               Process L2
               {processL2.length > 0 && editedRuleDefinition && (
-                <span className="ml-1 text-xs text-blue-400 font-normal">(AI)</span>
+                <span className="ml-1 text-xs text-purple-400 font-normal">(AI)</span>
               )}
             </label>
             <select
@@ -178,7 +178,7 @@ export function Step2Metadata() {
             <label className="block text-sm font-semibold text-white mb-2">
               Process L3
               {processL3.length > 0 && editedRuleDefinition && (
-                <span className="ml-1 text-xs text-blue-400 font-normal">(AI)</span>
+                <span className="ml-1 text-xs text-purple-400 font-normal">(AI)</span>
               )}
             </label>
             <select
@@ -197,7 +197,7 @@ export function Step2Metadata() {
           <label className="block text-sm font-semibold text-white mb-2">
             Group Data Categories
             {groupDataCategories.length > 0 && editedRuleDefinition && (
-              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+              <span className="ml-2 text-xs text-purple-400 font-normal">(AI suggested)</span>
             )}
           </label>
           <select
@@ -218,7 +218,7 @@ export function Step2Metadata() {
         <div>
           <label className="block text-sm font-semibold text-white mb-2">
             Sensitive Data Categories
-            <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+            <span className="ml-2 text-xs text-purple-400 font-normal">(AI suggested)</span>
           </label>
           <select
             multiple
@@ -239,7 +239,7 @@ export function Step2Metadata() {
           <div>
             <label className="block text-sm font-semibold text-white mb-2">
               Regulator
-              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+              <span className="ml-2 text-xs text-purple-400 font-normal">(AI suggested)</span>
             </label>
             <select
               multiple
@@ -257,7 +257,7 @@ export function Step2Metadata() {
           <div>
             <label className="block text-sm font-semibold text-white mb-2">
               Authority
-              <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+              <span className="ml-2 text-xs text-purple-400 font-normal">(AI suggested)</span>
             </label>
             <select
               multiple
@@ -278,7 +278,7 @@ export function Step2Metadata() {
         <div>
           <label className="block text-sm font-semibold text-white mb-2">
             Data Subjects
-            <span className="ml-2 text-xs text-blue-400 font-normal">(AI suggested)</span>
+            <span className="ml-2 text-xs text-purple-400 font-normal">(AI suggested)</span>
           </label>
           <select
             multiple

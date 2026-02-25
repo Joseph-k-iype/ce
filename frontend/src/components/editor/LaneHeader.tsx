@@ -4,7 +4,7 @@ import { useEditorStore } from '../../stores/editorStore';
 import { LANE_WIDTH, LANE_GAP, LANE_HEADER_HEIGHT } from '../../utils/laneGeometry';
 
 const LANE_HEADER_COLORS: Record<string, string> = {
-  originCountry: 'bg-blue-500',
+  originCountry: 'bg-purple-500',
   receivingCountry: 'bg-sky-500',
   rule: 'bg-red-500',
   dataCategory: 'bg-emerald-500',

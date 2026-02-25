@@ -32,6 +32,33 @@ class RuleType(str, Enum):
     ATTRIBUTE = "attribute"            # Entity/content-aware rules
 
 
+class LogicNodeType(str, Enum):
+    """Type of logic node for complex rule matching."""
+    AND = "AND"
+    OR = "OR"
+    CONDITION = "CONDITION"
+
+
+class LogicNode(BaseModel):
+    """Recursive node for building complex rule logic (AND/OR trees)."""
+    type: LogicNodeType
+    dimension: Optional[str] = Field(default=None, description="Only for CONDITION type (e.g., 'Regulator')")
+    value: Optional[str] = Field(default=None, description="Only for CONDITION type (e.g., 'SEC')")
+    children: Optional[List["LogicNode"]] = Field(default=None, description="Only for AND/OR types")
+
+    @model_validator(mode='after')
+    def validate_node(self):
+        if self.type == LogicNodeType.CONDITION:
+            if not self.dimension or not self.value:
+                raise ValueError("CONDITION nodes must have both 'dimension' and 'value'")
+        elif self.type in (LogicNodeType.AND, LogicNodeType.OR):
+            if not self.children or len(self.children) < 2:
+                # We relax the >2 requirement slightly to allow empty/single-child groups during building,
+                # but valid trees should ideally have 2+ children.
+                pass
+        return self
+
+
 class RuleSpec(BaseModel):
     """Declarative rule specification — validated at ingestion time.
 
@@ -60,7 +87,13 @@ class RuleSpec(BaseModel):
     origin_countries: List[str] = Field(default_factory=list)
     receiving_countries: List[str] = Field(default_factory=list)
 
-    # ── Entity dimension requirements ──────────────────────────────────
+    # ── Complex Logic Tree (Phase 8) ───────────────────────────────────
+    logic_tree: Optional[LogicNode] = Field(
+        default=None,
+        description="Nested AND/OR logic for rule triggering. Takes precedence over flat required_* lists."
+    )
+
+    # ── Entity dimension requirements (Legacy/Flat) ────────────────────
     # These define WHAT the rule applies to. Empty = not required.
     # Matching mode determines how dimensions are combined (default: AND).
     matching_mode: RuleMatchingMode = Field(
@@ -106,8 +139,9 @@ class RuleSpec(BaseModel):
     @model_validator(mode='after')
     def validate_rule_consistency(self):
         """Validate rule spec consistency."""
-        # Attribute rules should have at least one entity dimension or keyword
+        # Attribute rules should have at least one entity dimension or keyword, or a logic tree
         if self.rule_type == RuleType.ATTRIBUTE:
+            has_logic_tree = bool(self.logic_tree)
             has_entities = any([
                 self.required_data_categories,
                 self.required_purposes,
@@ -119,9 +153,9 @@ class RuleSpec(BaseModel):
                 self.required_sensitive_data_categories,
             ])
             has_keywords = bool(self.keywords or self.patterns)
-            if not has_entities and not has_keywords:
+            if not has_logic_tree and not has_entities and not has_keywords:
                 raise ValueError(
-                    "Attribute rules must specify at least one entity dimension "
+                    "Attribute rules must specify a logic_tree OR at least one entity dimension "
                     "or keyword/pattern for matching"
                 )
 

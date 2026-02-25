@@ -83,19 +83,19 @@ export function KanbanContextMenu() {
     >
       <button
         onClick={handleDetails}
-        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2"
+        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors flex items-center gap-2"
       >
         <span className="text-lg">ℹ️</span> Show Details
       </button>
       <button
         onClick={handleHighlight}
-        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2"
+        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors flex items-center gap-2"
       >
         <span className="text-lg">🎯</span> Highlight Path
       </button>
       <button
         onClick={handleAddEdge}
-        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2"
+        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors flex items-center gap-2"
       >
         <span className="text-lg">🔗</span> Add Edge
       </button>

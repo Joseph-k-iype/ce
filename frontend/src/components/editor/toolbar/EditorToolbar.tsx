@@ -57,7 +57,7 @@ function EditorToolbarInner() {
         {/* Layout controls */}
         <button
           onClick={handleAutoLayout}
-          className="px-3 py-1.5 text-xs font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
+          className="px-3 py-1.5 text-xs font-medium text-white bg-purple-500 rounded-md hover:bg-purple-600 transition-colors"
         >
           Auto Layout
         </button>
@@ -91,7 +91,7 @@ function EditorToolbarInner() {
         </button>
         <button
           onClick={handleAddEdge}
-          className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+          className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 transition-colors"
         >
           + Edge
         </button>

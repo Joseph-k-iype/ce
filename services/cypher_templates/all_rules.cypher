@@ -78,6 +78,7 @@ RETURN DISTINCT
     r.attribute_name AS attribute_name,
     r.attribute_keywords AS attribute_keywords,
     r.attribute_patterns AS attribute_patterns,
+    r.logic_tree AS logic_tree,
     required_assessments,
     duty_names,
     prohibition_names,
@@ -89,4 +90,4 @@ RETURN DISTINCT
     linked_data_subjects,
     linked_regulators,
     collect(DISTINCT auth.name) AS linked_authorities
-ORDER BY r.priority_order
+ORDER BY priority_order

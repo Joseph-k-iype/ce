@@ -672,11 +672,13 @@ class TestMockedEvaluator:
             mock_attr.return_value = mock_detector
 
             from services.rules_evaluator import RulesEvaluator
+            from services.cypher_template_engine import get_cypher_templates
             evaluator = RulesEvaluator.__new__(RulesEvaluator)
             evaluator.db = mock_db_instance
             evaluator.cache = mock_cache.return_value
             evaluator.attribute_detector = mock_detector
             evaluator._rules_graph = mock_db_instance.get_rules_graph.return_value
+            evaluator._templates = get_cypher_templates()
 
             yield evaluator, mock_db_instance
 

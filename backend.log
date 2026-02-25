@@ -1,0 +1,680 @@
+2026-02-25 11:31:31,436 - __main__ - INFO - Starting Compliance Engine v6.0.0
+2026-02-25 11:31:31,436 - __main__ - INFO - Server: http://0.0.0.0:5001
+2026-02-25 11:31:31,436 - __main__ - INFO - Docs: http://0.0.0.0:5001/docs
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/langchain_core/_api/deprecation.py:26: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1.fields import FieldInfo as FieldInfoV1
+2026-02-25 11:31:32,388 - agents.ai_service - INFO - AI Service initialized (enabled=True)
+2026-02-25 11:31:32,388 - agents.audit.event_store - INFO - Event Store initialized
+INFO:     Started server process [3860]
+INFO:     Waiting for application startup.
+2026-02-25 11:31:32,998 - api.main - INFO - Starting Compliance Engine v6.0.0
+2026-02-25 11:31:33,011 - services.database - INFO - Connected to FalkorDB at localhost:6379
+2026-02-25 11:31:33,018 - api.main - INFO - Database connection established
+2026-02-25 11:31:33,018 - services.cache - INFO - Cache service initialized (enabled=True)
+2026-02-25 11:31:33,018 - api.main - INFO - Cache initialized (enabled=True)
+2026-02-25 11:31:33,018 - api.main - INFO - AI service initialized (enabled=True)
+2026-02-25 11:31:33,033 - api.main - INFO - Graph validation: 8 rules, 83 countries loaded
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59643 - "POST /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59655 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59696 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59705 - "GET /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59748 - "POST /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59751 - "GET /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59828 - "GET /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60081 - "GET /api/graph/schema HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60082 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60088 - "GET /api/graph/schema HTTP/1.1" 200 OK
+2026-02-25 11:48:29,905 - services.attribute_detector - INFO - Loaded health data config from /Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/config/health_data_config.json
+2026-02-25 11:48:29,938 - services.attribute_detector - INFO - Loaded metadata detection config from /Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/config/metadata_detection_config.json
+2026-02-25 11:48:29,938 - services.attribute_detector - INFO - Attribute detector initialized with 6 configurations
+2026-02-25 11:48:29,956 - services.cypher_template_engine - INFO - Loaded Cypher template: precedent_cases (19 lines)
+2026-02-25 11:48:29,962 - services.cypher_template_engine - INFO - Loaded Cypher template: all_rules (87 lines)
+2026-02-25 11:48:29,985 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) →  (normalized: ), PII=False
+2026-02-25 11:48:30,046 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8']
+2026-02-25 11:48:30,047 - services.rules_evaluator - INFO - Graph query returned 3 applicable rule(s)
+2026-02-25 11:48:30,047 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 11:48:30,047 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:48:30,047 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:48:30,048 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:48:30,049 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 11:48:30,069 - services.rules_evaluator - INFO - Triggered 3 rule(s), prohibition=False, duties=['Complete TIA Module', 'Complete PIA Module', 'HRPR', 'TIA', 'PIA', 'Complete HRPR Module']
+INFO:     127.0.0.1:60109 - "POST /api/evaluate-rules HTTP/1.1" 200 OK
+2026-02-25 11:48:33,250 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) → Denmark (normalized: Denmark), PII=False
+2026-02-25 11:48:33,291 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8', 'R_NORDIC_UI_TEST']
+2026-02-25 11:48:33,291 - services.rules_evaluator - INFO - Graph query returned 4 applicable rule(s)
+2026-02-25 11:48:33,291 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 11:48:33,291 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:48:33,292 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:48:33,292 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:48:33,292 - services.rules_evaluator - INFO - Rule R_NORDIC_UI_TEST (None): has_linked=False, has_keywords=, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:48:33,292 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 11:48:33,301 - api.routers.evaluation - ERROR - Error evaluating rules: 1 validation error for TriggeredRule
+rule_type
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60113 - "POST /api/evaluate-rules HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:60132 - "GET /api/evaluate-rules HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60148 - "GET /api/graph/schema HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60147 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60150 - "GET /api/graph/schema HTTP/1.1" 200 OK
+2026-02-25 11:49:39,392 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) →  (normalized: ), PII=False
+2026-02-25 11:49:39,438 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8']
+2026-02-25 11:49:39,438 - services.rules_evaluator - INFO - Graph query returned 3 applicable rule(s)
+2026-02-25 11:49:39,439 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 11:49:39,439 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:49:39,439 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:49:39,439 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:49:39,439 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 11:49:39,439 - services.rules_evaluator - INFO - Triggered 3 rule(s), prohibition=False, duties=['Complete TIA Module', 'Complete PIA Module', 'HRPR', 'TIA', 'PIA', 'Complete HRPR Module']
+INFO:     127.0.0.1:60154 - "POST /api/evaluate-rules HTTP/1.1" 200 OK
+2026-02-25 11:49:42,965 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) → Denmark (normalized: Denmark), PII=False
+2026-02-25 11:49:43,002 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8', 'R_NORDIC_UI_TEST']
+2026-02-25 11:49:43,002 - services.rules_evaluator - INFO - Graph query returned 4 applicable rule(s)
+2026-02-25 11:49:43,002 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 11:49:43,003 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:49:43,003 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:49:43,003 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:49:43,003 - services.rules_evaluator - INFO - Rule R_NORDIC_UI_TEST (None): has_linked=False, has_keywords=, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:49:43,003 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 11:49:43,020 - api.routers.evaluation - ERROR - Error evaluating rules: 1 validation error for TriggeredRule
+rule_type
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60158 - "POST /api/evaluate-rules HTTP/1.1" 500 Internal Server Error
+2026-02-25 11:50:56,788 - api.main - ERROR - Unhandled exception: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 111, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 391, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 290, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/api/routers/rules_overview.py", line 122, in get_rules_overview_table
+    rows.append(RuleTableRow(
+                ~~~~~~~~~~~~^
+        rule_id=row.get('rule_id', ''),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        priority=row.get('priority', 'low'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60200 - "GET /api/rules-overview-table HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/protocols/http/h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/applications.py", line 1134, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 111, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 391, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 290, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/api/routers/rules_overview.py", line 122, in get_rules_overview_table
+    rows.append(RuleTableRow(
+                ~~~~~~~~~~~~^
+        rule_id=row.get('rule_id', ''),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        priority=row.get('priority', 'low'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60202 - "GET /api/graph/editor-network HTTP/1.1" 200 OK
+2026-02-25 11:50:57,604 - api.main - ERROR - Unhandled exception: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 111, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 391, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 290, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/api/routers/rules_overview.py", line 122, in get_rules_overview_table
+    rows.append(RuleTableRow(
+                ~~~~~~~~~~~~^
+        rule_id=row.get('rule_id', ''),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        priority=row.get('priority', 'low'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60207 - "GET /api/rules-overview-table HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/protocols/http/h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/applications.py", line 1134, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 111, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 391, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 290, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/api/routers/rules_overview.py", line 122, in get_rules_overview_table
+    rows.append(RuleTableRow(
+                ~~~~~~~~~~~~^
+        rule_id=row.get('rule_id', ''),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        priority=row.get('priority', 'low'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60228 - "GET /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60240 - "GET /api/admin/rules HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60242 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60245 - "GET /api/admin/rules HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60248 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+2026-02-25 11:52:34,876 - api.main - ERROR - Unhandled exception: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 111, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 391, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 290, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/api/routers/rules_overview.py", line 122, in get_rules_overview_table
+    rows.append(RuleTableRow(
+                ~~~~~~~~~~~~^
+        rule_id=row.get('rule_id', ''),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        priority=row.get('priority', 'low'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60266 - "GET /api/rules-overview-table HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/protocols/http/h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/applications.py", line 1134, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 111, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 391, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 290, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/api/routers/rules_overview.py", line 122, in get_rules_overview_table
+    rows.append(RuleTableRow(
+                ~~~~~~~~~~~~^
+        rule_id=row.get('rule_id', ''),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        priority=row.get('priority', 'low'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+2026-02-25 11:52:35,028 - api.main - ERROR - Unhandled exception: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 111, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 391, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 290, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/api/routers/rules_overview.py", line 122, in get_rules_overview_table
+    rows.append(RuleTableRow(
+                ~~~~~~~~~~~~^
+        rule_id=row.get('rule_id', ''),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        priority=row.get('priority', 'low'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60269 - "GET /api/rules-overview-table HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/protocols/http/h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/applications.py", line 1134, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 111, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 391, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/routing.py", line 290, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/api/routers/rules_overview.py", line 122, in get_rules_overview_table
+    rows.append(RuleTableRow(
+                ~~~~~~~~~~~~^
+        rule_id=row.get('rule_id', ''),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        priority=row.get('priority', 'low'),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RuleTableRow
+rule_details
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+priority
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60281 - "GET /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60297 - "POST /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60300 - "GET /api/admin/mappings/country-group HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60306 - "GET /api/graph/schema HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60309 - "GET /api/graph/schema HTTP/1.1" 200 OK
+2026-02-25 11:54:06,371 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) →  (normalized: ), PII=False
+2026-02-25 11:54:06,454 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8']
+2026-02-25 11:54:06,454 - services.rules_evaluator - INFO - Graph query returned 3 applicable rule(s)
+2026-02-25 11:54:06,455 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 11:54:06,455 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:54:06,455 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:54:06,455 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:54:06,455 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 11:54:06,457 - services.rules_evaluator - INFO - Triggered 3 rule(s), prohibition=False, duties=['Complete TIA Module', 'Complete PIA Module', 'HRPR', 'TIA', 'PIA', 'Complete HRPR Module']
+INFO:     127.0.0.1:60315 - "POST /api/evaluate-rules HTTP/1.1" 200 OK
+2026-02-25 11:54:10,734 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) → Denmark (normalized: Denmark), PII=False
+2026-02-25 11:54:10,755 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8', 'R_NORDIC_UI_TEST']
+2026-02-25 11:54:10,755 - services.rules_evaluator - INFO - Graph query returned 4 applicable rule(s)
+2026-02-25 11:54:10,755 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 11:54:10,757 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:54:10,757 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:54:10,758 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:54:10,758 - services.rules_evaluator - INFO - Rule R_NORDIC_UI_TEST (None): has_linked=False, has_keywords=, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:54:10,758 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 11:54:10,760 - api.routers.evaluation - ERROR - Error evaluating rules: 1 validation error for TriggeredRule
+rule_type
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+INFO:     127.0.0.1:60319 - "POST /api/evaluate-rules HTTP/1.1" 500 Internal Server Error
+2026-02-25 11:56:40,975 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) → Denmark (normalized: Denmark), PII=False
+2026-02-25 11:56:41,033 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_8', 'RULE_6', 'RULE_7', 'R_NORDIC_UI_TEST', 'R_NORDIC_UI_TEST']
+2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Graph query returned 5 applicable rule(s)
+2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Rule R_NORDIC_UI_TEST (Transfer): has_linked=False, has_keywords=, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Triggered 4 rule(s), prohibition=False, duties=['Complete TIA Module', 'Complete PIA Module', 'HRPR', 'TIA', 'PIA', 'Complete HRPR Module']
+INFO:     127.0.0.1:60384 - "POST /api/evaluate-rules HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK

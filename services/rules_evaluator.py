@@ -338,9 +338,10 @@ class RulesEvaluator:
             has_keywords = keywords_json and keywords_json != '[]'
             has_patterns = patterns_json and patterns_json != '[]'
 
-            # Check if rule has graph-linked attributes/categories/purposes/processes/gdcs
+            # Check if rule has graph-linked attributes/categories/purposes/processes/gdcs OR a logic tree
             has_linked = bool(
-                rule_row.get('linked_attributes')
+                rule_row.get('logic_tree')
+                or rule_row.get('linked_attributes')
                 or rule_row.get('linked_data_categories')
                 or rule_row.get('linked_purposes')
                 or rule_row.get('linked_processes')
@@ -770,6 +771,67 @@ class RulesEvaluator:
     MIN_FUZZY_KEYWORD_LEN = 6
     MIN_FUZZY_HIT_COUNT = 3
 
+    def _evaluate_logic_node(self, node: dict, context: EvaluationContext, current_matches: Dict[str, List[str]]) -> bool:
+        """Recursively evaluate a logic tree node against the evaluation context."""
+        node_type = node.get('type')
+        if node_type == 'AND':
+            children = node.get('children', [])
+            if not children:
+                return True
+            return all(self._evaluate_logic_node(child, context, current_matches) for child in children)
+        elif node_type == 'OR':
+            children = node.get('children', [])
+            if not children:
+                return False
+            return any(self._evaluate_logic_node(child, context, current_matches) for child in children)
+        elif node_type == 'CONDITION':
+            dim = node.get('dimension')
+            val = node.get('value')
+            if not dim or not val:
+                return False
+            
+            # Support comma-separated multi-select values
+            val_items = [v.strip() for v in str(val).split(',') if v.strip()]
+            val_norms = {_normalize_text(v) for v in val_items}
+            if not val_norms:
+                return False
+            
+            # Map dimension to context fields
+            ctx_vals = set()
+            if dim == 'DataCategory':
+                ctx_vals = {_normalize_text(str(c)) for c in context.data_categories if c}
+            elif dim == 'Purpose':
+                ctx_vals = {_normalize_text(str(p)) for p in context.purposes if p}
+            elif dim == 'Process':
+                ctx_vals = {_normalize_text(str(p)) for p in (context.process_l1 + context.process_l2 + context.process_l3) if p}
+            elif dim == 'GDC':
+                ctx_vals = {_normalize_text(str(c)) for c in context.data_categories if c}
+            elif dim == 'DataSubject':
+                ctx_vals = {_normalize_text(str(d)) for d in context.data_subjects if d}
+            elif dim == 'Regulator':
+                ctx_vals = {_normalize_text(str(r)) for r in context.regulators if r}
+            elif dim == 'Authority':
+                ctx_vals = {_normalize_text(str(a)) for a in context.authorities if a}
+            elif dim == 'OriginCountry':
+                ctx_vals = {_normalize_text(str(context.origin_country))} if context.origin_country else set()
+            elif dim == 'ReceivingCountry':
+                ctx_vals = {_normalize_text(str(context.receiving_country))} if context.receiving_country else set()
+            elif dim == 'LegalEntity':
+                ctx_vals = {_normalize_text(str(le)) for le in context.legal_entities if le}
+                
+                
+            intersection = val_norms.intersection(ctx_vals)
+            if intersection:
+                if dim not in current_matches:
+                    current_matches[dim] = []
+                for original_v in val_items:
+                    if _normalize_text(original_v) in intersection:
+                        current_matches[dim].append(original_v)
+                return True
+            return False
+            
+        return False
+
     def _match_graph_linked_attributes(
         self, context: EvaluationContext, rule_row: dict
     ) -> bool:
@@ -781,12 +843,34 @@ class RulesEvaluator:
           - linked_processes vs context.process_l1/l2/l3
           - linked_gdcs vs context.data_categories (GDC = Group Data Category)
           Case-insensitive set intersection. Any overlap → match.
+          - OR, if logic_tree exists, evaluates the tree recursively to determine match.
 
         Tier 2 — Fuzzy/keyword match for free-text fields only:
           - linked_attributes vs personal_data_names + metadata values
           - Requires threshold: 2+ keyword hits OR 1 keyword >= 6 chars
           - Does NOT match linked_attributes against structured fields.
         """
+        rule_id = rule_row.get('rule_id', 'unknown')
+        current_matches: Dict[str, List[str]] = {}
+
+        # ── Optional: Complex Logic Tree evaluation ─────────────────────
+        logic_tree_json = rule_row.get('logic_tree')
+        if logic_tree_json:
+            try:
+                tree_data = json.loads(logic_tree_json) if isinstance(logic_tree_json, str) else logic_tree_json
+                if tree_data:
+                    matched = self._evaluate_logic_node(tree_data, context, current_matches)
+                    if matched:
+                        logger.debug(f"Rule {rule_id} matched via logic_tree")
+                        rule_row['matched_entities'] = current_matches
+                        return True
+                    else:
+                        logger.debug(f"Rule {rule_id} logic_tree evaluated to False")
+                        return False
+            except Exception as e:
+                logger.error(f"Failed to parse logic_tree for rule {rule_id}: {e}")
+                return False
+
         linked_attrs = rule_row.get('linked_attributes') or []
         linked_cats = rule_row.get('linked_data_categories') or []
         linked_purposes = rule_row.get('linked_purposes') or []

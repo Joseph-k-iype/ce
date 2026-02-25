@@ -38,9 +38,9 @@ export function Step5SandboxTest() {
     return (
       <div className="space-y-4">
         <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-900">Step 5: Sandbox Test</h3>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
-          <p className="text-sm text-blue-800 font-medium">Ready to Load</p>
-          <p className="text-sm text-blue-700 mt-1">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-5">
+          <p className="text-sm text-purple-800 font-medium">Ready to Load</p>
+          <p className="text-sm text-purple-700 mt-1">
             Click "Load Sandbox" to create a temporary sandbox graph and load the rule for testing.
           </p>
         </div>

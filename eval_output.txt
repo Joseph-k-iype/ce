@@ -1,0 +1,40 @@
+INFO:services.database:Connected to FalkorDB at localhost:6379
+INFO:services.cache:Cache service initialized (enabled=True)
+INFO:services.attribute_detector:Loaded health data config from /Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/config/health_data_config.json
+INFO:services.attribute_detector:Loaded metadata detection config from /Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/config/metadata_detection_config.json
+INFO:services.attribute_detector:Attribute detector initialized with 6 configurations
+INFO:services.cypher_template_engine:Loaded Cypher template: precedent_cases (19 lines)
+INFO:services.cypher_template_engine:Loaded Cypher template: all_rules (87 lines)
+INFO:services.rules_evaluator:Evaluating transfer: United States (normalized: United States) → Denmark (normalized: Denmark), PII=False
+INFO:services.rules_evaluator:Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8', 'R_NORDIC_01']
+INFO:services.rules_evaluator:Graph query returned 4 applicable rule(s)
+INFO:services.rules_evaluator:Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+INFO:services.rules_evaluator:Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+INFO:services.rules_evaluator:Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+INFO:services.rules_evaluator:Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+INFO:services.rules_evaluator:Rule R_NORDIC_01 (None): has_linked=False, has_keywords=, linked_cats=[], linked_regs=[], linked_purps=[]
+INFO:services.rules_evaluator:Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+Traceback (most recent call last):
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/test_eval.py", line 34, in <module>
+    result = evaluator.evaluate(
+        origin_country="United States",
+        receiving_country="Denmark",
+    )
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/services/rules_evaluator.py", line 458, in evaluate
+    triggered_rules.append(self._build_triggered_rule_from_row(rule_row, rule_type, context))
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/josephkiype/Desktop/development/code/deterministic policy/compliance_engine/services/rules_evaluator.py", line 1377, in _build_triggered_rule_from_row
+    return TriggeredRule(
+        rule_id=rule_id_str,
+    ...<13 lines>...
+        matched_entities=matched_entities,
+    )
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for TriggeredRule
+rule_type
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+Setting up test rule for Nordic Council...
+
+Cleaning up test rule...

@@ -113,7 +113,7 @@ export function AgentProgressPanel({ events, connected }: Props) {
           <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ease-out ${
-                isComplete ? 'bg-green-500' : isFailed ? 'bg-red-500' : 'bg-blue-500'
+                isComplete ? 'bg-green-500' : isFailed ? 'bg-red-500' : 'bg-purple-500'
               }`}
               style={{ width: `${isComplete ? 100 : progressPct}%` }}
             />
@@ -125,7 +125,7 @@ export function AgentProgressPanel({ events, connected }: Props) {
       {latestActivity && !isComplete && !isFailed && (
         <div className="mb-3 px-2 py-1.5 bg-gray-800/50 rounded border border-gray-700/50">
           <div className="flex items-center gap-2">
-            <span className="text-blue-400 text-xs animate-pulse">●</span>
+            <span className="text-purple-400 text-xs animate-pulse">●</span>
             <span className="text-gray-300 text-xs">{latestActivity.message}</span>
           </div>
         </div>
@@ -145,7 +145,7 @@ export function AgentProgressPanel({ events, connected }: Props) {
                 event.event_type.includes('failed') ? 'text-red-400' :
                 event.event_type.includes('complete') ? 'text-green-400' :
                 event.event_type === 'step_progress' ? 'text-yellow-400' :
-                'text-blue-400 font-bold'
+                'text-purple-400 font-bold'
               }>
                 [{event.agent_name || 'system'}]
               </span>

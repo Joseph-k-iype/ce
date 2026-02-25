@@ -97,7 +97,7 @@ export function ResultsTable({ result }: ResultsTableProps) {
                                                     {rule.required_assessments && rule.required_assessments.length > 0 && (
                                                         <div className="flex flex-wrap gap-1">
                                                             {rule.required_assessments.map(a => (
-                                                                <span key={a} className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">{a}</span>
+                                                                <span key={a} className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">{a}</span>
                                                             ))}
                                                         </div>
                                                     )}
@@ -113,7 +113,7 @@ export function ResultsTable({ result }: ResultsTableProps) {
                                                     {allDuties.length > 0 && (
                                                         <div className={`flex flex-wrap gap-1 ${allDuties.length > 4 ? 'max-h-[80px] overflow-y-auto' : ''}`}>
                                                             {allDuties.map((duty, di) => (
-                                                                <span key={di} className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                                                <span key={di} className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-medium">
                                                                     {duty.module && duty.module !== 'action' ? `[${duty.module}] ` : ''}{duty.name}
                                                                 </span>
                                                             ))}
@@ -196,7 +196,7 @@ export function ResultsTable({ result }: ResultsTableProps) {
                     </div>
                     <div className={`mt-1.5 flex flex-wrap gap-1 ${hasManyDuties ? 'max-h-[120px] overflow-y-auto pr-1' : ''}`}>
                         {consolidatedDuties.map((d, i) => (
-                            <span key={i} className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-medium">{d}</span>
+                            <span key={i} className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-medium">{d}</span>
                         ))}
                     </div>
                 </div>

@@ -66,7 +66,7 @@ export function AddNodeDialog({ onClose }: AddNodeDialogProps) {
                 const opt = NODE_TYPE_OPTIONS.find((o) => o.type === e.target.value);
                 if (opt) setSelectedType(opt);
               }}
-              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
             >
               {NODE_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.type} value={opt.type}>
@@ -83,7 +83,7 @@ export function AddNodeDialog({ onClose }: AddNodeDialogProps) {
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="Enter node label..."
-              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-purple-400 focus:border-purple-400 outline-none"
               autoFocus
             />
           </div>
@@ -103,7 +103,7 @@ export function AddNodeDialog({ onClose }: AddNodeDialogProps) {
           <button
             onClick={handleCreate}
             disabled={!label.trim() || creating}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-purple-500 rounded-md hover:bg-purple-600 disabled:opacity-50 transition-colors"
           >
             {creating ? 'Creating...' : 'Create'}
           </button>

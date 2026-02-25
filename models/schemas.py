@@ -510,3 +510,7 @@ class ValidationErrorResponse(BaseModel):
     """Validation error response"""
     error: str = "Validation Error"
     details: List[ValidationErrorDetail]
+
+class MappingsUpdate(BaseModel):
+    source_id: str
+    target_ids: List[str]

@@ -47,7 +47,7 @@ export function RulesOverviewTable() {
   const outcomeBadge = (outcome: string) => {
     return outcome === 'Prohibition'
       ? 'bg-red-50 text-red-700 border-red-200'
-      : 'bg-blue-50 text-blue-700 border-blue-200';
+      : 'bg-purple-50 text-purple-700 border-purple-200';
   };
 
   return (

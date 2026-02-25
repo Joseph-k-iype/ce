@@ -11,6 +11,7 @@ import { EditorPage } from './pages/EditorPage';
 import { RuleEditorPage } from './components/editor/RuleEditorPage';
 import { SavedPoliciesPage } from './pages/SavedPoliciesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +35,7 @@ function App() {
                 <Route path="/evaluator" element={<EvaluatorPage />} />
                 <Route path="/saved-policies" element={<SavedPoliciesPage />} />
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/generator" element={<WizardPage />} />
                   <Route path="/editor" element={<EditorPage />} />
                   <Route path="/editor/:ruleId" element={<RuleEditorPage />} />

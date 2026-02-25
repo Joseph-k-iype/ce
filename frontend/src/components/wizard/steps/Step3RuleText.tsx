@@ -1,6 +1,7 @@
 import { useWizardStore } from '../../../stores/wizardStore';
 import { useAgentEvents } from '../../../hooks/useAgentEvents';
 import { useRef, useEffect, useMemo } from 'react';
+import { TerminalStream } from '../TerminalStream';
 import gsap from 'gsap';
 
 export function Step3RuleText() {
@@ -85,13 +86,7 @@ export function Step3RuleText() {
           </div>
 
           {/* Event stream */}
-          <div className="max-h-40 overflow-y-auto space-y-1 font-mono text-xs">
-            {(events || []).filter(e => e.event_type !== 'heartbeat').map((event, i) => (
-              <div key={i} className="agent-text">
-                [{event.event_type}] {event.message || event.agent_name || ''}
-              </div>
-            ))}
-          </div>
+          <TerminalStream events={events} maxHeight="16rem" />
         </div>
       )}
     </div>

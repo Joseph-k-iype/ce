@@ -884,6 +884,7 @@ class RulesGraphBuilder:
                 r.attribute_name = $attribute_name,
                 r.attribute_keywords = $attribute_keywords,
                 r.attribute_patterns = $attribute_patterns,
+                r.logic_tree = $logic_tree,
                 r.enabled = true
             """, {
                 "rule_id": rule_def.get('rule_id'),
@@ -908,6 +909,7 @@ class RulesGraphBuilder:
                 "attribute_name": rule_def.get('attribute_name', ''),
                 "attribute_keywords": json.dumps(rule_def.get('attribute_keywords') or []),
                 "attribute_patterns": json.dumps(rule_def.get('attribute_patterns') or []),
+                "logic_tree": json.dumps(rule_def.get('logic_tree')) if rule_def.get('logic_tree') else None,
             })
 
             # Permission/Prohibition — delete old relationships first to prevent
@@ -975,29 +977,64 @@ class RulesGraphBuilder:
                         MERGE (p)-[:CAN_HAVE_DUTY]->(d)
                         """, {"perm_name": perm_name, "duty_name": action_stripped})
 
-            # ORIGINATES_FROM country (mandatory for new rules)
-            for country in (rule_def.get('origin_countries') or []):
-                self._ensure_country(country)
-                self.graph.query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MATCH (c:Country {name: $country})
-                MERGE (r)-[:ORIGINATES_FROM]->(c)
-                """, {"rule_id": rule_id, "country": country})
+            # Helper to link geographic scopes correctly
+            def link_scopes(scopes, is_origin=True):
+                if not scopes:
+                    return "any"
+                
+                match_type = "specific"
+                has_groups = False
+                for scope in scopes:
+                    scope = scope.strip()
+                    if not scope: continue
+                    # Check if it's a group
+                    res = self.graph.query("MATCH (g:CountryGroup {name: $name}) RETURN g LIMIT 1", {"name": scope})
+                    is_group = len(res.result_set) > 0 if hasattr(res, 'result_set') else False
+                    
+                    if is_group:
+                        has_groups = True
+                        if is_origin:
+                            self.graph.query("""
+                            MATCH (r:Rule {rule_id: $rule_id})
+                            MATCH (g:CountryGroup {name: $name})
+                            MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(g)
+                            """, {"rule_id": rule_id, "name": scope})
+                        else:
+                            self.graph.query("""
+                            MATCH (r:Rule {rule_id: $rule_id})
+                            MATCH (g:CountryGroup {name: $name})
+                            MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(g)
+                            """, {"rule_id": rule_id, "name": scope})
+                    else:
+                        self._ensure_country(scope)
+                        if is_origin:
+                            self.graph.query("""
+                            MATCH (r:Rule {rule_id: $rule_id})
+                            MATCH (c:Country {name: $name})
+                            MERGE (r)-[:ORIGINATES_FROM]->(c)
+                            MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(c)
+                            """, {"rule_id": rule_id, "name": scope})
+                        else:
+                            self.graph.query("""
+                            MATCH (r:Rule {rule_id: $rule_id})
+                            MATCH (c:Country {name: $name})
+                            MERGE (r)-[:RECEIVED_IN]->(c)
+                            MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(c)
+                            """, {"rule_id": rule_id, "name": scope})
+                
+                return "group" if has_groups else "specific"
 
-            # Origin trigger relationships
-            if rule_def.get('origin_group'):
-                self.graph.query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MATCH (g:CountryGroup {name: $group})
-                MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(g)
-                """, {"rule_id": rule_id, "group": rule_def['origin_group']})
-            for country in (rule_def.get('origin_countries') or []):
-                self._ensure_country(country)
-                self.graph.query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MATCH (c:Country {name: $country})
-                MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(c)
-                """, {"rule_id": rule_id, "country": country})
+            # Process origins and receivings
+            computed_origin_type = link_scopes(
+                (rule_def.get('origin_countries') or []) + [rule_def.get('origin_group')] if rule_def.get('origin_group') else rule_def.get('origin_countries'),
+                is_origin=True
+            )
+            computed_receiving_type = link_scopes(
+                (rule_def.get('receiving_countries') or []) + [rule_def.get('receiving_group')] if rule_def.get('receiving_group') else rule_def.get('receiving_countries'),
+                is_origin=False
+            )
+            
+            # Additional origin/receiving legal entities
             for entity in (rule_def.get('origin_legal_entities') or []):
                 self.graph.query("""
                 MATCH (r:Rule {rule_id: $rule_id})
@@ -1005,27 +1042,6 @@ class RulesGraphBuilder:
                 MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(le)
                 """, {"rule_id": rule_id, "entity": entity})
 
-            # RECEIVED_IN and receiving trigger relationships
-            for country in (rule_def.get('receiving_countries') or []):
-                self._ensure_country(country)
-                self.graph.query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MATCH (c:Country {name: $country})
-                MERGE (r)-[:RECEIVED_IN]->(c)
-                """, {"rule_id": rule_id, "country": country})
-            if rule_def.get('receiving_group'):
-                self.graph.query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MATCH (g:CountryGroup {name: $group})
-                MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(g)
-                """, {"rule_id": rule_id, "group": rule_def['receiving_group']})
-            for country in (rule_def.get('receiving_countries') or []):
-                self._ensure_country(country)
-                self.graph.query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MATCH (c:Country {name: $country})
-                MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(c)
-                """, {"rule_id": rule_id, "country": country})
             for entity in (rule_def.get('receiving_legal_entities') or []):
                 self.graph.query("""
                 MATCH (r:Rule {rule_id: $rule_id})
@@ -1041,8 +1057,39 @@ class RulesGraphBuilder:
             MERGE (r)-[:HAS_ACTION]->(a)
             """, {"rule_id": rule_id, "action_name": action_name})
 
+            # Gather entities from both flat lists and the logic_tree
+            v_data_categories = set(rule_def.get('data_categories') or [])
+            v_purposes = set(rule_def.get('purposes_of_processing') or [])
+            v_processes = set(rule_def.get('processes') or [])
+            v_gdc = set(rule_def.get('gdc') or [])
+            v_regulators = set(rule_def.get('regulators') or [])
+            v_authorities = set(rule_def.get('authorities') or [])
+            v_sdc = set(rule_def.get('sensitive_data_categories') or [])
+            v_data_subjects = set(rule_def.get('data_subjects') or [])
+
+            logic_tree = rule_def.get('logic_tree')
+            if logic_tree:
+                def walk_tree(node):
+                    if not isinstance(node, dict): return
+                    if node.get('type') == 'CONDITION':
+                        dim = node.get('dimension')
+                        val = node.get('value')
+                        if not val: return
+                        if dim == 'DataCategory': v_data_categories.add(val)
+                        elif dim == 'Purpose': v_purposes.add(val)
+                        elif dim == 'Process': v_processes.add(val)
+                        elif dim == 'GDC': v_gdc.add(val)
+                        elif dim == 'Regulator': v_regulators.add(val)
+                        elif dim == 'Authority': v_authorities.add(val)
+                        elif dim == 'SensitiveDataCategory': v_sdc.add(val)
+                        elif dim == 'DataSubject': v_data_subjects.add(val)
+                    elif node.get('type') in ['AND', 'OR', 'NOT']:
+                        for child in node.get('children', []):
+                            walk_tree(child)
+                walk_tree(logic_tree)
+
             # Data Categories — MERGE nodes and link to rule
-            for cat in (rule_def.get('data_categories') or []):
+            for cat in v_data_categories:
                 cat_name = str(cat).strip()
                 if cat_name:
                     self.graph.query("MERGE (dc:DataCategory {name: $name})", {"name": cat_name})
@@ -1053,7 +1100,7 @@ class RulesGraphBuilder:
                     """, {"rule_id": rule_id, "name": cat_name})
 
             # Purposes — MERGE nodes and link to rule (both PurposeOfProcessing and Purpose)
-            for purpose in (rule_def.get('purposes_of_processing') or []):
+            for purpose in v_purposes:
                 purpose_name = str(purpose).strip()
                 if purpose_name:
                     self.graph.query("MERGE (p:PurposeOfProcessing {name: $name})", {"name": purpose_name})
@@ -1071,7 +1118,7 @@ class RulesGraphBuilder:
                     """, {"rule_id": rule_id, "name": purpose_name})
 
             # Processes — MERGE nodes and link to rule
-            for proc in (rule_def.get('processes') or []):
+            for proc in v_processes:
                 proc_name = str(proc).strip()
                 if proc_name:
                     self.graph.query("MERGE (p:Process {name: $name})", {"name": proc_name})
@@ -1082,7 +1129,7 @@ class RulesGraphBuilder:
                     """, {"rule_id": rule_id, "name": proc_name})
 
             # GDC — MERGE nodes and link to rule
-            for gdc in (rule_def.get('gdc') or []):
+            for gdc in v_gdc:
                 gdc_name = str(gdc).strip()
                 if gdc_name:
                     self.graph.query("MERGE (g:GDC {name: $name})", {"name": gdc_name})
@@ -1093,12 +1140,7 @@ class RulesGraphBuilder:
                     """, {"rule_id": rule_id, "name": gdc_name})
 
             # LINKED_TO relationships for reference entity types.
-            # Uses MERGE (not MATCH-only) so that AI-suggested names that don't
-            # exactly match CSV-loaded reference data still create stub nodes and
-            # the relationship is always established. This prevents silent failures
-            # when AI extracts "Information Commissioner's Office" but the graph
-            # only has "ICO" — both end up linked to the rule.
-            for reg in (rule_def.get('regulators') or []):
+            for reg in v_regulators:
                 reg_name = str(reg).strip()
                 if reg_name:
                     self.graph.query(
@@ -1111,7 +1153,7 @@ class RulesGraphBuilder:
                     MERGE (r)-[:LINKED_TO]->(reg)
                     """, {"rule_id": rule_id, "name": reg_name})
 
-            for auth in (rule_def.get('authorities') or []):
+            for auth in v_authorities:
                 auth_name = str(auth).strip()
                 if auth_name:
                     self.graph.query(
@@ -1124,7 +1166,7 @@ class RulesGraphBuilder:
                     MERGE (r)-[:LINKED_TO]->(auth)
                     """, {"rule_id": rule_id, "name": auth_name})
 
-            for sdc in (rule_def.get('sensitive_data_categories') or []):
+            for sdc in v_sdc:
                 sdc_name = str(sdc).strip()
                 if sdc_name:
                     self.graph.query(
@@ -1134,8 +1176,22 @@ class RulesGraphBuilder:
                     self.graph.query("""
                     MATCH (r:Rule {rule_id: $rule_id})
                     MATCH (sdc:SensitiveDataCategory {name: $name})
-                    MERGE (r)-[:LINKED_TO]->(sdc)
+                    MERGE (r)-[:HAS_SENSITIVE_DATA_CATEGORY]->(sdc)
                     """, {"rule_id": rule_id, "name": sdc_name})
+
+            for ds in v_data_subjects:
+                ds_name = str(ds).strip()
+                if ds_name:
+                    self.graph.query(
+                        "MERGE (ds:DataSubject {name: $name})",
+                        {"name": ds_name},
+                    )
+                    self.graph.query("""
+                    MATCH (r:Rule {rule_id: $rule_id})
+                    MATCH (ds:DataSubject {name: $name})
+                    MERGE (r)-[:LINKED_TO]->(ds)
+                    """, {"rule_id": rule_id, "name": ds_name})
+
 
             for ds in (rule_def.get('data_subjects') or []):
                 ds_name = str(ds).strip()

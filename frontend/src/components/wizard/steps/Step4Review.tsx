@@ -317,7 +317,7 @@ export function Step4Review() {
           <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Entity Trigger Conditions</h4>
           <button
             onClick={() => setEditingEntities(prev => !prev)}
-            className="text-xs text-blue-400 hover:text-blue-300 underline"
+            className="text-xs text-purple-400 hover:text-purple-300 underline"
           >
             {editingEntities ? 'Collapse' : 'Edit conditions'}
           </button>
@@ -474,7 +474,7 @@ export function Step4Review() {
                     {ai.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {ai.map(v => (
-                          <span key={v} className="px-1.5 py-0.5 bg-blue-900/40 text-blue-300 rounded text-[10px]">{v}</span>
+                          <span key={v} className="px-1.5 py-0.5 bg-purple-900/40 text-purple-300 rounded text-[10px]">{v}</span>
                         ))}
                       </div>
                     ) : <span className="text-gray-600 italic">—</span>}
@@ -531,7 +531,7 @@ export function Step4Review() {
             {Object.entries(triggerLogic.dimensions).map(([key, values]) =>
               values.length > 0 ? (
                 <div key={key} className="pl-8 text-gray-400">
-                  <span className="text-blue-400">●</span>
+                  <span className="text-purple-400">●</span>
                   {' '}<span className="text-gray-300">{key.replace(/_/g, ' ')}</span>
                   {' '}<span className="text-gray-500">is one of:</span>
                   {' '}<span className="text-green-300">[{values.join(', ')}]</span>
@@ -540,7 +540,7 @@ export function Step4Review() {
             )}
             {triggerLogic.attribute_keywords_count > 0 && (
               <div className="pl-8 text-gray-400">
-                <span className="text-blue-400">●</span>
+                <span className="text-purple-400">●</span>
                 {' '}<span className="text-gray-300">attribute keywords</span>
                 {' '}<span className="text-gray-500">matched</span>
                 {' '}<span className="text-green-300">({triggerLogic.attribute_keywords_count} keywords)</span>

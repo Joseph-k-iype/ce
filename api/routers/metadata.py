@@ -9,6 +9,7 @@ All data is served from the RulesGraph — no runtime file I/O.
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 
 from services.database import get_db_service
 from services.cache import get_cache_service
@@ -16,6 +17,10 @@ from services.cache import get_cache_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["metadata"])
+
+class MetadataNodeCreate(BaseModel):
+    dimension: str
+    value: str
 
 
 def get_db():
@@ -473,9 +478,17 @@ async def get_all_dropdown_values(db=Depends(get_db)):
     # New entity types
     result["regulators"] = await get_regulators(db)
     result["authorities"] = await get_authorities(db)
+    
+    # Country Groups
+    c_groups = _rules_query(db, "MATCH (n:CountryGroup) RETURN n.name as name ORDER BY n.name")
+    result["country_groups"] = [g["name"] for g in c_groups if g.get("name")]
     result["global_business_functions"] = await get_global_business_functions(db)
     result["sensitive_data_categories"] = await get_sensitive_data_categories(db)
     result["data_categories"] = await get_data_categories(db)
+    
+    # Attributes
+    rows = _rules_query(db, "MATCH (a:Attribute) RETURN a.name as name ORDER BY a.name")
+    result["attributes"] = [r["name"] for r in rows if r.get("name")]
 
     # Dynamic node types from schema metadata
     try:
@@ -501,3 +514,33 @@ async def get_all_dropdown_values(db=Depends(get_db)):
 
     cache.set("all_dropdown_values", result, "metadata", ttl=600)
     return result
+
+
+@router.post("/metadata/nodes")
+async def create_metadata_node(data: MetadataNodeCreate, db=Depends(get_db)):
+    """Dynamically create a new graph node from the Visual Builder."""
+    node_mapping = {
+        "OriginCountry": "Country",
+        "ReceivingCountry": "Country",
+        "LegalEntity": "LegalEntity",
+        "DataCategory": "DataCategory",
+        "Purpose": "Purpose",
+        "Process": "Process",
+        "DataSubject": "DataSubject",
+        "Regulator": "Regulator",
+        "Authority": "Authority",
+        "Attribute": "Attribute",
+    }
+    
+    label = node_mapping.get(data.dimension)
+    if not label:
+        return {"status": "ignored", "reason": "unmapped dimension"}
+        
+    query = f"MERGE (n:{label} {{name: $value}}) RETURN n.name as name"
+    _rules_query(db, query, {"value": data.value.strip()})
+    
+    # Invalidate cache so dropdowns refresh immediately
+    cache = get_cache_service()
+    cache.delete("all_dropdown_values", namespace="metadata")
+    
+    return {"status": "success", "node": data.value.strip(), "label": label}

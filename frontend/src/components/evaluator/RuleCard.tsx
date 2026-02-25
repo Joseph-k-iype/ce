@@ -68,7 +68,7 @@ export function RuleCard({ rule, index }: RuleCardProps) {
               <span className="text-[10px] font-semibold text-gray-400 uppercase">Required Assessments</span>
               <div className="flex flex-wrap gap-1 mt-0.5">
                 {rule.required_assessments.map(a => (
-                  <span key={a} className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">{a}</span>
+                  <span key={a} className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">{a}</span>
                 ))}
               </div>
             </div>
@@ -96,7 +96,7 @@ export function RuleCard({ rule, index }: RuleCardProps) {
               <div className={`mt-1 space-y-1 ${hasManyDuties ? 'max-h-[200px] overflow-y-auto pr-1' : ''}`}>
                 {allDuties.map((duty, di) => (
                   <div key={di} className="flex items-start gap-1.5">
-                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-medium break-words" style={{ overflowWrap: 'break-word' }}>
+                    <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-medium break-words" style={{ overflowWrap: 'break-word' }}>
                       {duty.module && duty.module !== 'action' ? `[${duty.module}] ` : ''}{duty.name}
                     </span>
                   </div>

@@ -88,7 +88,7 @@ export function Step1Country() {
               value={Array.isArray(receivingLegalEntity) ? receivingLegalEntity : receivingLegalEntity ? [receivingLegalEntity] : []}
               onChange={(e) => {
                 const selected = Array.from(e.target.selectedOptions, o => o.value);
-                setReceivingLegalEntity(selected.join(','));
+                setReceivingLegalEntity(selected);
               }}
               className="input-dark h-20"
             >

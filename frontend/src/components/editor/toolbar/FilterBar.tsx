@@ -17,28 +17,28 @@ function FilterBarInner() {
         placeholder="Country..."
         value={filters.country}
         onChange={(e) => setFilter('country', e.target.value)}
-        className="px-2 py-1 text-xs border border-gray-300 rounded-md w-28 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+        className="px-2 py-1 text-xs border border-gray-300 rounded-md w-28 focus:outline-none focus:ring-1 focus:ring-purple-400 focus:border-purple-400"
       />
       <input
         type="text"
         placeholder="Rule..."
         value={filters.ruleSearch}
         onChange={(e) => setFilter('ruleSearch', e.target.value)}
-        className="px-2 py-1 text-xs border border-gray-300 rounded-md w-28 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+        className="px-2 py-1 text-xs border border-gray-300 rounded-md w-28 focus:outline-none focus:ring-1 focus:ring-purple-400 focus:border-purple-400"
       />
       <input
         type="text"
         placeholder="Data Category..."
         value={filters.dataCategory}
         onChange={(e) => setFilter('dataCategory', e.target.value)}
-        className="px-2 py-1 text-xs border border-gray-300 rounded-md w-32 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+        className="px-2 py-1 text-xs border border-gray-300 rounded-md w-32 focus:outline-none focus:ring-1 focus:ring-purple-400 focus:border-purple-400"
       />
       <input
         type="text"
         placeholder="Process..."
         value={filters.process}
         onChange={(e) => setFilter('process', e.target.value)}
-        className="px-2 py-1 text-xs border border-gray-300 rounded-md w-28 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+        className="px-2 py-1 text-xs border border-gray-300 rounded-md w-28 focus:outline-none focus:ring-1 focus:ring-purple-400 focus:border-purple-400"
       />
       {hasFilters && (
         <button

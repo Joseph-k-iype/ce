@@ -30,6 +30,7 @@ export function SavedPoliciesPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSessions();
   }, []);
 
@@ -190,11 +191,10 @@ export function SavedPoliciesPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                      session.status === 'approved' ? 'bg-green-100 text-green-700' :
-                      session.status === 'saved' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${session.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        session.status === 'saved' ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-600'
+                      }`}>
                       {session.status || 'draft'}
                     </span>
                   </td>

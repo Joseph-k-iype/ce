@@ -8,7 +8,7 @@ interface Point {
 
 const RELATIONSHIP_COLORS: Record<string, string> = {
   TRIGGERED_BY_ORIGIN: '#0ea5e9', // sky-500
-  TRIGGERED_BY_RECEIVING: '#3b82f6', // blue-500
+  TRIGGERED_BY_RECEIVING: '#3b82f6', // purple-500
   HAS_DATA_CATEGORY: '#10b981', // emerald-500
   HAS_PURPOSE: '#f59e0b', // amber-500
   HAS_GDC: '#a855f7', // purple-500
@@ -17,14 +17,14 @@ const RELATIONSHIP_COLORS: Record<string, string> = {
   HAS_PERMISSION: '#22c55e', // green-500
   HAS_PROHIBITION: '#ef4444', // red-500
   HAS_DUTY: '#14b8a6', // teal-500
-  BELONGS_TO: '#6366f1', // indigo-500
+  BELONGS_TO: '#6366f1', // purple-500
   EXCLUDES_RECEIVING: '#f43f5e', // rose-500
   HAS_ATTRIBUTE: '#8b5cf6', // violet-500
   HAS_DATA_SUBJECT: '#ec4899', // pink-500
   HAS_LEGAL_ENTITY: '#f97316', // orange-500
-  LINKED_TO: '#6366f1', // indigo-500
+  LINKED_TO: '#6366f1', // purple-500
   CAN_HAVE_DUTY: '#14b8a6', // teal-500
-  HAS_AUTHORITY: '#818cf8', // indigo-400
+  HAS_AUTHORITY: '#818cf8', // purple-400
   HAS_GBGF: '#84cc16', // lime-500
   HAS_REGULATOR: '#f43f5e', // rose-500
   HAS_SENSITIVE_DATA_CATEGORY: '#d946ef', // fuchsia-500

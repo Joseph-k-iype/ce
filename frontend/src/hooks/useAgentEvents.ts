@@ -14,7 +14,7 @@ export function useAgentEvents(sessionId: string | null) {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const terminalRef = useRef(false);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(function connectFn() {
     if (!sessionId) return;
 
     // Close any existing connection
@@ -47,7 +47,7 @@ export function useAgentEvents(sessionId: string | null) {
         const delay = BASE_RECONNECT_DELAY_MS * Math.pow(2, reconnectAttemptRef.current);
         reconnectAttemptRef.current += 1;
         reconnectTimerRef.current = setTimeout(() => {
-          connect();
+          connectFn();
         }, delay);
       }
     };

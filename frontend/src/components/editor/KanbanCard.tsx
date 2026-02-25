@@ -5,7 +5,7 @@ import { useEditorStore } from '../../stores/editorStore';
 const NODE_TYPE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
   Rule: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' },
   Country: { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-700' },
-  CountryGroup: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+  CountryGroup: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
   DataCategory: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
   Purpose: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
   Process: { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700' },
@@ -17,7 +17,7 @@ const NODE_TYPE_COLORS: Record<string, { bg: string; border: string; text: strin
   LegalEntity: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
   DataSubject: { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-700' },
   Attribute: { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700' },
-  Authority: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700' },
+  Authority: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
   Regulator: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
   GlobalBusinessFunction: { bg: 'bg-lime-50', border: 'border-lime-200', text: 'text-lime-700' },
   PurposeOfProcessing: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700' },
@@ -126,9 +126,9 @@ function KanbanCardInner({ node, isSelected, isHighlighted, connectionCount }: K
       className={`
         relative px-3 py-2.5 rounded-lg border cursor-pointer transition-all duration-300
         ${colors.bg} ${colors.border}
-        ${isSelected ? 'ring-2 ring-blue-400 shadow-md translate-x-1' : 'hover:shadow-sm hover:border-gray-300'}
-        ${isHighlighted && !isSelected ? 'ring-1 ring-blue-200 shadow-sm' : ''}
-        ${addEdgeMode ? 'cursor-crosshair ring-1 ring-dashed ring-blue-300' : ''}
+        ${isSelected ? 'ring-2 ring-purple-400 shadow-md translate-x-1' : 'hover:shadow-sm hover:border-gray-300'}
+        ${isHighlighted && !isSelected ? 'ring-1 ring-purple-200 shadow-sm' : ''}
+        ${addEdgeMode ? 'cursor-crosshair ring-1 ring-dashed ring-purple-300' : ''}
         ${opacity}
       `}
     >
