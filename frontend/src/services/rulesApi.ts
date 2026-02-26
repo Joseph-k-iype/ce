@@ -11,6 +11,11 @@ export async function getRulesOverviewTable(params?: Record<string, string>): Pr
   return data;
 }
 
+export async function createRule(): Promise<{ status: string; rule_id: string }> {
+  const { data } = await api.post<{ status: string; rule_id: string }>('/admin/rules/create');
+  return data;
+}
+
 export async function getDropdownValues(): Promise<DropdownValues> {
   const { data } = await api.get<DropdownValues>('/all-dropdown-values');
   return data;

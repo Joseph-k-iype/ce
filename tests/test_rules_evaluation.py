@@ -18,6 +18,10 @@ from rules.dictionaries.country_groups import (
     ADEQUACY_COUNTRIES,
     BCR_COUNTRIES,
     COUNTRY_GROUPS,
+    EU_EEA_UK_CROWN_CH,
+    ADEQUACY_PLUS_EU,
+    CROWN_DEPENDENCIES,
+    SWITZERLAND_APPROVED,
     get_country_group,
     is_country_in_group,
 )
@@ -117,16 +121,16 @@ class TestCaseMatchingRules:
         """Test EU internal transfer rule"""
         rule = CASE_MATCHING_RULES.get("RULE_1_EU_INTERNAL")
         assert rule is not None
-        assert rule.origin_group == "EU_EEA_UK_CROWN_CH"
-        assert rule.receiving_group == "EU_EEA_UK_CROWN_CH"
+        assert rule.origin_countries == EU_EEA_UK_CROWN_CH
+        assert rule.receiving_countries == EU_EEA_UK_CROWN_CH
         assert rule.required_assessments.pia_required
 
     def test_eu_adequacy_rule(self):
         """Test EU to adequacy countries rule"""
         rule = CASE_MATCHING_RULES.get("RULE_2_EU_ADEQUACY")
         assert rule is not None
-        assert rule.origin_group == "EU_EEA"
-        assert rule.receiving_group == "ADEQUACY_COUNTRIES"
+        assert rule.origin_countries == EU_EEA_COUNTRIES
+        assert rule.receiving_countries == ADEQUACY_COUNTRIES
         assert rule.required_assessments.pia_required
 
     def test_rest_of_world_rule_requires_tia(self):
@@ -141,7 +145,7 @@ class TestCaseMatchingRules:
         """Test BCR countries rule"""
         rule = CASE_MATCHING_RULES.get("RULE_7_BCR")
         assert rule is not None
-        assert rule.origin_group == "BCR_COUNTRIES"
+        assert rule.origin_countries == BCR_COUNTRIES
         assert rule.required_assessments.pia_required
         assert rule.required_assessments.hrpr_required
 
@@ -287,30 +291,12 @@ class TestRuleConsistency:
             assert rule.odrl_type in valid_types
             assert rule.odrl_action in valid_actions
 
-    def test_all_origin_groups_exist(self):
-        """Test that origin groups referenced in rules exist in COUNTRY_GROUPS"""
-        for key, rule in CASE_MATCHING_RULES.items():
-            if rule.origin_group:
-                assert rule.origin_group in COUNTRY_GROUPS, (
-                    f"Rule {key} references non-existent origin group: {rule.origin_group}"
-                )
-
-    def test_all_receiving_groups_exist(self):
-        """Test that receiving groups referenced in rules exist in COUNTRY_GROUPS"""
-        for key, rule in CASE_MATCHING_RULES.items():
-            if rule.receiving_group:
-                assert rule.receiving_group in COUNTRY_GROUPS, (
-                    f"Rule {key} references non-existent receiving group: {rule.receiving_group}"
-                )
-
     def test_receiving_not_in_groups_exist(self):
         """Test that receiving_not_in groups exist"""
         for key, rule in CASE_MATCHING_RULES.items():
             if rule.receiving_not_in:
-                for group in rule.receiving_not_in:
-                    assert group in COUNTRY_GROUPS, (
-                        f"Rule {key} excludes non-existent group: {group}"
-                    )
+                # receiving_not_in is now a direct frozenset of countries, so we don't need to look up country_groups strings
+                assert isinstance(rule.receiving_not_in, frozenset)
 
 
 class TestDataDictionaries:

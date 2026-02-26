@@ -47,7 +47,7 @@ class TestAgentNodes:
 
         from agents.nodes.rule_analyzer import rule_analyzer_node
 
-        state = create_initial_state(
+        state = create_initial_state("test_session", 
             origin_country="Germany",
             scenario_type="transfer",
             receiving_countries=["India"],
@@ -79,7 +79,7 @@ class TestAgentNodes:
 
         from agents.nodes.cypher_generator import cypher_generator_node
 
-        state = create_initial_state("Germany", "transfer", ["India"], "test")
+        state = create_initial_state("test_session", "Germany", "transfer", ["India"], "test")
         state["rule_definition"] = {"rule_id": "RULE_TEST_001"}
 
         result = cypher_generator_node(state)
@@ -108,7 +108,7 @@ class TestAgentNodes:
 
         from agents.nodes.validator import validator_node
 
-        state = create_initial_state("Germany", "transfer", ["India"], "test")
+        state = create_initial_state("test_session", "Germany", "transfer", ["India"], "test")
         state["rule_definition"] = {"rule_id": "RULE_TEST_001"}
         state["cypher_queries"] = {"queries": {"rule_check": "MATCH (c) RETURN c"}}
 
@@ -138,7 +138,7 @@ class TestAgentNodes:
 
         from agents.nodes.validator import validator_node
 
-        state = create_initial_state("Germany", "transfer", ["India"], "test")
+        state = create_initial_state("test_session", "Germany", "transfer", ["India"], "test")
         state["rule_definition"] = {"rule_id": "RULE_TEST_001"}
         state["cypher_queries"] = {"queries": {"rule_check": "MATCH (c) RETURN c"}}
 

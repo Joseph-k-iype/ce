@@ -93,24 +93,7 @@ function EvaluationFlowViewInner() {
 
   return (
     <div className="h-full w-full bg-white relative">
-      {/* Lane Headers */}
-      <div className="absolute inset-0 pointer-events-none z-10">
-        <div className="flex h-full">
-          {computeLaneRanges(lanes).map((range) => (
-            <div
-              key={range.id}
-              className="border-r border-gray-100 last:border-r-0 h-full flex flex-col"
-              style={{ width: range.xEnd - range.xStart + 24 }}
-            >
-              <div className="h-[48px] bg-gray-50/80 border-b border-gray-200 flex items-center justify-center px-2">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">
-                  {range.label}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Use minimalist approach without rigid background columns to support canvas panning/zooming cleanly */}
 
       <ReactFlow
         nodes={rfNodes}

@@ -293,8 +293,8 @@ export function WizardContainer() {
   const StepComponent = stepComponents[store.currentStep] || Step1RuleInput;
 
   return (
-    <div className="space-y-4">
-      <div ref={stepRef} className="bg-white rounded-xl border border-gray-200 p-6">
+    <div className="flex flex-col h-full space-y-4">
+      <div ref={stepRef} className="bg-white rounded-xl border border-gray-200 p-6 flex-1 min-h-0 overflow-y-auto">
         <StepComponent />
       </div>
 

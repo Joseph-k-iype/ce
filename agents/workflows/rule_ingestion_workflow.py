@@ -21,46 +21,6 @@ from services.sse_manager import get_sse_manager
 
 logger = logging.getLogger(__name__)
 
-# ── Step progress mapping ────────────────────────────────────────────────
-# Maps agent names to step numbers for progress tracking
-STEP_PROGRESS_MAP = {
-    "rule_analyzer": (1, 6, "Analyzing rule text"),
-    "data_dictionary": (2, 6, "Generating data dictionary"),
-    "cypher_generator": (3, 6, "Generating graph queries"),
-    "validator": (4, 6, "Validating outputs"),
-    "rule_tester": (5, 6, "Running test scenarios"),
-    "review_proposal": (6, 6, "Preparing proposal"),
-}
-
-
-def _emit_step_progress(state: WizardAgentState, agent_name: str):
-    """Emit a STEP_PROGRESS SSE event based on the current agent."""
-    step_info = STEP_PROGRESS_MAP.get(agent_name)
-    if not step_info:
-        return
-
-    step_current, step_total, description = step_info
-    session_id = state.get("origin_country", "unknown")
-    sse_manager = get_sse_manager()
-
-    event = AgentEvent(
-        event_type=AgentEventType.STEP_PROGRESS,
-        session_id=session_id,
-        agent_name=agent_name,
-        phase=state.get("current_phase", ""),
-        message=f"Step {step_current}/{step_total} — {description}",
-        step_current=step_current,
-        step_total=step_total,
-        progress_pct=(step_current / step_total) * 100,
-    )
-    sse_manager.publish_sync(session_id, event)
-    state.setdefault("events", []).append({
-        "event_type": AgentEventType.STEP_PROGRESS.value,
-        "agent_name": agent_name,
-        "message": event.message,
-        "data": {"step_current": step_current, "step_total": step_total},
-    })
-
 
 def human_review_node(state: WizardAgentState) -> WizardAgentState:
     """Human review node - workflow pauses here for human input."""
@@ -105,12 +65,12 @@ def complete_node(state: WizardAgentState) -> WizardAgentState:
     })
 
     event_store = get_event_store()
-    session_id = state.get("origin_country", "unknown")
+    session_id = state.get("session_id", "unknown")
     event_store.append(
         session_id=session_id,
         event_type=AuditEventType.WORKFLOW_COMPLETED,
         data={
-            "rule_id": state.get("rule_definition", {}).get("rule_id"),
+            "rule_id": (state.get("rule_definition") or {}).get("rule_id"),
             "iterations": state.get("iteration", 0),
         },
     )
@@ -138,7 +98,7 @@ def fail_node(state: WizardAgentState) -> WizardAgentState:
         pass
 
     event_store = get_event_store()
-    session_id = state.get("origin_country", "unknown")
+    session_id = state.get("session_id", "unknown")
     event_store.append(
         session_id=session_id,
         event_type=AuditEventType.WORKFLOW_FAILED,
@@ -383,7 +343,7 @@ def _standard_route_after_validator(state: WizardAgentState) -> str:
     After two failures we give up and proceed to rule_tester so the workflow
     is never stuck in an infinite validator ↔ validator loop.
     """
-    v_result = state.get("validation_result", {})
+    v_result = state.get("validation_result") or {}
     if v_result.get("overall_valid") or v_result.get("skipped"):
         return "rule_tester"
     failure_count = state.get("agent_failure_counts", {}).get("validator", 0)
@@ -660,6 +620,7 @@ class RuleIngestionResult:
 
 
 def run_rule_ingestion(
+    session_id: str,
     origin_country: str,
     scenario_type: str,
     receiving_countries: List[str],
@@ -679,6 +640,7 @@ def run_rule_ingestion(
                          (dynamic routing, ~60-180s). Default: "autonomous".
     """
     initial_state = create_initial_state(
+        session_id=session_id,
         origin_country=origin_country,
         scenario_type=scenario_type,
         receiving_countries=receiving_countries,
@@ -692,7 +654,7 @@ def run_rule_ingestion(
 
     event_store = get_event_store()
     event_store.append(
-        session_id=origin_country,
+        session_id=session_id,
         event_type=AuditEventType.WORKFLOW_STARTED,
         data={
             "rule_text": rule_text[:200],

@@ -544,10 +544,9 @@ class RulesGraphBuilder:
         rules = get_enabled_case_matching_rules()
 
         for rule_key, rule in rules.items():
-            origin_match_type = "group" if rule.origin_group else ("specific" if rule.origin_countries else "any")
+            origin_match_type = "specific" if rule.origin_countries else "any"
             receiving_match_type = (
-                "not_in" if rule.receiving_not_in else
-                "group" if rule.receiving_group else
+                "not_in" if getattr(rule, 'receiving_not_in', None) else
                 ("specific" if rule.receiving_countries else "any")
             )
 
@@ -601,13 +600,6 @@ class RulesGraphBuilder:
                 """, {"perm_name": perm_name, "duty_name": duty_name, "module": assessment, "value": "Completed"})
 
             # Origin relationships
-            if rule.origin_group:
-                self.graph.query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MATCH (g:CountryGroup {name: $group})
-                MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(g)
-                """, {"rule_id": rule.rule_id, "group": rule.origin_group})
-
             if rule.origin_countries:
                 for country in rule.origin_countries:
                     self._ensure_country(country)
@@ -618,13 +610,6 @@ class RulesGraphBuilder:
                     """, {"rule_id": rule.rule_id, "country": country})
 
             # Receiving relationships
-            if rule.receiving_group:
-                self.graph.query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MATCH (g:CountryGroup {name: $group})
-                MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(g)
-                """, {"rule_id": rule.rule_id, "group": rule.receiving_group})
-
             if rule.receiving_countries:
                 for country in rule.receiving_countries:
                     self._ensure_country(country)
@@ -851,12 +836,10 @@ class RulesGraphBuilder:
         """Add any rule type to the graph from AI-generated definition."""
         try:
             rule_type = rule_def.get('rule_type') or 'attribute'
-            origin_match_type = "group" if rule_def.get('origin_group') else (
-                "specific" if rule_def.get('origin_countries') else "any"
-            )
-            receiving_match_type = "group" if rule_def.get('receiving_group') else (
-                "specific" if rule_def.get('receiving_countries') else "any"
-            )
+            origin_match_type = "specific" if rule_def.get('origin_countries') else "any"
+            receiving_match_type = "specific" if rule_def.get('receiving_countries') else "any"
+            # We don't use receiving_group or receiving_not_in for AI rules yet
+            # but if they were added, receiving_match_type would adjust here
             priority = rule_def.get('priority', 'medium')
             outcome = rule_def.get('outcome', 'permission')
             valid_until = rule_def.get('valid_until')
@@ -978,59 +961,40 @@ class RulesGraphBuilder:
                         """, {"perm_name": perm_name, "duty_name": action_stripped})
 
             # Helper to link geographic scopes correctly
+
             def link_scopes(scopes, is_origin=True):
                 if not scopes:
                     return "any"
                 
-                match_type = "specific"
-                has_groups = False
                 for scope in scopes:
                     scope = scope.strip()
                     if not scope: continue
-                    # Check if it's a group
-                    res = self.graph.query("MATCH (g:CountryGroup {name: $name}) RETURN g LIMIT 1", {"name": scope})
-                    is_group = len(res.result_set) > 0 if hasattr(res, 'result_set') else False
                     
-                    if is_group:
-                        has_groups = True
-                        if is_origin:
-                            self.graph.query("""
-                            MATCH (r:Rule {rule_id: $rule_id})
-                            MATCH (g:CountryGroup {name: $name})
-                            MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(g)
-                            """, {"rule_id": rule_id, "name": scope})
-                        else:
-                            self.graph.query("""
-                            MATCH (r:Rule {rule_id: $rule_id})
-                            MATCH (g:CountryGroup {name: $name})
-                            MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(g)
-                            """, {"rule_id": rule_id, "name": scope})
+                    self._ensure_country(scope)
+                    if is_origin:
+                        self.graph.query("""
+                        MATCH (r:Rule {rule_id: $rule_id})
+                        MATCH (c:Country {name: $name})
+                        MERGE (r)-[:ORIGINATES_FROM]->(c)
+                        MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(c)
+                        """, {"rule_id": rule_id, "name": scope})
                     else:
-                        self._ensure_country(scope)
-                        if is_origin:
-                            self.graph.query("""
-                            MATCH (r:Rule {rule_id: $rule_id})
-                            MATCH (c:Country {name: $name})
-                            MERGE (r)-[:ORIGINATES_FROM]->(c)
-                            MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(c)
-                            """, {"rule_id": rule_id, "name": scope})
-                        else:
-                            self.graph.query("""
-                            MATCH (r:Rule {rule_id: $rule_id})
-                            MATCH (c:Country {name: $name})
-                            MERGE (r)-[:RECEIVED_IN]->(c)
-                            MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(c)
-                            """, {"rule_id": rule_id, "name": scope})
+                        self.graph.query("""
+                        MATCH (r:Rule {rule_id: $rule_id})
+                        MATCH (c:Country {name: $name})
+                        MERGE (r)-[:RECEIVED_IN]->(c)
+                        MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(c)
+                        """, {"rule_id": rule_id, "name": scope})
                 
-                return "group" if has_groups else "specific"
+                return "specific"
 
             # Process origins and receivings
             computed_origin_type = link_scopes(
-                (rule_def.get('origin_countries') or []) + [rule_def.get('origin_group')] if rule_def.get('origin_group') else rule_def.get('origin_countries'),
+                rule_def.get('origin_countries') or [],
                 is_origin=True
             )
             computed_receiving_type = link_scopes(
-                (rule_def.get('receiving_countries') or []) + [rule_def.get('receiving_group')] if rule_def.get('receiving_group') else rule_def.get('receiving_countries'),
+                rule_def.get('receiving_countries') or [],
                 is_origin=False
             )
             

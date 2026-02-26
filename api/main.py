@@ -23,6 +23,7 @@ from config.settings import settings
 from models.schemas import ErrorResponse
 from services.database import get_db_service
 from services.cache import get_cache_service
+from services.backup_service import get_backup_service
 from agents.ai_service import get_ai_service
 
 # Import routers
@@ -66,6 +67,10 @@ async def lifespan(app: FastAPI):
 
     ai = get_ai_service()
     logger.info(f"AI service initialized (enabled={ai.is_enabled})")
+
+    backup = get_backup_service()
+    backup.start_background_task()
+    logger.info("Backup service initialized")
 
     # Validate graph has data (graph-native: no CSV reads at runtime)
     if db.check_connection():

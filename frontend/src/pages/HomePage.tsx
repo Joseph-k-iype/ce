@@ -116,7 +116,14 @@ export function HomePage() {
                   <td>{row.sending_country}</td>
                   <td>{row.receiving_country}</td>
                   <td className="font-medium">{row.rule_name}</td>
-                  <td className="max-w-xs">{row.rule_details}</td>
+                  <td className="max-w-xs">
+                    <div className="text-gray-200 font-medium">{row.rule_details}</div>
+                    {row.rule_description && (
+                      <div className="text-sm text-gray-400 mt-1 italic leading-tight">
+                        {row.rule_description}
+                      </div>
+                    )}
+                  </td>
                   <td>
                     <span className={row.permission_prohibition === 'Permission' ? 'badge-permission' : 'badge-prohibition'}>
                       {row.permission_prohibition}

@@ -83,32 +83,32 @@ class TestPydanticModels:
         assert rule.odrl_type == "Prohibition"
 
     def test_rule_definition_model_invalid_country_group(self):
-        """Test invalid country group (Permissive model allows it)"""
+        """Test invalid country group list (Permissive model allows any string array)"""
         rule = RuleDefinitionModel(
             rule_type="attribute",
             rule_id="RULE_TEST_004",
             name="Test Rule",
             description="Test description here",
             priority="medium",
-            origin_group="INVALID_GROUP",
+            origin_countries=["INVALID_GROUP"],
             outcome="prohibition",
             odrl_type="Prohibition",
         )
-        assert rule.origin_group == "INVALID_GROUP"
+        assert rule.origin_countries == ["INVALID_GROUP"]
 
     def test_rule_definition_model_valid_country_group(self):
-        """Test valid country group"""
+        """Test valid country group lists"""
         rule = RuleDefinitionModel(
             rule_type="attribute",
             rule_id="RULE_TEST_005",
             name="Test EU Rule",
             description="Test rule for EU transfers",
             priority="medium",
-            origin_group="EU_EEA",
+            origin_countries=["Germany", "France"],
             outcome="permission",
             odrl_type="Permission",
         )
-        assert rule.origin_group == "EU_EEA"
+        assert rule.origin_countries == ["Germany", "France"]
 
     def test_cypher_queries_model_valid(self):
         """Test valid Cypher queries"""
@@ -155,7 +155,7 @@ class TestWizardAgentState:
 
     def test_create_initial_state(self):
         """Test creating initial state"""
-        state = create_initial_state(
+        state = create_initial_state("test_session", 
             origin_country="Germany",
             scenario_type="transfer",
             receiving_countries=["India"],
@@ -172,7 +172,7 @@ class TestWizardAgentState:
 
     def test_create_initial_state_with_categories(self):
         """Test creating initial state with data categories"""
-        state = create_initial_state(
+        state = create_initial_state("test_session", 
             origin_country="UK",
             scenario_type="attribute",
             receiving_countries=[],
@@ -191,38 +191,38 @@ class TestRouting:
         """Test routing to valid agent phases"""
         for phase in ["rule_analyzer", "data_dictionary", "cypher_generator",
                        "validator", "reference_data", "human_review", "complete", "fail"]:
-            state = create_initial_state("US", "transfer", [], "test")
+            state = create_initial_state("test_session", "US", "transfer", [], "test")
             state["current_phase"] = phase
             assert route_from_supervisor(state) == phase
 
     def test_route_from_supervisor_max_iterations(self):
         """Test routing to fail when max iterations reached"""
-        state = create_initial_state("US", "transfer", [], "test", max_iterations=3)
+        state = create_initial_state("test_session", "US", "transfer", [], "test", max_iterations=3)
         state["iteration"] = 3
         state["current_phase"] = "rule_analyzer"
         assert route_from_supervisor(state) == "fail"
 
     def test_route_from_supervisor_invalid_phase(self):
         """Test routing to fail for unknown phase"""
-        state = create_initial_state("US", "transfer", [], "test")
+        state = create_initial_state("test_session", "US", "transfer", [], "test")
         state["current_phase"] = "unknown_agent"
         assert route_from_supervisor(state) == "fail"
 
     # def test_route_after_validation_complete(self):
     #     \"\"\"Test routing after successful validation\"\"\"
-    #     state = create_initial_state("US", "transfer", [], "test")
+    #     state = create_initial_state("test_session", "US", "transfer", [], "test")
     #     state["current_phase"] = "complete"
     #     assert route_after_validation(state) == "review_proposal"  # Updated route
 
     # def test_route_after_validation_fail(self):
     #     \"\"\"Test routing after failed validation\"\"\"
-    #     state = create_initial_state("US", "transfer", [], "test")
+    #     state = create_initial_state("test_session", "US", "transfer", [], "test")
     #     state["current_phase"] = "fail"
     #     assert route_after_validation(state) == "fail"
 
     # def test_route_after_validation_retry(self):
     #     \"\"\"Test routing back to supervisor for retry\"\"\"
-    #     state = create_initial_state("US", "transfer", [], "test")
+    #     state = create_initial_state("test_session", "US", "transfer", [], "test")
     #     state["current_phase"] = "supervisor"
     #     assert route_after_validation(state) == "supervisor"
 
@@ -232,7 +232,7 @@ class TestRuleIngestionResult:
 
     def test_successful_result(self):
         """Test successful result from state"""
-        state = create_initial_state("US", "transfer", [], "test")
+        state = create_initial_state("test_session", "US", "transfer", [], "test")
         state["success"] = True
         state["rule_definition"] = {"rule_id": "RULE_AUTO_001", "rule_type": "transfer"}
         state["iteration"] = 2
@@ -243,7 +243,7 @@ class TestRuleIngestionResult:
 
     def test_failed_result(self):
         """Test failed result from state"""
-        state = create_initial_state("US", "transfer", [], "test")
+        state = create_initial_state("test_session", "US", "transfer", [], "test")
         state["success"] = False
         state["error_message"] = "Max iterations reached"
         state["iteration"] = 3
@@ -253,7 +253,7 @@ class TestRuleIngestionResult:
 
     def test_result_with_all_fields(self):
         """Test result with all optional fields populated"""
-        state = create_initial_state("US", "transfer", ["UK"], "test")
+        state = create_initial_state("test_session", "US", "transfer", ["UK"], "test")
         state["success"] = True
         state["rule_definition"] = {"rule_id": "RULE_001"}
         state["cypher_queries"] = {"queries": {"rule_check": "MATCH (c) RETURN c"}}
@@ -294,7 +294,7 @@ class TestRunRuleIngestion:
         mock_store = MagicMock()
         mock_event_store.return_value = mock_store
 
-        final_state = create_initial_state("UK", "transfer", ["US"], "test rule")
+        final_state = create_initial_state("test_session", "UK", "transfer", ["US"], "test rule")
         final_state["success"] = True
         final_state["rule_definition"] = {"rule_id": "RULE_AUTO_001", "rule_type": "transfer"}
 
@@ -303,6 +303,7 @@ class TestRunRuleIngestion:
         mock_build_graph.return_value = (mock_graph, MagicMock())
 
         result = run_rule_ingestion(
+            "test_session",
             origin_country="UK",
             scenario_type="transfer",
             receiving_countries=["US"],
@@ -319,7 +320,7 @@ class TestRunRuleIngestion:
         mock_store = MagicMock()
         mock_event_store.return_value = mock_store
 
-        final_state = create_initial_state("UK", "transfer", [], "test")
+        final_state = create_initial_state("test_session", "UK", "transfer", [], "test")
         final_state["success"] = False
         final_state["error_message"] = "Max iterations reached"
 
@@ -328,6 +329,7 @@ class TestRunRuleIngestion:
         mock_build_graph.return_value = (mock_graph, MagicMock())
 
         result = run_rule_ingestion(
+            "test_session",
             origin_country="UK",
             scenario_type="transfer",
             receiving_countries=[],
@@ -349,6 +351,7 @@ class TestRunRuleIngestion:
         mock_build_graph.return_value = (mock_graph, MagicMock())
 
         result = run_rule_ingestion(
+            "test_session",
             origin_country="Germany",
             scenario_type="transfer",
             receiving_countries=[],

@@ -6,7 +6,7 @@ import gsap from 'gsap';
 export function AppLayout() {
   const mainRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  const isEditorPage = location.pathname.startsWith('/editor');
+  const isFullScreenPage = ['/editor', '/dashboard', '/evaluator', '/generator'].some(path => location.pathname.startsWith(path));
 
   useEffect(() => {
     if (mainRef.current) {
@@ -17,7 +17,7 @@ export function AppLayout() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Navbar />
-      <main ref={mainRef} className={isEditorPage ? 'flex-1 flex flex-col overflow-hidden' : 'flex-1 overflow-auto px-8 pb-8'}>
+      <main ref={mainRef} className={isFullScreenPage ? 'flex-1 flex flex-col overflow-hidden' : 'flex-1 overflow-auto px-8 pb-8'}>
         <Outlet />
       </main>
     </div>

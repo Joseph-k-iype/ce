@@ -356,6 +356,7 @@ class RuleTableRow(BaseModel):
     receiving_country: str
     rule_name: str
     rule_details: str
+    rule_description: str = ""
     permission_prohibition: str
     duty: str
     priority: str = "low"

@@ -52,21 +52,22 @@ async def get_rules_overview_table(
         query = """
         MATCH (r:Rule)
         WHERE r.enabled = true
-        OPTIONAL MATCH (r)-[:TRIGGERED_BY_ORIGIN]->(og)
-        OPTIONAL MATCH (r)-[:TRIGGERED_BY_RECEIVING]->(rg)
+        OPTIONAL MATCH (r)-[:TRIGGERED_BY_ORIGIN]->(oc:Country)
+        OPTIONAL MATCH (r)-[:TRIGGERED_BY_RECEIVING]->(rc:Country)
         OPTIONAL MATCH (r)-[:HAS_PERMISSION]->(p:Permission)-[:CAN_HAVE_DUTY]->(d:Duty)
         OPTIONAL MATCH (r)-[:HAS_PROHIBITION]->(pb:Prohibition)
         RETURN
             r.rule_id AS rule_id,
             r.name AS name,
             r.description AS description,
+            r.logic_tree AS logic_tree,
             r.priority AS priority,
             r.outcome AS outcome,
             r.odrl_type AS odrl_type,
             r.origin_match_type AS origin_match_type,
             r.receiving_match_type AS receiving_match_type,
-            collect(DISTINCT og.name) AS origin_names,
-            collect(DISTINCT rg.name) AS receiving_names,
+            collect(DISTINCT oc.name) AS origin_names,
+            collect(DISTINCT rc.name) AS receiving_names,
             collect(DISTINCT d.name) AS duties,
             collect(DISTINCT pb.name) AS prohibitions,
             r.priority AS sort_priority
@@ -98,6 +99,23 @@ async def get_rules_overview_table(
                 'prohibitions': [],
             })
 
+def _parse_logic_tree(node: dict) -> str:
+    if not isinstance(node, dict): return ""
+    typ = node.get('type')
+    if typ == 'CONDITION':
+        d = node.get('dimension', '')
+        v = node.get('value', '')
+        return f"{d} = {v}"
+    elif typ in ['AND', 'OR']:
+        children = [_parse_logic_tree(c) for c in node.get('children', [])]
+        children = [c for c in children if c]
+        if not children: return ""
+        if len(children) == 1: return children[0]
+        joiner = f" {typ} "
+        res = joiner.join(children)
+        return f"({res})"
+    return ""
+
     # Build table rows
     rows = []
     all_duties = set()
@@ -119,12 +137,27 @@ async def get_rules_overview_table(
         all_countries_set.update(origin_names)
         all_countries_set.update(receiving_names)
 
+        logic_str = ""
+        logic_tree_data = row.get('logic_tree')
+        if logic_tree_data:
+            import json
+            try:
+                tree = json.loads(logic_tree_data) if isinstance(logic_tree_data, str) else logic_tree_data
+                logic_str = _parse_logic_tree(tree)
+            except:
+                pass
+        
+        # If there is logic, show it. Otherwise, fallback to a sensible default or the description if no logic was ever set.
+        details_text = logic_str if logic_str else (row.get('description', '') or "Standard compliance criteria apply.")
+        desc_text = row.get('description', '')
+
         rows.append(RuleTableRow(
             rule_id=row.get('rule_id', ''),
             sending_country=sending,
             receiving_country=receiving,
             rule_name=row.get('name', ''),
-            rule_details=row.get('description', ''),
+            rule_details=details_text,
+            rule_description=desc_text,
             permission_prohibition=perm_prohib,
             duty=duty_str,
             priority=row.get('priority', 'low'),
@@ -138,6 +171,7 @@ async def get_rules_overview_table(
             search_lower in r.receiving_country.lower() or
             search_lower in r.rule_name.lower() or
             search_lower in r.rule_details.lower() or
+            search_lower in r.rule_description.lower() or
             search_lower in r.permission_prohibition.lower() or
             search_lower in r.duty.lower()
         )]
@@ -182,8 +216,10 @@ async def get_rules_overview():
 
     def build_overview(rule, rule_type: str) -> RuleOverview:
         if rule_type == "case_matching":
-            origin_scope = rule.origin_group or str(rule.origin_countries) if rule.origin_countries else "Any"
-            receiving_scope = rule.receiving_group or str(rule.receiving_countries) if rule.receiving_countries else "Any"
+            origin_scope = ", ".join(sorted(rule.origin_countries)) if rule.origin_countries else "Any"
+            receiving_scope = ", ".join(sorted(rule.receiving_countries)) if rule.receiving_countries else "Any"
+            if getattr(rule, 'receiving_not_in', None):
+                receiving_scope = "Not in " + ", ".join(rule.receiving_not_in)
             required = rule.required_assessments.to_list()
             conditions = []
             if rule.requires_pii:
@@ -191,20 +227,20 @@ async def get_rules_overview():
             if rule.requires_personal_data:
                 conditions.append("Requires Personal Data")
         elif rule_type == "transfer":
-            origin_scope = rule.origin_group or "Specific countries"
-            receiving_scope = rule.receiving_group or "Specific countries"
+            origin_scope = "Specific countries"
+            receiving_scope = "Specific countries"
             required = rule.required_actions
             conditions = []
             if rule.requires_pii:
                 conditions.append("Requires PII")
-            if rule.requires_any_data:
+            if getattr(rule, 'requires_any_data', False):
                 conditions.append("Any data")
         else:
-            origin_scope = rule.origin_group or str(rule.origin_countries) if rule.origin_countries else "Any"
-            receiving_scope = rule.receiving_group or str(rule.receiving_countries) if rule.receiving_countries else "Any"
+            origin_scope = ", ".join(sorted(rule.origin_countries)) if rule.origin_countries else "Any"
+            receiving_scope = ", ".join(sorted(rule.receiving_countries)) if rule.receiving_countries else "Any"
             required = []
-            conditions = [f"Attribute: {rule.attribute_name}"]
-            if rule.requires_pii:
+            conditions = [f"Attribute: {getattr(rule, 'attribute_name', 'Unknown')}"]
+            if getattr(rule, 'requires_pii', False):
                 conditions.append("Requires PII")
 
         return RuleOverview(

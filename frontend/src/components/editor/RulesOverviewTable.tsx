@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { createRule } from '../../services/rulesApi';
 import type { RuleTableRow } from '../../types/api';
 
 interface RulesTableData {
@@ -60,6 +61,21 @@ export function RulesOverviewTable() {
             {data ? `${data.total_rules} rules across ${data.total_countries} countries` : 'Loading...'}
           </p>
         </div>
+        <button
+          onClick={async () => {
+            try {
+              setLoading(true);
+              const res = await createRule();
+              navigate(`/editor/${encodeURIComponent(res.rule_id)}`);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Error creating rule');
+              setLoading(false);
+            }
+          }}
+          className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg shadow hover:bg-purple-700 transition-colors"
+        >
+          Create New Rule
+        </button>
       </div>
 
       {/* Filters */}

@@ -19,6 +19,16 @@ Developers can add/modify rules here without changing core logic.
 from typing import Dict, List, Optional, Set, Tuple, Any, FrozenSet
 from dataclasses import dataclass, field
 from enum import Enum
+from rules.dictionaries.country_groups import (
+    EU_EEA_UK_CROWN_CH,
+    EU_EEA_COUNTRIES,
+    ADEQUACY_COUNTRIES,
+    ADEQUACY_PLUS_EU,
+    CROWN_DEPENDENCIES,
+    SWITZERLAND_APPROVED,
+    EU_EEA_ADEQUACY_UK,
+    BCR_COUNTRIES
+)
 
 
 class RuleType(Enum):
@@ -210,8 +220,8 @@ CASE_MATCHING_RULES: Dict[str, CaseMatchingRule] = {
         name="EU/EEA/UK/Crown/Switzerland Internal Transfers",
         description="Transfers within EU/EEA, UK, Crown Dependencies, and Switzerland require PIA completion",
         priority="low",
-        origin_group="EU_EEA_UK_CROWN_CH",
-        receiving_group="EU_EEA_UK_CROWN_CH",
+        origin_countries=EU_EEA_UK_CROWN_CH,
+        receiving_countries=EU_EEA_UK_CROWN_CH,
         required_assessments=RequiredAssessments(pia_required=True),
     ),
 
@@ -221,8 +231,8 @@ CASE_MATCHING_RULES: Dict[str, CaseMatchingRule] = {
         name="EU/EEA to Adequacy Countries",
         description="Transfers from EU/EEA to adequacy countries require PIA completion",
         priority="low",
-        origin_group="EU_EEA",
-        receiving_group="ADEQUACY_COUNTRIES",
+        origin_countries=EU_EEA_COUNTRIES,
+        receiving_countries=ADEQUACY_COUNTRIES,
         required_assessments=RequiredAssessments(pia_required=True),
     ),
 
@@ -232,8 +242,8 @@ CASE_MATCHING_RULES: Dict[str, CaseMatchingRule] = {
         name="Crown Dependencies to Adequacy + EU/EEA",
         description="Transfers from Crown Dependencies to adequacy countries or EU/EEA require PIA",
         priority="low",
-        origin_group="CROWN_DEPENDENCIES",
-        receiving_group="ADEQUACY_PLUS_EU",
+        origin_countries=CROWN_DEPENDENCIES,
+        receiving_countries=ADEQUACY_PLUS_EU,
         required_assessments=RequiredAssessments(pia_required=True),
     ),
 
@@ -244,7 +254,7 @@ CASE_MATCHING_RULES: Dict[str, CaseMatchingRule] = {
         description="Transfers from UK to adequacy countries or EU/EEA require PIA",
         priority="low",
         origin_countries=frozenset({"United Kingdom"}),
-        receiving_group="ADEQUACY_PLUS_EU",
+        receiving_countries=ADEQUACY_PLUS_EU,
         required_assessments=RequiredAssessments(pia_required=True),
     ),
 
@@ -255,7 +265,7 @@ CASE_MATCHING_RULES: Dict[str, CaseMatchingRule] = {
         description="Transfers from Switzerland to approved jurisdictions require PIA",
         priority="low",
         origin_countries=frozenset({"Switzerland"}),
-        receiving_group="SWITZERLAND_APPROVED",
+        receiving_countries=SWITZERLAND_APPROVED,
         required_assessments=RequiredAssessments(pia_required=True),
     ),
 
@@ -265,8 +275,8 @@ CASE_MATCHING_RULES: Dict[str, CaseMatchingRule] = {
         name="EU/EEA/Adequacy/UK to Rest of World",
         description="Transfers to non-adequacy countries require PIA and TIA",
         priority="low",
-        origin_group="EU_EEA_ADEQUACY_UK",
-        receiving_not_in=frozenset({"EU_EEA_ADEQUACY_UK"}),  # Marker: not in this group
+        origin_countries=EU_EEA_ADEQUACY_UK,
+        receiving_not_in=EU_EEA_ADEQUACY_UK,  # explicit frozenset marker
         required_assessments=RequiredAssessments(pia_required=True, tia_required=True),
     ),
 
@@ -276,7 +286,7 @@ CASE_MATCHING_RULES: Dict[str, CaseMatchingRule] = {
         name="BCR Countries Transfer",
         description="Transfers from BCR countries require PIA and HRPR",
         priority="low",
-        origin_group="BCR_COUNTRIES",
+        origin_countries=BCR_COUNTRIES,
         receiving_countries=None,  # Any country
         required_assessments=RequiredAssessments(pia_required=True, hrpr_required=True),
     ),

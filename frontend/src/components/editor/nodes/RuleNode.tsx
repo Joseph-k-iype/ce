@@ -7,40 +7,18 @@ function RuleNodeInner({ data }: NodeProps) {
   const isProhibition = d.odrlType === 'Prohibition';
 
   return (
-    <div
-      className={`border-2 rounded-lg shadow-sm min-w-[180px] max-w-[220px] ${
-        isProhibition
-          ? 'bg-red-50 border-red-400'
-          : 'bg-green-50 border-green-400'
-      }`}
-    >
-      <Handle type="target" position={Position.Left} className={isProhibition ? '!bg-red-400' : '!bg-green-400'} />
-
-      <div className="px-3 py-2">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-semibold text-gray-800 truncate">{d.label}</span>
-          <span
-            className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              isProhibition
-                ? 'text-red-700 bg-red-100'
-                : 'text-green-700 bg-green-100'
-            }`}
-          >
-            {d.odrlType}
-          </span>
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-3 min-w-[200px] max-w-[240px] hover:shadow-md transition-all">
+      <Handle type="target" position={Position.Left} className="!bg-gray-300 !w-2 !h-2 !border-none" />
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-800 truncate pr-2">{d.label}</span>
+          <div className={`w-2 h-2 rounded-full shrink-0 ${isProhibition ? 'bg-red-400' : 'bg-green-400'}`} title={d.odrlType} />
         </div>
         {d.description && (
-          <p className="text-xs text-gray-600 line-clamp-2">{d.description}</p>
-        )}
-        {d.actionName && (
-          <div className="mt-1">
-            <span className="text-xs text-orange-600 font-medium">Action</span>
-            <span className="text-xs text-orange-500 ml-1">{d.actionName}</span>
-          </div>
+          <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{d.description}</p>
         )}
       </div>
-
-      <Handle type="source" position={Position.Right} className={isProhibition ? '!bg-red-400' : '!bg-green-400'} />
+      <Handle type="source" position={Position.Right} className="!bg-gray-300 !w-2 !h-2 !border-none" />
     </div>
   );
 }

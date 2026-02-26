@@ -257,6 +257,94 @@ class TestMatchGraphLinkedAttributes(unittest.TestCase):
         result = self.evaluator._match_graph_linked_attributes(ctx, rule_row)
         self.assertTrue(result, "Case-insensitive matching should work")
 
+        self.assertTrue(result, "Case-insensitive matching should work")
+
+
+class TestEvaluateLogicNode(unittest.TestCase):
+    """Test complex AND/OR logic tree trigger logic in RulesEvaluator."""
+
+    def setUp(self):
+        """Create evaluator."""
+        self.evaluator = RulesEvaluator.__new__(RulesEvaluator)
+        self.evaluator._graph_query = MagicMock(return_value=[])
+
+    def _make_context(self, **kwargs):
+        defaults = {
+            'origin_country': 'United Kingdom',
+            'receiving_country': 'India',
+            'purposes': [],
+            'process_l1': [],
+            'process_l2': [],
+            'process_l3': [],
+            'data_categories': [],
+            'data_subjects': [],
+            'regulators': [],
+            'authorities': [],
+            'pii': False,
+            'metadata': {},
+            'detected_attributes': [],
+        }
+        defaults.update(kwargs)
+        return EvaluationContext(**defaults)
+
+    def test_single_condition(self):
+        """Basic condition node matches against context array."""
+        ctx = self._make_context(data_categories=['Health Data'])
+        node = {
+            "type": "CONDITION",
+            "dimension": "DataCategory",
+            "value": "Health Data"
+        }
+        matches = {}
+        res = self.evaluator._evaluate_logic_node(node, ctx, matches)
+        self.assertTrue(res)
+        self.assertIn("DataCategory", matches)
+        
+    def test_or_logic_satisfies_with_one_match(self):
+        """OR node requires at least one children to match."""
+        ctx = self._make_context(data_categories=['Health Data'])
+        node = {
+            "type": "OR",
+            "children": [
+                {"type": "CONDITION", "dimension": "DataCategory", "value": "Financial Data"},
+                {"type": "CONDITION", "dimension": "DataCategory", "value": "Health Data"}
+            ]
+        }
+        matches = {}
+        res = self.evaluator._evaluate_logic_node(node, ctx, matches)
+        self.assertTrue(res)
+
+    def test_and_logic_fails_with_one_miss(self):
+        """AND node requires all children to match."""
+        ctx = self._make_context(data_categories=['Health Data'])
+        node = {
+            "type": "AND",
+            "children": [
+                {"type": "CONDITION", "dimension": "DataCategory", "value": "Health Data"},
+                {"type": "CONDITION", "dimension": "Purpose", "value": "Marketing"}
+            ]
+        }
+        res = self.evaluator._evaluate_logic_node(node, ctx, {})
+        self.assertFalse(res)
+
+    def test_nested_logic_tree(self):
+        """Nested AND inside an OR handles complex boolean trigger gating."""
+        ctx = self._make_context(data_categories=['Analytics Data'], regulators=['ICO'])
+        node = {
+            "type": "OR",
+            "children": [
+                {"type": "CONDITION", "dimension": "DataCategory", "value": "Health Data"},
+                {
+                    "type": "AND",
+                    "children": [
+                        {"type": "CONDITION", "dimension": "DataCategory", "value": "Analytics Data"},
+                        {"type": "CONDITION", "dimension": "Regulator", "value": "ICO"}
+                    ]
+                }
+            ]
+        }
+        res = self.evaluator._evaluate_logic_node(node, ctx, {})
+        self.assertTrue(res)
 
 if __name__ == '__main__':
     unittest.main()

@@ -140,11 +140,7 @@ def find_matching_rules(origin: str, receiving: str, pii: bool = False, personal
 
         # Check origin match
         origin_matches = False
-        if rule.origin_group:
-            group = get_country_group(rule.origin_group)
-            if origin in group:
-                origin_matches = True
-        elif rule.origin_countries:
+        if rule.origin_countries:
             if origin in rule.origin_countries:
                 origin_matches = True
         else:
@@ -158,16 +154,12 @@ def find_matching_rules(origin: str, receiving: str, pii: bool = False, personal
         receiving_matches = False
         if rule.receiving_not_in:
             # "not_in" match type — rule fires when receiving is NOT in these groups
-            excluded = False
-            for group_name in rule.receiving_not_in:
-                group = get_country_group(group_name)
-                if receiving in group:
-                    excluded = True
-                    break
-            receiving_matches = not excluded
-        elif rule.receiving_group:
-            group = get_country_group(rule.receiving_group)
-            if receiving in group:
+            # Convert string to set for flexible testing
+            excluded_countries = rule.receiving_not_in
+            if isinstance(excluded_countries, str):
+                excluded_countries = get_country_group(excluded_countries)
+            
+            if receiving not in excluded_countries:
                 receiving_matches = True
         elif rule.receiving_countries:
             if receiving in rule.receiving_countries:
@@ -924,8 +916,8 @@ class TestGraphBuilderDictionaries:
                 "rule_type": "case_matching",
                 "priority": "medium",
                 "outcome": "permission",
-                "origin_group": "EU_EEA",
-                "receiving_group": "BCR_COUNTRIES",
+                "origin_countries": ["Germany", "France"],
+                "receiving_countries": ["India"],
                 "odrl_type": "Permission",
                 "odrl_action": "transfer",
                 "odrl_target": "Data",

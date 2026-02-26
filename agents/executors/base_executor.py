@@ -228,7 +228,7 @@ class ComplianceAgentExecutor(AgentExecutor):
     ):
         """Emit an SSE event directly (convenience method for rich events)."""
         sse_manager = get_sse_manager()
-        session_id = state.get("origin_country", "unknown")
+        session_id = state.get("session_id", "unknown")
 
         event_data = data or {}
         if step_current is not None:
@@ -416,6 +416,47 @@ def wrap_executor_as_node(
 # ---------------------------------------------------------------------------
 # internal: drain A2A EventQueue into SSE AgentEvents
 # ---------------------------------------------------------------------------
+
+# Maps agent names to step numbers for progress tracking
+STEP_PROGRESS_MAP = {
+    "rule_analyzer": (1, 6, "Analyzing rule text"),
+    "data_dictionary": (2, 6, "Generating data dictionary"),
+    "cypher_generator": (3, 6, "Generating graph queries"),
+    "validator": (4, 6, "Validating outputs"),
+    "rule_tester": (5, 6, "Running test scenarios"),
+    "review_proposal": (6, 6, "Preparing proposal"),
+}
+
+
+def _emit_step_progress(state: WizardAgentState, agent_name: str):
+    """Emit a STEP_PROGRESS SSE event based on the current agent."""
+    step_info = STEP_PROGRESS_MAP.get(agent_name)
+    if not step_info:
+        return
+
+    step_current, step_total, description = step_info
+    session_id = state.get("session_id", "unknown")
+    sse_manager = get_sse_manager()
+
+    event = AgentEvent(
+        event_type=AgentEventType.STEP_PROGRESS,
+        session_id=session_id,
+        agent_name=agent_name,
+        phase=state.get("current_phase", ""),
+        message=f"Step {step_current}/{step_total} — {description}",
+        step_current=step_current,
+        step_total=step_total,
+        progress_pct=(step_current / step_total) * 100,
+    )
+    sse_manager.publish_sync(session_id, event)
+    state.setdefault("events", []).append({
+        "event_type": AgentEventType.STEP_PROGRESS.value,
+        "agent_name": agent_name,
+        "message": event.message,
+        "data": {"step_current": step_current, "step_total": step_total},
+    })
+
+
 async def _drain_event_queue_to_sse(
     queue: EventQueue,
     state: WizardAgentState,
@@ -427,18 +468,14 @@ async def _drain_event_queue_to_sse(
     ensuring every phase produces at least these two SSE events.
     """
     sse_manager = get_sse_manager()
-    session_id = state.get("origin_country", "unknown")
+    session_id = state.get("session_id", "unknown")
 
     # Ensure events list exists
     if "events" not in state or not isinstance(state.get("events"), list):
         state["events"] = []
 
     # Emit step progress event
-    try:
-        from agents.workflows.rule_ingestion_workflow import _emit_step_progress
-        _emit_step_progress(state, agent_name)
-    except ImportError:
-        pass
+    _emit_step_progress(state, agent_name)
 
     # Emit agent_started event at the beginning of every phase
     started_event = AgentEvent(

@@ -9,6 +9,109 @@ import logging
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
+import io
+
+from services.backup_service import get_backup_service
+
+def _sync_logic_tree_edges(db, rule_id: str, logic_tree: dict):
+    # Wipe old graph edges driven by logic tree
+    db.execute_rules_query("""
+    MATCH (r:Rule {rule_id: $rule_id})-[rel:HAS_DATA_CATEGORY|HAS_PURPOSE|HAS_PROCESS|HAS_REGULATOR|HAS_AUTHORITY|HAS_DATA_SUBJECT|HAS_SENSITIVE_DATA_CATEGORY|HAS_GDC|TRIGGERED_BY_ORIGIN|TRIGGERED_BY_RECEIVING|ORIGINATES_FROM|RECEIVED_IN]->()
+    DELETE rel
+    """, {"rule_id": rule_id})
+
+    if not logic_tree:
+        return
+
+    # Dimensions
+    dim_maps = {
+        'DataCategory': ('DataCategory', 'HAS_DATA_CATEGORY'),
+        'Purpose': ('PurposeOfProcessing', 'HAS_PURPOSE'),
+        'Process': ('Process', 'HAS_PROCESS'),
+        'Regulator': ('Regulator', 'HAS_REGULATOR'),
+        'Authority': ('Authority', 'HAS_AUTHORITY'),
+        'DataSubject': ('DataSubject', 'HAS_DATA_SUBJECT'),
+        'SensitiveDataCategory': ('SensitiveDataCategory', 'HAS_SENSITIVE_DATA_CATEGORY'),
+        'GDC': ('GDC', 'HAS_GDC'),
+        'OriginCountry': ('Country', 'ORIGINATES_FROM'),
+        'ReceivingCountry': ('Country', 'RECEIVED_IN'),
+        'LegalEntity': ('LegalEntity', 'TRIGGERED_BY_ORIGIN')  # Treating all logic_tree LEs as origins for simplicity or just general triggers
+    }
+    
+    # Also collect group bindings separately
+    origin_countries = set()
+    receiving_countries = set()
+
+    def walk_tree(node):
+        if not isinstance(node, dict): return
+        if node.get('type') == 'CONDITION':
+            dim = node.get('dimension')
+            val = node.get('value')
+            if not val: return
+            
+            # Values can be comma separated
+            values = [v.strip() for v in val.split(',') if v.strip()]
+            
+            for v in values:
+                if dim == 'OriginCountry':
+                    origin_countries.add(v)
+                elif dim == 'ReceivingCountry':
+                    receiving_countries.add(v)
+                
+                if dim in dim_maps:
+                    label, rel = dim_maps[dim]
+                    # Create the physical linkage
+                    db.execute_rules_query(f"""
+                    MATCH (r:Rule {{rule_id: $rule_id}})
+                    MERGE (n:{label} {{name: $val_name}})
+                    MERGE (r)-[:{rel}]->(n)
+                    """, {"rule_id": rule_id, "val_name": v})
+                    
+        elif node.get('type') in ['AND', 'OR', 'NOT']:
+            for child in node.get('children', []):
+                walk_tree(child)
+
+    walk_tree(logic_tree)
+    
+    # Helper to resolve Origin/Receiving Groups versus Specific Countries
+    def link_scopes(scopes, is_origin=True):
+        has_groups = False
+        for scope in scopes:
+            res = db.execute_rules_query("MATCH (g:CountryGroup {name: $name}) RETURN g LIMIT 1", {"name": scope})
+            is_group = len(res) > 0
+            
+            if is_group:
+                has_groups = True
+                if is_origin:
+                    db.execute_rules_query("""
+                    MATCH (r:Rule {rule_id: $rule_id})
+                    MATCH (g:CountryGroup {name: $name})
+                    MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(g)
+                    """, {"rule_id": rule_id, "name": scope})
+                else:
+                    db.execute_rules_query("""
+                    MATCH (r:Rule {rule_id: $rule_id})
+                    MATCH (g:CountryGroup {name: $name})
+                    MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(g)
+                    """, {"rule_id": rule_id, "name": scope})
+            else:
+                if is_origin:
+                    db.execute_rules_query("""
+                    MATCH (r:Rule {rule_id: $rule_id})
+                    MATCH (c:Country {name: $name})
+                    MERGE (r)-[:TRIGGERED_BY_ORIGIN]->(c)
+                    """, {"rule_id": rule_id, "name": scope})
+                else:
+                    db.execute_rules_query("""
+                    MATCH (r:Rule {rule_id: $rule_id})
+                    MATCH (c:Country {name: $name})
+                    MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(c)
+                    """, {"rule_id": rule_id, "name": scope})
+
+    if origin_countries:
+        link_scopes(origin_countries, is_origin=True)
+    if receiving_countries:
+        link_scopes(receiving_countries, is_origin=False)
 from pydantic import BaseModel
 import pandas as pd
 import io
@@ -87,6 +190,38 @@ class DictionaryEntryCreate(BaseModel):
 
 
 # ── Rules CRUD ─────────────────────────────────────────────────────────
+
+@router.post("/rules/create")
+async def create_rule(db=Depends(get_db)):
+    """Create a new blank rule in the graph with a generated ID."""
+    rule_id = f"RULE_CUSTOM_{uuid.uuid4().hex[:8].upper()}"
+    
+    query = """
+    MERGE (r:Rule {rule_id: $rule_id})
+    SET r.name = "New Custom Rule",
+        r.description = "",
+        r.priority = "medium",
+        r.outcome = "permission",
+        r.rule_type = "case_matching",
+        r.enabled = true,
+        r.odrl_type = "Permission",
+        r.odrl_action = "transfer",
+        r.odrl_target = "Data",
+        r.has_pii_required = false,
+        r.requires_any_data = false,
+        r.requires_personal_data = false,
+        r.priority_order = 100,
+        r.logic_tree = '{"type":"AND","children":[]}'
+    RETURN r.rule_id as rule_id
+    """
+    try:
+        db.execute_rules_query(query, {"rule_id": rule_id})
+        invalidate_cache()
+        return {"status": "success", "rule_id": rule_id}
+    except Exception as e:
+        logger.error(f"Error creating custom rule: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create rule")
+
 
 @router.get("/rules")
 async def list_rules(db=Depends(get_db)):
@@ -253,6 +388,10 @@ async def update_rule(rule_id: str, update: RuleUpdate, db=Depends(get_db)):
         result = db.execute_rules_query(query, params=params)
         if not result:
             raise HTTPException(status_code=404, detail="Rule not found")
+
+    # If logic_tree changed, we must sync the graph schema edges
+    if update.logic_tree is not None:
+        _sync_logic_tree_edges(db, rule_id, update.logic_tree)
 
     # If outcome changed, re-map graph edges
     if update.outcome is not None:
@@ -649,6 +788,34 @@ async def update_mappings(mapping_type: str, mapping: MappingsUpdate, db=Depends
 
 
 # ── Graph Operations ──────────────────────────────────────────────────
+
+@router.post("/backup/create")
+async def create_backup():
+    """Manually trigger a full graph backup to disk."""
+    try:
+        backup = get_backup_service()
+        data = backup.create_backup()
+        return {
+            "status": "success", 
+            "message": "Backup created successfully", 
+            "node_count": len(data["nodes"]), 
+            "edge_count": len(data["edges"])
+        }
+    except Exception as e:
+        logger.error(f"Manual backup failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/backup/restore")
+async def restore_backup():
+    """Restore the rules graph from the latest disk backup."""
+    try:
+        backup = get_backup_service()
+        backup.restore_backup()
+        invalidate_cache()
+        return {"status": "success", "message": "Backup restored successfully"}
+    except Exception as e:
+        logger.error(f"Manual restore failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/rebuild-graph")
 async def rebuild_graph():

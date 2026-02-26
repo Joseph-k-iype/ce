@@ -433,6 +433,7 @@ class RulesEvaluator:
                 pii=pii,
                 scenario_summary=scenario_summary,
                 triggered_rules=triggered_rules,
+                evaluation_graph=EvaluationGraph(nodes=[], edges=[]),
                 detected_attributes=self._format_detected(context),
                 message=f"REQUIRES REVIEW [{context_info}]: No applicable rules found. Please raise a governance ticket.",
                 evaluation_time_ms=(time.time() - start_time) * 1000,
@@ -472,6 +473,9 @@ class RulesEvaluator:
         # ── PHASE 2: Search for precedent cases ───────────────────────
         precedent_result = self._search_precedent_cases(context, required_assessments)
 
+        # ── Build visual evaluation graph ──────────────────────────────
+        evaluation_graph = self._build_evaluation_graph(context, triggered_rules, required_assessments, list(set(consolidated_duties)))
+
         # ── PHASE 3: Determine final status ───────────────────────────
         # If ANY triggered rule is a prohibition → overall PROHIBITION
         if has_prohibition:
@@ -483,6 +487,7 @@ class RulesEvaluator:
                 pii=pii,
                 scenario_summary=scenario_summary,
                 triggered_rules=triggered_rules,
+                evaluation_graph=evaluation_graph,
                 precedent_validation=precedent_result,
                 detected_attributes=self._format_detected(context),
                 consolidated_duties=list(set(consolidated_duties)),
@@ -511,6 +516,7 @@ class RulesEvaluator:
                 pii=pii,
                 scenario_summary=scenario_summary,
                 triggered_rules=triggered_rules,
+                evaluation_graph=evaluation_graph,
                 precedent_validation=precedent_result,
                 assessment_compliance=assessment_compliance,
                 detected_attributes=self._format_detected(context),
@@ -543,6 +549,7 @@ class RulesEvaluator:
             pii=pii,
             scenario_summary=scenario_summary,
             triggered_rules=triggered_rules,
+            evaluation_graph=evaluation_graph,
             precedent_validation=precedent_result,
             assessment_compliance=assessment_compliance,
             detected_attributes=self._format_detected(context),
@@ -1649,6 +1656,92 @@ LIMIT 10"""
             evidence_narrative=" ".join(parts),
         )
 
+    def _build_evaluation_graph(
+        self,
+        context: EvaluationContext,
+        triggered_rules: List[TriggeredRule],
+        required_assessments: Dict[str, bool],
+        consolidated_duties: List[str]
+    ) -> EvaluationGraph:
+        """Dynamically build an EvaluationGraph for the React Flow frontend visualization."""
+        nodes: List[EvaluationNode] = []
+        edges: List[EvaluationEdge] = []
+        node_ids = set()
+        
+        def add_node(n_id: str, label: str, node_type: str, n_data: dict):
+            if n_id not in node_ids:
+                from utils.schema_manager import get_rf_type_for_label, get_lane_for_label
+                nodes.append(EvaluationNode(
+                    id=n_id,
+                    type=get_rf_type_for_label(node_type),
+                    data={"label": label, "nodeType": node_type, "lane": get_lane_for_label(node_type), **n_data}
+                ))
+                node_ids.add(n_id)
+                
+        def add_edge(source: str, target: str, rel: str):
+            edge_id = f"e_{source}_{target}"
+            edges.append(EvaluationEdge(
+                id=edge_id,
+                source=source,
+                target=target,
+                type="laneEdge",
+                data={"relationship": rel}
+            ))
+
+        # 1. Base Countries
+        norm_orig = context.origin_country
+        norm_recv = context.receiving_country
+        
+        if norm_orig:
+            add_node(f"country_{norm_orig}", norm_orig, "Country", {"countryCount": 1})
+        if norm_recv:
+            add_node(f"country_{norm_recv}", norm_recv, "Country", {"countryCount": 1})
+            
+        # 2. Add properties from Context
+        for dc in context.data_categories:
+            add_node(f"dc_{dc}", dc, "DataCategory", {})
+            if norm_orig:
+                add_edge(f"country_{norm_orig}", f"dc_{dc}", "HAS_DATA_CATEGORY")
+                
+        for purp in context.purposes:
+            add_node(f"purp_{purp}", purp, "Purpose", {})
+            if norm_orig:
+                add_edge(f"country_{norm_orig}", f"purp_{purp}", "HAS_PURPOSE")
+
+        # 3. Add Triggered Rules & Link
+        for rule in triggered_rules:
+            r_id = f"rule_{rule.rule_id}"
+            add_node(r_id, rule.rule_name, "Rule", {
+                "ruleId": rule.rule_id,
+                "odrlType": rule.outcome.value.title(),
+                "description": rule.description
+            })
+            
+            if norm_orig:
+                add_edge(f"country_{norm_orig}", r_id, "TRIGGERED_BY_ORIGIN")
+            if norm_recv:
+                add_edge(r_id, f"country_{norm_recv}", "TRIGGERED_BY_RECEIVING")
+
+            # Link Rule to component duty parameters
+            if rule.permissions:
+                for perm in rule.permissions:
+                    for duty in (perm.duties or []):
+                        if duty.name:
+                            duty_id = f"duty_{duty.name}"
+                            add_node(duty_id, duty.name, "Duty", {"subType": "Action"})
+                            add_edge(r_id, duty_id, "HAS_DUTY")
+                            
+        # 4. Global Assessments attached to the transfer as duties
+        for module in ["pia", "tia", "hrpr"]:
+            if required_assessments.get(module):
+                mod_id = f"mod_{module.upper()}"
+                add_node(mod_id, module.upper(), "Duty", {"subType": "Assessment"})
+                # Link to all rules that required it
+                for rule in triggered_rules:
+                    r_id = f"rule_{rule.rule_id}"
+                    add_edge(r_id, mod_id, "CAN_HAVE_DUTY")
+                    
+        return EvaluationGraph(nodes=nodes, edges=edges)
 
 # Singleton
 _evaluator: Optional[RulesEvaluator] = None

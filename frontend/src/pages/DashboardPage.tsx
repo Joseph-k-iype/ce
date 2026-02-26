@@ -48,7 +48,7 @@ export function DashboardPage() {
                     </div>
                 )}
                 {activeTab === 'builder' && (
-                    <div className="absolute inset-0 p-8 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
+                    <div className="absolute inset-0 p-8 overflow-hidden w-full h-full animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
                         <LogicBuilder />
                     </div>
                 )}

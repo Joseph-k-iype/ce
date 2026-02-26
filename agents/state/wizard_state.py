@@ -12,6 +12,7 @@ class WizardAgentState(TypedDict):
     """State maintained throughout the wizard agent workflow."""
 
     # Input from wizard steps 1-3
+    session_id: str
     origin_country: str
     scenario_type: str
     receiving_countries: List[str]
@@ -78,6 +79,7 @@ class WizardAgentState(TypedDict):
 
 
 def create_initial_state(
+    session_id: str,
     origin_country: str,
     scenario_type: str,
     receiving_countries: List[str],
@@ -95,6 +97,7 @@ def create_initial_state(
                          "autonomous" for LLM-supervised workflow (default).
     """
     return WizardAgentState(
+        session_id=session_id,
         origin_country=origin_country,
         scenario_type=scenario_type,
         receiving_countries=receiving_countries,

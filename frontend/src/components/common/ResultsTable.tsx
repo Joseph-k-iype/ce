@@ -21,14 +21,14 @@ export function ResultsTable({ result }: ResultsTableProps) {
 
             {/* Transfer Status Banner */}
             <div className={`rounded-lg p-3 ${result.transfer_status === 'ALLOWED' ? 'bg-green-50 border border-green-200' :
-                    result.transfer_status === 'PROHIBITED' ? 'bg-red-50 border border-red-200' :
-                        'bg-yellow-50 border border-yellow-200'
+                result.transfer_status === 'PROHIBITED' ? 'bg-red-50 border border-red-200' :
+                    'bg-yellow-50 border border-yellow-200'
                 }`}>
                 <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-gray-900">Transfer Status</span>
                     <span className={`text-sm font-bold ${result.transfer_status === 'ALLOWED' ? 'text-green-600' :
-                            result.transfer_status === 'PROHIBITED' ? 'text-red-600' :
-                                'text-yellow-600'
+                        result.transfer_status === 'PROHIBITED' ? 'text-red-600' :
+                            'text-yellow-600'
                         }`}>
                         {result.transfer_status}
                     </span>
@@ -81,8 +81,8 @@ export function ResultsTable({ result }: ResultsTableProps) {
                                             {/* Outcome */}
                                             <td className="py-2.5 px-3 align-top">
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${isProhibition
-                                                        ? 'bg-red-100 text-red-700'
-                                                        : 'bg-green-100 text-green-700'
+                                                    ? 'bg-red-100 text-red-700'
+                                                    : 'bg-green-100 text-green-700'
                                                     }`}>
                                                     {isProhibition ? 'Prohibition' : 'Permission'}
                                                 </span>
@@ -248,16 +248,46 @@ export function ResultsTable({ result }: ResultsTableProps) {
             {/* Precedent Cases */}
             {result.precedent_validation && (
                 <div className="border-t pt-3">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Precedent Cases</span>
-                    <div className="mt-1 text-xs text-gray-600">
-                        <p>{result.precedent_validation.total_matches} total match(es), {result.precedent_validation.compliant_matches} compliant</p>
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                        Contextual Precedent Cases
+                        <span className="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full text-[10px] font-medium ml-1">
+                            {result.precedent_validation.total_matches}
+                        </span>
+                    </span>
+                    <div className="mt-2 text-xs text-gray-600">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-gray-500">Matches:</span>
+                            <span className="font-semibold text-gray-800">{result.precedent_validation.compliant_matches} Compliant</span>
+                            <span className="text-gray-400">/</span>
+                            <span className="text-gray-500">{result.precedent_validation.total_matches} Total Scenarios Found</span>
+                        </div>
                         {result.precedent_validation.evidence_summary?.evidence_narrative && (
-                            <p className="mt-1 text-gray-500">{result.precedent_validation.evidence_summary.evidence_narrative}</p>
+                            <p className="mt-1 text-gray-500 bg-gray-50 p-2 rounded border border-gray-100 italic">
+                                {result.precedent_validation.evidence_summary.evidence_narrative}
+                            </p>
                         )}
                         {(result.precedent_validation.matching_cases || []).length > 0 && (
-                            <p className="mt-1 text-gray-400">
-                                Cases: {result.precedent_validation.matching_cases.map(c => c.case_ref_id).join(', ')}
-                            </p>
+                            <div className="mt-2 space-y-2">
+                                {result.precedent_validation.matching_cases.map(c => (
+                                    <div key={c.case_id} className="bg-white border border-gray-200 rounded p-2">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="font-semibold text-indigo-700">{c.case_ref_id}</span>
+                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${c.is_compliant ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {c.case_status}
+                                            </span>
+                                        </div>
+                                        {c.relevance_explanation && (
+                                            <p className="text-[10px] text-gray-500 mb-1 leading-snug">{c.relevance_explanation}</p>
+                                        )}
+                                        <div className="flex flex-wrap gap-1 mt-1.5">
+                                            {c.purposes?.map((p, i) => <span key={i} className="bg-blue-50 text-blue-600 px-1 rounded text-[9px]">{p}</span>)}
+                                            {c.process_l1?.map((p, i) => <span key={`l1-${i}`} className="bg-teal-50 text-teal-600 px-1 rounded text-[9px]">{p}</span>)}
+                                            {c.process_l2?.map((p, i) => <span key={`l2-${i}`} className="bg-emerald-50 text-emerald-600 px-1 rounded text-[9px]">{p}</span>)}
+                                            {c.process_l3?.map((p, i) => <span key={`l3-${i}`} className="bg-green-50 text-green-600 px-1 rounded text-[9px]">{p}</span>)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </div>
                 </div>

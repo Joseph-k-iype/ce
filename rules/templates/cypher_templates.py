@@ -92,12 +92,13 @@ LIMIT 1
 # =============================================================================
 
 RULE_MATCH_BY_COUNTRIES = """
-MATCH (r:Rule)-[:TRIGGERED_BY_ORIGIN]->(og:CountryGroup)
-OPTIONAL MATCH (oc:Country {name: $origin_country})-[:BELONGS_TO]->(og)
-WHERE og.name = 'ANY' OR oc IS NOT NULL
-MATCH (r)-[:TRIGGERED_BY_RECEIVING]->(rg:CountryGroup)
-OPTIONAL MATCH (rc:Country {name: $receiving_country})-[:BELONGS_TO]->(rg)
-WHERE rg.name = 'ANY' OR rc IS NOT NULL
+MATCH (r:Rule)
+WHERE r.enabled = true
+OPTIONAL MATCH (r)-[:TRIGGERED_BY_ORIGIN]->(oc:Country)
+OPTIONAL MATCH (r)-[:TRIGGERED_BY_RECEIVING]->(rc:Country)
+WITH r, collect(DISTINCT oc.name) as origins, collect(DISTINCT rc.name) as receivings
+WHERE (size(origins) = 0 OR $origin_country IN origins)
+  AND (size(receivings) = 0 OR $receiving_country IN receivings)
 OPTIONAL MATCH (r)-[:HAS_PERMISSION]->(p:Permission)
 OPTIONAL MATCH (r)-[:HAS_PROHIBITION]->(pb:Prohibition)
 OPTIONAL MATCH (p)-[:CAN_HAVE_DUTY]->(d1:Duty)
@@ -107,9 +108,12 @@ ORDER BY r.priority ASC
 """
 
 RULE_CHECK_TRANSFER_PROHIBITION = """
-MATCH (r:Rule)-[:TRIGGERED_BY_ORIGIN]->(og:CountryGroup)<-[:BELONGS_TO]-(oc:Country {{name: $origin_country}})
-MATCH (r)-[:TRIGGERED_BY_RECEIVING]->(rg:CountryGroup)<-[:BELONGS_TO]-(rc:Country {{name: $receiving_country}})
-MATCH (r)-[:HAS_PROHIBITION]->(pb:Prohibition)
+MATCH (r:Rule)-[:HAS_PROHIBITION]->(pb:Prohibition)
+OPTIONAL MATCH (r)-[:TRIGGERED_BY_ORIGIN]->(oc:Country)
+OPTIONAL MATCH (r)-[:TRIGGERED_BY_RECEIVING]->(rc:Country)
+WITH r, pb, collect(DISTINCT oc.name) as origins, collect(DISTINCT rc.name) as receivings
+WHERE (size(origins) = 0 OR $origin_country IN origins)
+  AND (size(receivings) = 0 OR $receiving_country IN receivings)
 RETURN r, pb
 ORDER BY r.priority ASC
 LIMIT 1
@@ -121,21 +125,22 @@ LIMIT 1
 # =============================================================================
 
 ATTRIBUTE_RULE_CHECK = """
-MATCH (r:Rule)-[:TRIGGERED_BY_ORIGIN]->(og:CountryGroup)
-OPTIONAL MATCH (oc:Country {{name: $origin_country}})-[:BELONGS_TO]->(og)
-WHERE og.name = 'ANY' OR oc IS NOT NULL
-MATCH (r)-[:TRIGGERED_BY_RECEIVING]->(rg:CountryGroup)
-OPTIONAL MATCH (rc:Country {{name: $receiving_country}})-[:BELONGS_TO]->(rg)
-WHERE rg.name = 'ANY' OR rc IS NOT NULL
+MATCH (r:Rule)
+OPTIONAL MATCH (r)-[:TRIGGERED_BY_ORIGIN]->(oc:Country)
+OPTIONAL MATCH (r)-[:TRIGGERED_BY_RECEIVING]->(rc:Country)
+WITH r, collect(DISTINCT oc.name) as origins, collect(DISTINCT rc.name) as receivings
+WHERE (size(origins) = 0 OR $origin_country IN origins)
+  AND (size(receivings) = 0 OR $receiving_country IN receivings)
 RETURN r
 ORDER BY r.priority ASC
 """
 
 HEALTH_DATA_CHECK = """
-MATCH (r:Rule)-[:TRIGGERED_BY_ORIGIN]->(og:CountryGroup)
-OPTIONAL MATCH (oc:Country {{name: $origin_country}})-[:BELONGS_TO]->(og)
-WHERE og.name = 'ANY' OR oc IS NOT NULL
+MATCH (r:Rule)
+OPTIONAL MATCH (r)-[:TRIGGERED_BY_ORIGIN]->(oc:Country)
 OPTIONAL MATCH (r)-[:HAS_PROHIBITION]->(pb:Prohibition)
+WITH r, pb, collect(DISTINCT oc.name) as origins
+WHERE (size(origins) = 0 OR $origin_country IN origins)
 RETURN r, pb, r.priority as priority
 ORDER BY priority ASC
 LIMIT 1

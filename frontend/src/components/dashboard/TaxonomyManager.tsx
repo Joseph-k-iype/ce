@@ -21,7 +21,11 @@ const DICT_OPTIONS = [
 ];
 
 export function TaxonomyManager() {
-    const [activeTab, setActiveTab] = useState<'upload' | 'mapping'>('upload');
+    const [activeTab, setActiveTab] = useState<'upload' | 'mapping' | 'backup'>('upload');
+
+    // Backup State
+    const [backupLoading, setBackupLoading] = useState(false);
+    const [backupMessage, setBackupMessage] = useState({ text: '', type: '' });
 
     // Upload State
     const [file, setFile] = useState<File | null>(null);
@@ -118,6 +122,33 @@ export function TaxonomyManager() {
         }
     };
 
+    const handleCreateBackup = async () => {
+        setBackupLoading(true);
+        setBackupMessage({ text: '', type: '' });
+        try {
+            const res = await api.post('/admin/backup/create');
+            setBackupMessage({ text: `Backup created: ${res.data.node_count} nodes, ${res.data.edge_count} edges`, type: 'success' });
+        } catch (err: any) {
+            setBackupMessage({ text: err.response?.data?.detail || 'Failed to create backup', type: 'error' });
+        } finally {
+            setBackupLoading(false);
+        }
+    };
+
+    const handleRestoreBackup = async () => {
+        if (!window.confirm('Are you sure you want to restore the rule graph? This will overwrite existing data with the latest backup.')) return;
+        setBackupLoading(true);
+        setBackupMessage({ text: '', type: '' });
+        try {
+            await api.post('/admin/backup/restore');
+            setBackupMessage({ text: 'Backup restored successfully.', type: 'success' });
+        } catch (err: any) {
+            setBackupMessage({ text: err.response?.data?.detail || 'Failed to restore backup', type: 'error' });
+        } finally {
+            setBackupLoading(false);
+        }
+    };
+
     if (loadingDropdowns) return <LoadingSpinner />;
 
     // Prepare dropdown options
@@ -149,6 +180,13 @@ export function TaxonomyManager() {
                             }`}
                     >
                         Entity Mappings
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('backup')}
+                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'backup' ? 'bg-white shadow text-red-700' : 'text-slate-600 hover:text-red-600'
+                            }`}
+                    >
+                        Graph Backups
                     </button>
                 </div>
             </div>
@@ -205,7 +243,7 @@ export function TaxonomyManager() {
                         </button>
                     </div>
                 </div>
-            ) : (
+            ) : activeTab === 'mapping' ? (
                 <div className="bg-white border rounded-xl p-6 shadow-sm flex-1">
                     <h3 className="text-md font-semibold text-gray-800 mb-4">Manage Entity Relationships</h3>
 
@@ -288,6 +326,39 @@ export function TaxonomyManager() {
                         >
                             {mappingLoading ? 'Saving...' : 'Save Mapping'}
                         </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-white border rounded-xl p-6 shadow-sm flex-1">
+                    <h3 className="text-md font-semibold text-gray-800 mb-4">Graph Backups</h3>
+                    <div className="max-w-xl space-y-5">
+                        <p className="text-sm text-gray-600">
+                            The system automatically takes complete layout backups of the Rules Graph every 30 minutes in the background.
+                            You can also trigger a manual backup off-schedule here, or restore from the latest disk snapshot.
+                        </p>
+
+                        <div className="flex gap-4 border-t pt-5">
+                            <button
+                                onClick={handleCreateBackup}
+                                disabled={backupLoading}
+                                className="flex-1 py-2.5 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-50 transition-colors"
+                            >
+                                {backupLoading ? 'Working...' : 'Create Snapshot'}
+                            </button>
+                            <button
+                                onClick={handleRestoreBackup}
+                                disabled={backupLoading}
+                                className="flex-1 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 disabled:opacity-50 transition-colors"
+                            >
+                                {backupLoading ? 'Working...' : 'Restore from Disk'}
+                            </button>
+                        </div>
+
+                        {backupMessage.text && (
+                            <div className={`p-3 rounded-lg text-sm ${backupMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                {backupMessage.text}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

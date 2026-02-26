@@ -63,6 +63,7 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
 
         result = await asyncio.to_thread(
             run_rule_ingestion,
+            session_id=session_id,
             origin_country=session.origin_country,
             scenario_type="attribute",
             receiving_countries=session.receiving_countries,

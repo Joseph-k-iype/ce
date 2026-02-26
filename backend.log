@@ -678,3 +678,46 @@ INFO:     127.0.0.1:60319 - "POST /api/evaluate-rules HTTP/1.1" 500 Internal Ser
 2026-02-25 11:56:41,034 - services.rules_evaluator - INFO - Triggered 4 rule(s), prohibition=False, duties=['Complete TIA Module', 'Complete PIA Module', 'HRPR', 'TIA', 'PIA', 'Complete HRPR Module']
 INFO:     127.0.0.1:60384 - "POST /api/evaluate-rules HTTP/1.1" 200 OK
 INFO:     127.0.0.1:60456 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60571 - "GET /api/graph/schema HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60570 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60573 - "GET /api/graph/schema HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60624 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60642 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60667 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60695 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60727 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60764 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60810 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63096 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63109 - "GET /api/graph/schema HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63108 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63111 - "GET /api/graph/schema HTTP/1.1" 200 OK
+2026-02-25 22:29:44,068 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) → Denmark (normalized: Denmark), PII=False
+2026-02-25 22:29:44,214 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8']
+2026-02-25 22:29:44,214 - services.rules_evaluator - INFO - Graph query returned 3 applicable rule(s)
+2026-02-25 22:29:44,216 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 22:29:44,216 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 22:29:44,217 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 22:29:44,217 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 22:29:44,226 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 22:29:44,255 - services.rules_evaluator - INFO - Triggered 3 rule(s), prohibition=False, duties=['Complete TIA Module', 'Complete PIA Module', 'HRPR', 'TIA', 'PIA', 'Complete HRPR Module']
+INFO:     127.0.0.1:63154 - "POST /api/evaluate-rules HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63179 - "GET /api/graph/schema HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63178 - "GET /api/all-dropdown-values HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63181 - "GET /api/graph/schema HTTP/1.1" 200 OK
+2026-02-25 22:32:13,592 - services.rules_evaluator - INFO - Evaluating transfer: United States (normalized: United States) → Denmark (normalized: Denmark), PII=False
+2026-02-25 22:32:13,605 - services.rules_evaluator - INFO - Rules matched by graph query: ['RULE_6', 'RULE_7', 'RULE_8']
+2026-02-25 22:32:13,605 - services.rules_evaluator - INFO - Graph query returned 3 applicable rule(s)
+2026-02-25 22:32:13,605 - services.rules_evaluator - INFO - Entity context: data_categories=[], purposes=[], regulators=[], data_subjects=[], authorities=[], processes_l1=[], ctx_has_any_content_data=False
+2026-02-25 22:32:13,605 - services.rules_evaluator - INFO - Rule RULE_6 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 22:32:13,605 - services.rules_evaluator - INFO - Rule RULE_7 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 22:32:13,605 - services.rules_evaluator - INFO - Rule RULE_8 (case_matching): has_linked=False, has_keywords=False, linked_cats=[], linked_regs=[], linked_purps=[]
+2026-02-25 22:32:13,605 - services.rules_evaluator - INFO - Required assessments: {'pia': True, 'tia': True, 'hrpr': True}
+2026-02-25 22:32:13,606 - services.rules_evaluator - INFO - Triggered 3 rule(s), prohibition=False, duties=['Complete TIA Module', 'Complete PIA Module', 'HRPR', 'TIA', 'PIA', 'Complete HRPR Module']
+INFO:     127.0.0.1:63203 - "POST /api/evaluate-rules HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-02-25 22:40:48,296 - api.main - INFO - Shutting down application
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3860]

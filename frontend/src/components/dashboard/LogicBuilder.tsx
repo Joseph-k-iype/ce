@@ -30,6 +30,8 @@ export function LogicBuilder() {
     const [dropdownValues, setDropdownValues] = useState<any>(null);
     const [selectedRuleId, setSelectedRuleId] = useState<string>('');
     const [tree, setTree] = useState<LogicNode | null>(null);
+    const [ruleName, setRuleName] = useState<string>('');
+    const [ruleDescription, setRuleDescription] = useState<string>('');
     const [outcome, setOutcome] = useState<'permission' | 'prohibition'>('permission');
     const [attributes, setAttributes] = useState<string[]>([]);
     const [enabled, setEnabled] = useState<boolean>(true);
@@ -79,6 +81,8 @@ export function LogicBuilder() {
         const rule = rules.find(r => r.rule_id === id);
 
         if (rule) {
+            setRuleName(rule.name || '');
+            setRuleDescription(rule.description || '');
             setOutcome(rule.outcome === 'prohibition' ? 'prohibition' : 'permission');
             setAttributes(rule.linked_attributes || []);
             setEnabled(rule.enabled ?? true);
@@ -87,6 +91,8 @@ export function LogicBuilder() {
             setRequiredAssessments(rule.required_assessments || []);
             setRequiredActions(rule.required_actions || []);
         } else {
+            setRuleName('');
+            setRuleDescription('');
             setOutcome('permission');
             setAttributes([]);
             setEnabled(true);
@@ -137,6 +143,8 @@ export function LogicBuilder() {
         setSuccess(false);
         try {
             await api.put(`/admin/rules/${selectedRuleId}`, {
+                name: ruleName,
+                description: ruleDescription,
                 logic_tree: tree,
                 outcome,
                 linked_attributes: attributes,
@@ -150,6 +158,8 @@ export function LogicBuilder() {
             // Update local rules cache
             setRules(rules.map(r => r.rule_id === selectedRuleId ? {
                 ...r,
+                name: ruleName,
+                description: ruleDescription,
                 logic_tree: JSON.stringify(tree),
                 outcome,
                 linked_attributes: attributes,
@@ -161,6 +171,32 @@ export function LogicBuilder() {
             } : r));
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Failed to save logic tree');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleCreateRule = async () => {
+        setSaving(true);
+        setError(null);
+        setSuccess(false);
+        try {
+            const res = await api.post('/admin/rules/create');
+            const newRuleId = res.data.rule_id;
+            await fetchRules(); // To get the new rule in the list
+            setSelectedRuleId(newRuleId); // Auto-select it
+            setTree({ type: 'AND', children: [] });
+            setRuleName('New Custom Rule');
+            setRuleDescription('');
+            setOutcome('permission');
+            setAttributes([]);
+            setEnabled(true);
+            setRequiresPii(false);
+            setValidUntil('');
+            setRequiredAssessments([]);
+            setRequiredActions([]);
+        } catch (err: any) {
+            setError(err.response?.data?.detail || 'Failed to create new rule');
         } finally {
             setSaving(false);
         }
@@ -421,8 +457,8 @@ export function LogicBuilder() {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 space-y-6 max-w-7xl mx-auto">
-            <div className="flex justify-between items-start bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
+        <div className="h-full flex flex-col w-full max-w-7xl mx-auto">
+            <div className="flex justify-between items-start bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6 shrink-0">
                 <div className="flex-1">
                     <h2 className="text-lg font-medium text-gray-900 mb-4">Rule Logic Selection</h2>
 
@@ -469,7 +505,14 @@ export function LogicBuilder() {
                     </select>
                     {loading && <span className="ml-3 text-sm text-gray-500">Loading rules...</span>}
                 </div>
-                <div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleCreateRule}
+                        disabled={saving}
+                        className="px-6 py-2 bg-white text-purple-700 border border-purple-200 rounded-lg text-sm font-medium hover:bg-purple-50 disabled:opacity-50 transition-colors whitespace-nowrap"
+                    >
+                        {saving ? 'Wait...' : '+ Create New Rule'}
+                    </button>
                     <button
                         onClick={saveTree}
                         disabled={!selectedRuleId || saving}
@@ -496,8 +539,8 @@ export function LogicBuilder() {
                     </div>
 
                     {/* Right: Rule Configuration Side Panel */}
-                    <div className="w-96 flex-shrink-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 p-6 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-gray-900/5">
-                        <div className="pb-4 border-b border-gray-100">
+                    <div className="w-96 flex-shrink-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 p-6 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-gray-900/5 overflow-y-auto min-h-0">
+                        <div className="pb-4 border-b border-gray-100 flex-shrink-0">
                             <h3 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 flex items-center gap-2">
                                 <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -509,6 +552,26 @@ export function LogicBuilder() {
                         </div>
 
                         <div className="space-y-4">
+                            <label className="block text-sm font-semibold text-gray-800">Rule Name</label>
+                            <input
+                                type="text"
+                                value={ruleName}
+                                onChange={(e) => setRuleName(e.target.value)}
+                                className="w-full text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm px-3 py-2 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                            />
+                        </div>
+
+                        <div className="space-y-4 pt-4 border-t border-gray-100">
+                            <label className="block text-sm font-semibold text-gray-800">Rule Description</label>
+                            <textarea
+                                value={ruleDescription}
+                                onChange={(e) => setRuleDescription(e.target.value)}
+                                rows={2}
+                                className="w-full text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm px-3 py-2 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                            />
+                        </div>
+
+                        <div className="space-y-4 pt-4 border-t border-gray-100">
                             <label className="block text-sm font-semibold text-gray-800">Rule Outcome</label>
                             <div className="flex bg-gray-100 p-1 rounded-lg">
                                 <button

@@ -59,12 +59,21 @@ export interface CaseMatch {
   case_status: string;
   origin_country: string;
   receiving_country: string;
-  pia_status?: string;
-  tia_status?: string;
-  hrpr_status?: string;
   is_compliant: boolean;
   match_score: number;
   relevance_explanation?: string;
+  purposes?: string[];
+  process_l1?: string[];
+  process_l2?: string[];
+  process_l3?: string[];
+  personal_data_names?: string[];
+  data_categories?: string[];
+  pia_status?: string;
+  tia_status?: string;
+  hrpr_status?: string;
+  legal_basis?: string;
+  created_date?: string;
+  last_updated?: string;
 }
 
 export interface EvidenceSummary {
@@ -184,6 +193,7 @@ export interface RuleTableRow {
   receiving_country: string;
   rule_name: string;
   rule_details: string;
+  rule_description?: string;
   permission_prohibition: string;
   duty: string;
   priority: string;

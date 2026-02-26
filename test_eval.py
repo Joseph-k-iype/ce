@@ -15,7 +15,7 @@ try:
     print("Setting up test rule for Nordic Council...")
     # 1. Create a dummy rule linked to Nordic Council
     query = """
-    MERGE (r:Rule {rule_id: 'R_NORDIC_01', name: 'Nordic Data Processing Rule', criticality: 'High', enabled: true, origin_match_type: 'any', receiving_match_type: 'in'})
+    MERGE (r:Rule {rule_id: 'R_NORDIC_01', name: 'Nordic Data Processing Rule', rule_type: 'Transfer', criticality: 'High', enabled: true, origin_match_type: 'any', receiving_match_type: 'in'})
     MERGE (g:CountryGroup {name: 'Nordic Council'})
     MERGE (r)-[:TRIGGERED_BY_RECEIVING]->(g)
     """
@@ -37,9 +37,14 @@ try:
     )
 
     print("\n--- EVALUATION RESULTS FOR US -> DENMARK ---")
-    print(f"Risk Level: {result.overall_risk}")
+    print(f"Transfer Status: {result.transfer_status}")
     for rule in result.triggered_rules:
-        print(f"- Triggered Rule: {rule.name} ({rule.rule_id})")
+        print(f"- Triggered Rule: {rule.rule_name} ({rule.rule_id})")
+        
+    if result.evaluation_graph:
+        print(f"\nGenerated Graph: {len(result.evaluation_graph.nodes)} nodes, {len(result.evaluation_graph.edges)} edges")
+    else:
+        print("\nGenerated Graph: None")
 
 except Exception as e:
     import traceback
