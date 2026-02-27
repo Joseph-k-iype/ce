@@ -124,6 +124,26 @@ class SSESettings(BaseSettings):
     connection_timeout_seconds: int = Field(default=300, validation_alias="SSE_CONNECTION_TIMEOUT")
 
 
+class AuthSettings(BaseSettings):
+    """Authentication and LDAP Configuration"""
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+    jwt_secret_key: str = Field(default="change_this_to_a_secure_random_string_in_production", validation_alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(default=1440, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES") # 24h
+
+    # LDAP Details
+    enable_ldap: bool = Field(default=False, validation_alias="ENABLE_LDAP")
+    ldap_server_url: str = Field(default="ldap://localhost:389", validation_alias="LDAP_SERVER_URL")
+    ldap_bind_dn: str = Field(default="", validation_alias="LDAP_BIND_DN")
+    ldap_bind_password: str = Field(default="", validation_alias="LDAP_BIND_PASSWORD")
+    ldap_search_base: str = Field(default="DC=example,DC=com", validation_alias="LDAP_SEARCH_BASE")
+
+
 class PathSettings(BaseSettings):
     """File Path Configuration"""
     model_config = SettingsConfigDict(extra="ignore")
@@ -180,6 +200,7 @@ class Settings(BaseSettings):
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     ai: AIServiceSettings = Field(default_factory=AIServiceSettings)
     api: APISettings = Field(default_factory=APISettings)
+    auth: AuthSettings = Field(default_factory=AuthSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)
     sse: SSESettings = Field(default_factory=SSESettings)
     paths: PathSettings = Field(default_factory=PathSettings)

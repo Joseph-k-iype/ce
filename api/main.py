@@ -9,7 +9,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
@@ -39,7 +39,9 @@ from api.routers import (
     admin,
     rule_links,
     jobs,
+    auth,
 )
+from api.dependencies.auth import get_current_user, get_current_admin
 
 # Configure logging
 logging.basicConfig(
@@ -59,6 +61,14 @@ async def lifespan(app: FastAPI):
     db = get_db_service()
     if db.check_connection():
         logger.info("Database connection established")
+        # Ensure indexes are created for performance
+        try:
+            from utils.graph_builder import RulesGraphBuilder
+            builder = RulesGraphBuilder(db.get_rules_graph())
+            builder._create_indexes()
+            logger.info("Graph indexes verified/created for optimal query performance")
+        except Exception as e:
+            logger.warning(f"Failed to verify/create indexes: {e}")
     else:
         logger.warning("Database connection failed")
 
@@ -114,18 +124,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routers
+# Register public and auth routers
 app.include_router(health.router)
-app.include_router(evaluation.router)
-app.include_router(metadata.router)
-app.include_router(rules_overview.router)
-app.include_router(graph_data.router)
-app.include_router(wizard.router)
-app.include_router(sandbox.router)
-app.include_router(agent_events.router)
-app.include_router(admin.router)
-app.include_router(rule_links.router)
-app.include_router(jobs.router)
+app.include_router(auth.router)
+
+# External endpoints (User-level access)
+app.include_router(evaluation.router, dependencies=[Depends(get_current_user)])
+app.include_router(metadata.router, dependencies=[Depends(get_current_user)])
+app.include_router(rules_overview.router, dependencies=[Depends(get_current_user)])
+
+# Internal endpoints (Admin-level access)
+app.include_router(graph_data.router, dependencies=[Depends(get_current_admin)])
+app.include_router(wizard.router, dependencies=[Depends(get_current_admin)])
+app.include_router(sandbox.router, dependencies=[Depends(get_current_admin)])
+app.include_router(agent_events.router, dependencies=[Depends(get_current_admin)])
+app.include_router(admin.router, dependencies=[Depends(get_current_admin)])
+app.include_router(rule_links.router, dependencies=[Depends(get_current_admin)])
+app.include_router(jobs.router, dependencies=[Depends(get_current_admin)])
 
 # Serve React frontend static files
 frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"

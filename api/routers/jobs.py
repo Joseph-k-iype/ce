@@ -17,7 +17,7 @@ from services.job_manager import get_job_manager, JobStatus
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/jobs", tags=["jobs"])
+router = APIRouter(prefix="/api/jobs", tags=["Internal - Background Jobs"])
 
 
 class JobSubmitRequest(BaseModel):

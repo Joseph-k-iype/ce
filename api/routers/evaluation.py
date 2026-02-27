@@ -24,7 +24,7 @@ from services.rules_evaluator import get_rules_evaluator
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["evaluation"])
+router = APIRouter(prefix="/api", tags=["External - Policy Evaluation"])
 
 
 def get_db():

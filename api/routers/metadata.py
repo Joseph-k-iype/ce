@@ -16,7 +16,7 @@ from services.cache import get_cache_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["metadata"])
+router = APIRouter(prefix="/api", tags=["External - Metadata"])
 
 class MetadataNodeCreate(BaseModel):
     dimension: str

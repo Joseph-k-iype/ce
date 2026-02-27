@@ -24,7 +24,7 @@ from rules.templates.cypher_templates import list_templates
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["rules"])
+router = APIRouter(prefix="/api", tags=["External - Rules Data"])
 
 
 def get_db():
@@ -99,22 +99,22 @@ async def get_rules_overview_table(
                 'prohibitions': [],
             })
 
-def _parse_logic_tree(node: dict) -> str:
-    if not isinstance(node, dict): return ""
-    typ = node.get('type')
-    if typ == 'CONDITION':
-        d = node.get('dimension', '')
-        v = node.get('value', '')
-        return f"{d} = {v}"
-    elif typ in ['AND', 'OR']:
-        children = [_parse_logic_tree(c) for c in node.get('children', [])]
-        children = [c for c in children if c]
-        if not children: return ""
-        if len(children) == 1: return children[0]
-        joiner = f" {typ} "
-        res = joiner.join(children)
-        return f"({res})"
-    return ""
+    def _parse_logic_tree(node: dict) -> str:
+        if not isinstance(node, dict): return ""
+        typ = node.get('type')
+        if typ == 'CONDITION':
+            d = node.get('dimension', '')
+            v = node.get('value', '')
+            return f"{d} = {v}"
+        elif typ in ['AND', 'OR']:
+            children = [_parse_logic_tree(c) for c in node.get('children', [])]
+            children = [c for c in children if c]
+            if not children: return ""
+            if len(children) == 1: return children[0]
+            joiner = f" {typ} "
+            res = joiner.join(children)
+            return f"({res})"
+        return ""
 
     # Build table rows
     rows = []

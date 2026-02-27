@@ -24,7 +24,7 @@ from utils.schema_manager import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/graph", tags=["graph"])
+router = APIRouter(prefix="/api/graph", tags=["Internal - Graph Data"])
 
 # ──────────────────────────────────────────────────────────
 # Schema helper wrappers (delegating to schema_manager)

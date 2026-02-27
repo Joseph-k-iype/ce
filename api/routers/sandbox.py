@@ -12,7 +12,7 @@ from models.wizard_models import SandboxEvaluationRequest
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/sandbox", tags=["sandbox"])
+router = APIRouter(prefix="/api/sandbox", tags=["Internal - Sandbox Testing"])
 
 
 @router.post("/create")

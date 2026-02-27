@@ -1,0 +1,1 @@
+\n# Authentication & RBAC\npython-jose[cryptography]>=3.3.0\npasslib[bcrypt]>=1.7.4\nldap3>=2.9.1 install python-jose[cryptography] passlib[bcrypt] ldap3

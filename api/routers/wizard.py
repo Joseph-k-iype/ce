@@ -33,7 +33,7 @@ from agents.workflows.rule_ingestion_workflow import run_rule_ingestion
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/wizard", tags=["wizard"])
+router = APIRouter(prefix="/api/wizard", tags=["Internal - Rule Wizard"])
 
 # In-memory session store (production would use Redis/DB)
 _sessions: Dict[str, WizardSessionState] = {}

@@ -12,7 +12,7 @@ from services.sse_manager import get_sse_manager
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/agent-events", tags=["agent-events"])
+router = APIRouter(prefix="/api/agent-events", tags=["Internal - Agent Events"])
 
 
 @router.get("/stream/{session_id}")

@@ -14,7 +14,7 @@ from services.database import get_db_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/rules", tags=["rule-links"])
+router = APIRouter(prefix="/api/rules", tags=["Internal - Rule Links Management"])
 
 
 def get_db():

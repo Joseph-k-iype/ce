@@ -1,6 +1,29 @@
 {
-  "timestamp": "2026-02-26T05:44:03.337061",
+  "timestamp": "2026-02-27T03:59:27.981099",
   "nodes": [
+    {
+      "id": 0,
+      "labels": [
+        "Rule"
+      ],
+      "properties": {
+        "rule_id": "RULE_CUSTOM_25A689DA",
+        "name": "New Custom RuleBrowser Test Rule",
+        "description": "This is a test description for the browser rule.",
+        "priority": "medium",
+        "outcome": "permission",
+        "rule_type": "case_matching",
+        "enabled": true,
+        "odrl_type": "Permission",
+        "odrl_action": "transfer",
+        "odrl_target": "Data",
+        "has_pii_required": false,
+        "requires_any_data": false,
+        "requires_personal_data": false,
+        "priority_order": 100,
+        "logic_tree": "{\"type\": \"AND\", \"children\": [{\"type\": \"CONDITION\", \"dimension\": \"OriginCountry\", \"value\": \"Andorra\"}]}"
+      }
+    },
     {
       "id": 1,
       "labels": [
@@ -6593,9 +6616,93 @@
         "iso3": "GBR",
         "rtn_code": "UK001"
       }
+    },
+    {
+      "id": 538,
+      "labels": [
+        "Permission"
+      ],
+      "properties": {
+        "name": "Transfer Permission (New Custom RuleBrowser Test Rule)"
+      }
+    },
+    {
+      "id": 539,
+      "labels": [
+        "Country"
+      ],
+      "properties": {
+        "name": "TestLand"
+      }
+    },
+    {
+      "id": 540,
+      "labels": [
+        "Country"
+      ],
+      "properties": {
+        "name": "Mockania"
+      }
+    },
+    {
+      "id": 541,
+      "labels": [
+        "LegalEntity"
+      ],
+      "properties": {
+        "name": "TestCorp LLC"
+      }
+    },
+    {
+      "id": 542,
+      "labels": [
+        "LegalEntity"
+      ],
+      "properties": {
+        "name": "MockCorp Inc"
+      }
+    },
+    {
+      "id": 543,
+      "labels": [
+        "Purpose"
+      ],
+      "properties": {
+        "name": "Analytics"
+      }
+    },
+    {
+      "id": 544,
+      "labels": [
+        "Purpose"
+      ],
+      "properties": {
+        "name": "Marketing"
+      }
     }
   ],
   "edges": [
+    {
+      "id": 8,
+      "type": "ORIGINATES_FROM",
+      "src": 0,
+      "dst": 447,
+      "properties": {}
+    },
+    {
+      "id": 7,
+      "type": "TRIGGERED_BY_ORIGIN",
+      "src": 0,
+      "dst": 447,
+      "properties": {}
+    },
+    {
+      "id": 6,
+      "type": "HAS_PERMISSION",
+      "src": 0,
+      "dst": 538,
+      "properties": {}
+    },
     {
       "id": 14,
       "type": "HAS_PROHIBITION",
@@ -10150,6 +10257,20 @@
       "type": "BELONGS_TO",
       "src": 446,
       "dst": 467,
+      "properties": {}
+    },
+    {
+      "id": 4,
+      "type": "HAS_LEGAL_ENTITY",
+      "src": 447,
+      "dst": 406,
+      "properties": {}
+    },
+    {
+      "id": 5,
+      "type": "HAS_LEGAL_ENTITY",
+      "src": 447,
+      "dst": 421,
       "properties": {}
     },
     {
@@ -15316,6 +15437,13 @@
       "type": "BELONGS_TO",
       "src": 537,
       "dst": 470,
+      "properties": {}
+    },
+    {
+      "id": 3,
+      "type": "HAS_LEGAL_ENTITY",
+      "src": 539,
+      "dst": 421,
       "properties": {}
     }
   ]

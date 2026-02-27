@@ -125,7 +125,7 @@ from utils.graph_builder import RulesGraphBuilder, build_rules_graph
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/api/admin", tags=["Internal - Admin & Taxonomy"])
 
 
 def get_db():
@@ -739,13 +739,38 @@ async def upload_dictionary_csv(dict_type: str, file: UploadFile = File(...), db
     invalidate_cache()
     return {"status": "success", "inserted": len(records), "type": dict_type}
 
+@router.get("/dictionaries/{dict_type}/template")
+async def download_dictionary_template(dict_type: str):
+    """Download a simple sample CSV template for the dictionary."""
+    node_type = DICT_TYPE_MAP.get(dict_type)
+    if not node_type:
+        raise HTTPException(status_code=400, detail=f"Invalid dictionary type: {dict_type}")
+    
+    # Generic generic template headers
+    if dict_type == "countries":
+        df = pd.DataFrame(columns=["name", "code", "region"])
+    elif dict_type == "legal_entities":
+        df = pd.DataFrame(columns=["name", "category"]) # category often empty
+    else:
+        df = pd.DataFrame(columns=["name", "category", "description"])
+        
+    buffer = io.BytesIO()
+    df.to_csv(buffer, index=False)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={dict_type}_sample.csv"}
+    )
+
 @router.get("/mappings/{mapping_type}")
 async def get_mappings(mapping_type: str, db=Depends(get_db)):
     """Get existing mappings for a given type."""
     if mapping_type == "country-group":
         query = "MATCH (c:Country)-[:BELONGS_TO]->(g:CountryGroup) RETURN g.name AS source, collect(c.name) AS targets"
     elif mapping_type == "legal-entity":
-        query = "MATCH (c:Country)-[:HAS_LEGAL_ENTITY]->(l:LegalEntity) RETURN l.name AS source, collect(c.name) AS targets"
+        query = "MATCH (c:Country)-[:HAS_LEGAL_ENTITY]->(l:LegalEntity) RETURN c.name AS source, collect(l.name) AS targets"
     else:
         raise HTTPException(status_code=400, detail="Unknown mapping type")
     
@@ -758,30 +783,37 @@ async def update_mappings(mapping_type: str, mapping: MappingsUpdate, db=Depends
     if mapping_type == "country-group":
         rel = "BELONGS_TO"
         dest_label = "CountryGroup"
-        # We are linking countries to this group
+        db.execute_rules_query(f"MERGE (d:{dest_label} {{name: $dest_name}})", params={"dest_name": mapping.source_id})
+        db.execute_rules_query(
+            f"MATCH (c:Country)-[r:{rel}]->(d:{dest_label} {{name: $dest_name}}) DELETE r", 
+            params={"dest_name": mapping.source_id}
+        )
+        for target in mapping.target_ids:
+            query = f"""
+            MATCH (c:Country {{name: $target_name}})
+            MATCH (d:{dest_label} {{name: $dest_name}})
+            MERGE (c)-[:{rel}]->(d)
+            """
+            db.execute_rules_query(query, params={"dest_name": mapping.source_id, "target_name": target})
+
     elif mapping_type == "legal-entity":
         rel = "HAS_LEGAL_ENTITY"
-        dest_label = "LegalEntity"
+        dest_label = "Country"
+        # source_id is the Country, target_ids are the Legal Entities
+        db.execute_rules_query(f"MERGE (d:{dest_label} {{name: $dest_name}})", params={"dest_name": mapping.source_id})
+        db.execute_rules_query(
+            f"MATCH (d:{dest_label} {{name: $dest_name}})-[r:{rel}]->(l:LegalEntity) DELETE r", 
+            params={"dest_name": mapping.source_id}
+        )
+        for target in mapping.target_ids:
+            query = f"""
+            MATCH (d:{dest_label} {{name: $dest_name}})
+            MERGE (l:LegalEntity {{name: $target_name}})
+            MERGE (d)-[:{rel}]->(l)
+            """
+            db.execute_rules_query(query, params={"dest_name": mapping.source_id, "target_name": target})
     else:
         raise HTTPException(status_code=400, detail="Unknown mapping type")
-        
-    # Ensure the destination node exists (supports creating new groups on the fly)
-    db.execute_rules_query(f"MERGE (d:{dest_label} {{name: $dest_name}})", params={"dest_name": mapping.source_id})
-    
-    # Delete existing relationships from ANY Country TO exactly this destination
-    db.execute_rules_query(
-        f"MATCH (c:Country)-[r:{rel}]->(d:{dest_label} {{name: $dest_name}}) DELETE r", 
-        params={"dest_name": mapping.source_id}
-    )
-    
-    # Create new relationships for each selected country
-    for target in mapping.target_ids:
-        query = f"""
-        MATCH (c:Country {{name: $country_name}})
-        MATCH (d:{dest_label} {{name: $dest_name}})
-        MERGE (c)-[:{rel}]->(d)
-        """
-        db.execute_rules_query(query, params={"dest_name": mapping.source_id, "country_name": target})
         
     invalidate_cache()
     return {"status": "success"}
