@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import axios from 'axios';
 
 export type UserRole = 'admin' | 'user';
 
@@ -6,17 +7,13 @@ interface AuthState {
   isAuthenticated: boolean;
   username: string | null;
   role: UserRole | null;
-  login: (username: string, password: string) => boolean;
+  token: string | null;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
-const CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
-  admin: { password: 'admin', role: 'admin' },
-  user: { password: 'user', role: 'user' },
-};
-
 // Load persisted auth from localStorage
-function loadAuth(): { isAuthenticated: boolean; username: string | null; role: UserRole | null } {
+function loadAuth(): { isAuthenticated: boolean; username: string | null; role: UserRole | null; token: string | null } {
   try {
     const stored = localStorage.getItem('auth');
     if (stored) {
@@ -25,10 +22,11 @@ function loadAuth(): { isAuthenticated: boolean; username: string | null; role: 
         isAuthenticated: parsed.isAuthenticated || false,
         username: parsed.username || null,
         role: parsed.role || null,
+        token: parsed.token || null,
       };
     }
   } catch { /* ignore */ }
-  return { isAuthenticated: false, username: null, role: null };
+  return { isAuthenticated: false, username: null, role: null, token: null };
 }
 
 const initial = loadAuth();
@@ -36,19 +34,38 @@ const initial = loadAuth();
 export const useAuthStore = create<AuthState>((set) => ({
   ...initial,
 
-  login: (username: string, password: string) => {
-    const cred = CREDENTIALS[username];
-    if (cred && cred.password === password) {
-      const state = { isAuthenticated: true, username, role: cred.role };
+  login: async (username: string, password: string) => {
+    try {
+      const params = new URLSearchParams();
+      params.append('username', username);
+      params.append('password', password);
+
+      const response = await axios.post('/api/auth/login', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+
+      const { access_token, role, username: returnedUsername } = response.data;
+
+      const state = {
+        isAuthenticated: true,
+        username: returnedUsername,
+        role,
+        token: access_token
+      };
+
       localStorage.setItem('auth', JSON.stringify(state));
       set(state);
       return true;
+    } catch (error) {
+      console.error('Login failed:', error);
+      return false;
     }
-    return false;
   },
 
   logout: () => {
     localStorage.removeItem('auth');
-    set({ isAuthenticated: false, username: null, role: null });
+    set({ isAuthenticated: false, username: null, role: null, token: null });
   },
 }));

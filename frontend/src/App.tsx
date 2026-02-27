@@ -33,8 +33,8 @@ function App() {
               <Route element={<AppLayout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/evaluator" element={<EvaluatorPage />} />
-                <Route path="/saved-policies" element={<SavedPoliciesPage />} />
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
+                  <Route path="/saved-policies" element={<SavedPoliciesPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/generator" element={<WizardPage />} />
                   <Route path="/editor" element={<EditorPage />} />

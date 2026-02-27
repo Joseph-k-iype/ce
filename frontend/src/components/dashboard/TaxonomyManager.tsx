@@ -100,6 +100,26 @@ export function TaxonomyManager() {
         }
     };
 
+    const handleDownloadSample = async () => {
+        try {
+            const res = await api.get(`/admin/dictionaries/${dictType.value}/template`, {
+                responseType: 'blob',
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${dictType.value}_sample.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err: any) {
+            setUploadMessage({
+                text: 'Failed to download sample',
+                type: 'error'
+            });
+        }
+    };
+
     const handleSaveMapping = async () => {
         if (!selectedDestination) return;
         setMappingLoading(true);
@@ -154,8 +174,10 @@ export function TaxonomyManager() {
     // Prepare dropdown options
     const targetOptions = mappingType === 'country-group'
         ? (dropdowns?.country_groups || []).map((g: string) => ({ value: g, label: g }))
+        : (dropdowns?.countries || []).map((c: string) => ({ value: c, label: c }));
+    const sourceOptions = mappingType === 'country-group'
+        ? (dropdowns?.countries || []).map((c: string) => ({ value: c, label: c }))
         : Object.values(dropdowns?.legal_entities || {}).flat().map((l: string) => ({ value: l, label: l }));
-    const sourceOptions = (dropdowns?.countries || []).map((c: string) => ({ value: c, label: c }));
 
     return (
         <div className="h-full flex flex-col space-y-6">
@@ -197,9 +219,17 @@ export function TaxonomyManager() {
 
                     <div className="max-w-xl space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Select Dictionary Domain
-                            </label>
+                            <div className="flex justify-between items-end mb-1.5">
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Select Dictionary Domain
+                                </label>
+                                <button
+                                    onClick={handleDownloadSample}
+                                    className="text-xs text-red-600 hover:text-red-800 font-medium"
+                                >
+                                    Download Sample CSV
+                                </button>
+                            </div>
                             <Select
                                 options={DICT_OPTIONS}
                                 value={dictType}
@@ -272,7 +302,7 @@ export function TaxonomyManager() {
                         <div className="p-5 border border-red-100 bg-red-50/30 rounded-lg space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
-                                    Target {mappingType === 'country-group' ? 'Group' : 'Entity'}
+                                    Target {mappingType === 'country-group' ? 'Group' : 'Country'}
                                 </label>
                                 {mappingType === 'country-group' ? (
                                     <CreatableSelect
@@ -288,7 +318,7 @@ export function TaxonomyManager() {
                                         options={targetOptions}
                                         value={selectedDestination}
                                         onChange={(val) => setSelectedDestination(val)}
-                                        placeholder="Select target entity..."
+                                        placeholder="Select target country..."
                                         className="text-sm"
                                     />
                                 )}
@@ -300,14 +330,14 @@ export function TaxonomyManager() {
 
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
-                                    Source Countries
+                                    {mappingType === 'country-group' ? 'Source Countries' : 'Legal Entities'}
                                 </label>
                                 <Select
                                     isMulti
                                     options={sourceOptions}
                                     value={selectedSources}
                                     onChange={(val) => setSelectedSources(val as any)}
-                                    placeholder="Select multiple source countries to link..."
+                                    placeholder={mappingType === 'country-group' ? "Select multiple source countries to link..." : "Select multiple legal entities to link..."}
                                     className="text-sm"
                                 />
                             </div>
