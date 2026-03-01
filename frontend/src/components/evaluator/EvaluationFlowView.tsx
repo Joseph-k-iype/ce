@@ -7,7 +7,6 @@ import {
   type Node,
   type Edge,
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 
 import { useEvaluationStore } from '../../stores/evaluationStore';
 import { useSchemaStore } from '../../stores/schemaStore';

@@ -1,5 +1,6 @@
 import api from './api';
 import type { WizardSession, WizardStepData, SavedSession, TriggerLogicResponse } from '../types/wizard';
+import type { LogicNode } from '../components/shared/LogicTreeBuilder/types';
 
 export async function startWizardSession(userId = 'anonymous'): Promise<{ session_id: string }> {
   const { data } = await api.post('/wizard/start-session', { user_id: userId });
@@ -69,5 +70,15 @@ export async function deleteSavedSession(sessionId: string) {
 
 export async function getTriggerLogic(sessionId: string): Promise<TriggerLogicResponse> {
   const { data } = await api.get<TriggerLogicResponse>(`/wizard/session/${sessionId}/trigger-logic`);
+  return data;
+}
+
+export async function getLogicTree(sessionId: string): Promise<LogicNode> {
+  const { data } = await api.get<LogicNode>(`/wizard/session/${sessionId}/logic-tree`);
+  return data;
+}
+
+export async function updateLogicTree(sessionId: string, logicTree: LogicNode): Promise<{ status: string; logic_tree: LogicNode }> {
+  const { data } = await api.put(`/wizard/session/${sessionId}/logic-tree`, logicTree);
   return data;
 }

@@ -10,7 +10,6 @@ import {
   type Edge,
   ReactFlowProvider,
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 import api from '../../services/api';
 
 interface SubgraphNode {

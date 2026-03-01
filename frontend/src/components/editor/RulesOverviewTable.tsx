@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { createRule } from '../../services/rulesApi';
+import { RuleEditorModal } from './RuleEditorModal';
 import type { RuleTableRow } from '../../types/api';
 
 interface RulesTableData {
@@ -12,7 +11,6 @@ interface RulesTableData {
 }
 
 export function RulesOverviewTable() {
-  const navigate = useNavigate();
   const [data, setData] = useState<RulesTableData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +18,11 @@ export function RulesOverviewTable() {
   const [riskFilter, setRiskFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
 
-  useEffect(() => {
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+
+  const fetchRules = () => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (riskFilter) params.set('risk', riskFilter);
@@ -34,7 +36,31 @@ export function RulesOverviewTable() {
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchRules();
   }, [search, riskFilter, countryFilter]);
+
+  const handleCreateRule = () => {
+    setEditingRuleId(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditRule = (ruleId: string) => {
+    setEditingRuleId(ruleId);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingRuleId(null);
+  };
+
+  const handleRuleSaved = () => {
+    // Refetch rules after save
+    fetchRules();
+  };
 
   const priorityBadge = (priority: string) => {
     const colors: Record<string, string> = {
@@ -51,6 +77,42 @@ export function RulesOverviewTable() {
       : 'bg-purple-50 text-purple-700 border-purple-200';
   };
 
+  const handleExportCsv = () => {
+    if (!data?.rows || data.rows.length === 0) return;
+
+    const headers = ['Rule Name', 'Sending Country', 'Receiving Country', 'Type', 'Priority', 'Duty', 'Details'];
+    const csvContent = [
+      headers.join(','),
+      ...data.rows.map(row => {
+        const escapeCsv = (str: string | undefined | null) => {
+          if (!str) return '""';
+          const escaped = str.replace(/"/g, '""');
+          return `"${escaped}"`;
+        };
+
+        return [
+          escapeCsv(row.rule_name),
+          escapeCsv(row.sending_country),
+          escapeCsv(row.receiving_country),
+          escapeCsv(row.permission_prohibition),
+          escapeCsv(row.priority),
+          escapeCsv(row.duty),
+          escapeCsv(row.rule_details)
+        ].join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'rules_overview.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -61,21 +123,21 @@ export function RulesOverviewTable() {
             {data ? `${data.total_rules} rules across ${data.total_countries} countries` : 'Loading...'}
           </p>
         </div>
-        <button
-          onClick={async () => {
-            try {
-              setLoading(true);
-              const res = await createRule();
-              navigate(`/editor/${encodeURIComponent(res.rule_id)}`);
-            } catch (err) {
-              setError(err instanceof Error ? err.message : 'Error creating rule');
-              setLoading(false);
-            }
-          }}
-          className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg shadow hover:bg-purple-700 transition-colors"
-        >
-          Create New Rule
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCsv}
+            disabled={!data?.rows || data.rows.length === 0}
+            className="px-4 py-2 bg-white text-gray-700 border border-gray-300 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Export to CSV
+          </button>
+          <button
+            onClick={handleCreateRule}
+            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg shadow hover:bg-purple-700 transition-colors"
+          >
+            Create New Rule
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -143,7 +205,7 @@ export function RulesOverviewTable() {
               {(data?.rows || []).map((row) => (
                 <tr
                   key={row.rule_id}
-                  onClick={() => navigate(`/editor/${encodeURIComponent(row.rule_id)}`)}
+                  onClick={() => handleEditRule(row.rule_id)}
                   className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
                 >
                   <td className="py-3 px-4">
@@ -176,6 +238,14 @@ export function RulesOverviewTable() {
           </table>
         )}
       </div>
+
+      {/* Rule Editor Modal */}
+      <RuleEditorModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        ruleId={editingRuleId}
+        onSave={handleRuleSaved}
+      />
     </div>
   );
 }

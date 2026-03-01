@@ -12,6 +12,7 @@ import { RuleEditorPage } from './components/editor/RuleEditorPage';
 import { SavedPoliciesPage } from './pages/SavedPoliciesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { DataSourcesPage } from './pages/DataSourcesPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,7 @@ function App() {
                   <Route path="/generator" element={<WizardPage />} />
                   <Route path="/editor" element={<EditorPage />} />
                   <Route path="/editor/:ruleId" element={<RuleEditorPage />} />
+                  <Route path="/data-sources" element={<DataSourcesPage />} />
                 </Route>
                 <Route path="*" element={<NotFoundPage />} />
               </Route>

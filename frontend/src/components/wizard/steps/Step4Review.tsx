@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWizardStore } from '../../../stores/wizardStore';
 import { useDropdownData } from '../../../hooks/useDropdownData';
-import { editRule, editTerms, getTriggerLogic } from '../../../services/wizardApi';
+import { editRule, editTerms, getTriggerLogic, getLogicTree, updateLogicTree } from '../../../services/wizardApi';
+import { LogicTreeBuilder } from '../../shared/LogicTreeBuilder';
+import { DIMENSION_CONFIGS } from '../../../services/dimensionConfig';
 import type { TriggerLogicResponse } from '../../../types/wizard';
+import type { LogicNode } from '../../shared/LogicTreeBuilder/types';
 
 export function Step4Review() {
   const { data: dropdowns } = useDropdownData();
@@ -46,6 +49,10 @@ export function Step4Review() {
   // Trigger logic state
   const [triggerLogic, setTriggerLogic] = useState<TriggerLogicResponse | null>(null);
 
+  // Logic tree state (visual editor)
+  const [logicTree, setLogicTree] = useState<LogicNode>({ type: 'AND', children: [] });
+  const [editingLogicTree, setEditingLogicTree] = useState(false);
+
   // Entity editing state
   const [editingEntities, setEditingEntities] = useState(false);
 
@@ -53,12 +60,31 @@ export function Step4Review() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Fetch trigger logic from backend
+  // Fetch trigger logic and logic tree from backend
   useEffect(() => {
     if (!sessionId) return;
+
+    // Fetch trigger logic for display
     getTriggerLogic(sessionId)
       .then(setTriggerLogic)
       .catch(() => { /* trigger logic is optional — ignore errors */ });
+
+    // Fetch logic tree for visual editing
+    getLogicTree(sessionId)
+      .then(setLogicTree)
+      .catch(() => { /* logic tree is optional — use default */ });
+  }, [sessionId]);
+
+  const handleLogicTreeChange = useCallback(async (tree: LogicNode) => {
+    setLogicTree(tree);
+    // Auto-save logic tree changes
+    if (sessionId) {
+      try {
+        await updateLogicTree(sessionId, tree);
+      } catch (err) {
+        console.error('Failed to save logic tree:', err);
+      }
+    }
   }, [sessionId]);
 
   // Initialize rule fields from the rule definition
@@ -150,6 +176,8 @@ export function Step4Review() {
         regulators,
         authorities,
         data_subjects: dataSubjects,
+        // Include visual logic tree
+        logic_tree: logicTree,
       };
 
       await editRule(sessionId, updatedRule);
@@ -495,10 +523,58 @@ export function Step4Review() {
         </div>
       </div>
 
+      {/* Visual Logic Tree Builder — NEW! */}
+      <div className="card-dark p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Rule Trigger Logic (Visual Editor)</h4>
+            <p className="text-[10px] text-gray-500 mt-1">
+              AI-generated logic tree showing when this rule triggers. Edit visually using AND/OR groups and conditions.
+            </p>
+          </div>
+          <button
+            onClick={() => setEditingLogicTree(prev => !prev)}
+            className="text-xs text-purple-400 hover:text-purple-300 underline"
+          >
+            {editingLogicTree ? 'Collapse' : 'Edit logic tree'}
+          </button>
+        </div>
+
+        {editingLogicTree && (
+          <div className="pt-3">
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+              <LogicTreeBuilder
+                initialTree={logicTree}
+                dimensionConfigs={DIMENSION_CONFIGS}
+                dropdownData={dropdowns || null}
+                onChange={handleLogicTreeChange}
+                mode="full"
+              />
+            </div>
+
+            {/* Info box */}
+            <div className="mt-4 p-3 bg-purple-900/20 border border-purple-700/30 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-xs text-purple-200">
+                    <strong>Visual Logic Editor:</strong> This logic tree was automatically generated from AI-extracted entity dimensions.
+                    You can add, remove, or reorganize conditions using AND/OR groups to create complex matching rules.
+                    Changes are saved automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Trigger Logic — deterministic conditions display */}
       {triggerLogic && (
         <div className="card-dark p-5 space-y-3">
-          <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Rule Trigger Logic</h4>
+          <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Rule Trigger Logic (Text View)</h4>
           <p className="text-[10px] text-gray-500">
             This rule will fire when all geographic conditions match AND any one of the following entity dimensions matches.
           </p>

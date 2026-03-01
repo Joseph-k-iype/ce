@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { path: '/generator', label: 'Policy Generator', roles: ['admin'] },
   { path: '/editor', label: 'Policy Editor', roles: ['admin'] },
   { path: '/dashboard', label: 'Dashboard', roles: ['admin'] },
+  { path: '/data-sources', label: 'Data Sources', roles: ['admin'] },
 ];
 
 export function Navbar() {
