@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: compliance-engine-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        env:
+        # Connect backend to FalkorDB service
+        - name: FALKORDB_HOST
+          value: "falkordb"
+        - name: FALKORDB_PORT
+          value: "6379"
+        - name: FALKORDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: falkordb-secret
+              key: password
+        # Add any other missing backend env variables here (e.g. OpenAI Keys)
+        - name: JWT_SECRET_KEY
+          value: "your-super-secret-jwt-key"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000

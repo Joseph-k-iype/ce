@@ -241,6 +241,7 @@ class SandboxService:
         regulators: Optional[list] = None,
         authorities: Optional[list] = None,
         data_subjects: Optional[list] = None,
+        additional_precedent_graphs: Optional[list] = None,
     ) -> Dict[str, Any]:
         """
         Run evaluation against the sandbox graph.
@@ -248,12 +249,16 @@ class SandboxService:
         Creates a RulesEvaluator pointing at the sandbox graph so all
         rule matching (including the new rule) is done via Cypher queries.
         Attribute keywords are loaded from the sandbox graph automatically.
+        Supports multi-graph precedent search if additional_precedent_graphs is provided.
         """
         from services.rules_evaluator import RulesEvaluator
 
         try:
             graph = self.db.db.select_graph(graph_name)
-            evaluator = RulesEvaluator(rules_graph=graph)
+            evaluator = RulesEvaluator(
+                rules_graph=graph,
+                additional_precedent_graphs=additional_precedent_graphs or []
+            )
 
             result = evaluator.evaluate(
                 origin_country=origin_country,

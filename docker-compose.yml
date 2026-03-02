@@ -1,61 +1,57 @@
-version: '3.8'
+# Multi-architecture build support (use with docker buildx bake)
+x-bake:
+  default:
+    platforms:
+      - linux/amd64
+      - linux/arm64
 
 services:
-  # FalkorDB graph database
+  # FalkorDB graph database (no auth for local development)
   falkordb:
     image: falkordb/falkordb:latest
+    container_name: compliance-engine-falkordb
     ports:
       - "6379:6379"
+      - "3000:3000" # FalkorDB Browser UI
     volumes:
       - falkordb_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # FastAPI backend
+  # FastAPI backend (Production Dockerfile)
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: api/Dockerfile
+    container_name: compliance-engine-backend
     ports:
       - "5001:5001"
     environment:
       - FALKORDB_HOST=falkordb
       - FALKORDB_PORT=6379
+      - FALKORDB_PASSWORD=
       - LOG_LEVEL=info
+      - JWT_SECRET_KEY=dev-jwt-secret-key
+    volumes:
+      - .:/app
     depends_on:
       falkordb:
         condition: service_healthy
-    volumes:
-      - ./rules:/app/rules
-      - ./data:/app/data
-    command: python main.py
 
-  # React frontend (Vite dev server)
+  # React frontend (Local build served by Nginx)
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
-    environment:
-      - VITE_API_URL=http://localhost
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-
-  # Nginx reverse proxy
-  nginx:
     image: nginx:alpine
+    container_name: compliance-engine-frontend
     ports:
-      - "80:80"
+      - "3001:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
-      - frontend
 
 volumes:
   falkordb_data:

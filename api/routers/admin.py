@@ -12,6 +12,8 @@ from fastapi.responses import StreamingResponse
 import io
 
 from services.backup_service import get_backup_service
+from services.sandbox_service import get_sandbox_service
+from utils.cypher_safety import validate_label, validate_relationship
 
 def _sync_logic_tree_edges(db, rule_id: str, logic_tree: dict):
     # Wipe old graph edges driven by logic tree
@@ -112,7 +114,7 @@ def _sync_logic_tree_edges(db, rule_id: str, logic_tree: dict):
         link_scopes(origin_countries, is_origin=True)
     if receiving_countries:
         link_scopes(receiving_countries, is_origin=False)
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import pandas as pd
 import io
 import math
@@ -152,6 +154,29 @@ class RuleUpdate(BaseModel):
     valid_until: Optional[str] = None
     required_assessments: Optional[List[str]] = None
     required_actions: Optional[List[str]] = None
+
+    @field_validator('priority', mode='before')
+    @classmethod
+    def normalize_priority(cls, v):
+        """Normalize priority from integer or string to valid string."""
+        if v is None:
+            return None
+
+        # If already a valid string, return lowercase
+        if isinstance(v, str) and v.lower() in ['low', 'medium', 'high']:
+            return v.lower()
+
+        # Convert integer to string
+        if isinstance(v, int):
+            priority_map = {1: 'high', 2: 'medium', 3: 'low'}
+            return priority_map.get(v, 'medium')
+
+        # Convert numeric string to text
+        if isinstance(v, str) and v.isdigit():
+            priority_map = {'1': 'high', '2': 'medium', '3': 'low'}
+            return priority_map.get(v, 'medium')
+
+        return 'medium'  # Default fallback
 
 class RuleCreate(BaseModel):
     rule_id: str
@@ -478,6 +503,170 @@ async def create_rule(rule: RuleCreate, db=Depends(get_db)):
     return {"status": "created", "rule_id": rule.rule_id}
 
 
+@router.post("/rules/create-full")
+async def create_rule_full(request: RuleUpdate, db=Depends(get_db)):
+    """
+    Create a fully-configured rule with all properties and graph relationships in one call.
+    This combines rule creation with entity mapping, duties, and logic tree synchronization.
+    """
+    import uuid
+    import json
+
+    # Generate new rule ID
+    rule_id = f"RULE_CUSTOM_{uuid.uuid4().hex[:8].upper()}"
+
+    # Build rule properties
+    rule_props = {
+        "rule_id": rule_id,
+        "name": request.name or "New Custom Rule",
+        "description": request.description or "",
+        "priority": request.priority or "medium",
+        "outcome": request.outcome or "permission",
+        "rule_type": "attribute",
+        "enabled": request.enabled if request.enabled is not None else True,
+        "odrl_type": "Prohibition" if request.outcome == "prohibition" else "Permission",
+        "odrl_action": "transfer",
+        "odrl_target": "Data",
+        "has_pii_required": request.requires_pii if request.requires_pii is not None else False,
+        "requires_any_data": False,
+        "requires_personal_data": request.requires_pii if request.requires_pii is not None else False,
+        "priority_order": 100
+    }
+
+    if request.logic_tree:
+        rule_props["logic_tree"] = json.dumps(request.logic_tree)
+    else:
+        rule_props["logic_tree"] = '{"type":"AND","children":[]}'
+
+    if request.valid_until and request.valid_until.strip():
+        rule_props["valid_until"] = request.valid_until
+
+    # Create rule node
+    set_parts = [f"r.{k} = ${k}" for k in rule_props.keys()]
+    query = f"MERGE (r:Rule {{rule_id: $rule_id}}) SET {', '.join(set_parts)} RETURN r.rule_id as rule_id"
+
+    try:
+        result = db.execute_rules_query(query, params=rule_props)
+        if not result:
+            raise HTTPException(status_code=500, detail="Failed to create rule")
+
+        # Sync logic tree to graph edges
+        if request.logic_tree:
+            _sync_logic_tree_edges(db, rule_id, request.logic_tree)
+
+        # Create Permission/Prohibition node
+        if request.outcome == "prohibition":
+            db.execute_rules_query("""
+            MATCH (r:Rule {rule_id: $rule_id})
+            MERGE (pb:Prohibition {name: r.name})
+            MERGE (r)-[:HAS_PROHIBITION]->(pb)
+            """, params={"rule_id": rule_id})
+        else:
+            db.execute_rules_query("""
+            MATCH (r:Rule {rule_id: $rule_id})
+            MERGE (p:Permission {name: "Transfer Permission (" + r.name + ")"})
+            MERGE (r)-[:HAS_PERMISSION]->(p)
+            """, params={"rule_id": rule_id})
+
+        # Link attributes
+        if request.linked_attributes:
+            for attr in request.linked_attributes:
+                if attr.strip():
+                    db.execute_rules_query("""
+                    MATCH (r:Rule {rule_id: $rule_id})
+                    MERGE (a:Attribute {name: $attr_name})
+                    MERGE (r)-[:HAS_ATTRIBUTE]->(a)
+                    """, params={"rule_id": rule_id, "attr_name": attr.strip()})
+
+        # Create duties (assessments and actions)
+        if request.outcome != "prohibition":
+            if request.required_assessments:
+                for assessment in request.required_assessments:
+                    if assessment.strip():
+                        assessment_upper = str(assessment).strip().upper()
+                        duty_name = f"Complete {assessment_upper} Module"
+                        db.execute_rules_query("""
+                        MERGE (d:Duty {name: $duty_name, module: $module, value: 'Completed'})
+                        WITH d
+                        MATCH (r:Rule {rule_id: $rule_id})-[:HAS_PERMISSION]->(p:Permission)
+                        MERGE (p)-[:CAN_HAVE_DUTY]->(d)
+                        """, params={"duty_name": duty_name, "module": assessment_upper, "rule_id": rule_id})
+
+            if request.required_actions:
+                for action in request.required_actions:
+                    if action.strip():
+                        db.execute_rules_query("""
+                        MERGE (d:Duty {name: $action_name, module: 'action', value: 'required'})
+                        WITH d
+                        MATCH (r:Rule {rule_id: $rule_id})-[:HAS_PERMISSION]->(p:Permission)
+                        MERGE (p)-[:CAN_HAVE_DUTY]->(d)
+                        """, params={"action_name": action.strip(), "rule_id": rule_id})
+
+        invalidate_cache()
+        return {"status": "created", "rule_id": rule_id}
+
+    except Exception as e:
+        logger.error(f"Error creating full rule: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create rule: {str(e)}")
+
+
+@router.post("/rules/test")
+async def test_rule(request: dict, db=Depends(get_db)):
+    """
+    Test a rule definition against a scenario without saving to graph.
+    Creates temporary sandbox graph, loads rule, evaluates, and cleans up.
+    """
+    from services.sandbox_service import SandboxService
+    from services.rules_evaluator import RulesEvaluator
+
+    rule_def = request.get("rule_def")
+    test_scenario = request.get("test_scenario")
+
+    if not rule_def or not test_scenario:
+        raise HTTPException(status_code=400, detail="Missing rule_def or test_scenario")
+
+    try:
+        # Create temporary sandbox graph
+        sandbox = get_sandbox_service()
+        graph_name = sandbox.create_sandbox("test_session")
+
+        # Load rule into sandbox
+        success = sandbox.add_rule_to_sandbox(graph_name, rule_def)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to load rule into sandbox")
+
+        # Run evaluator
+        temp_graph = db.db.select_graph(graph_name)
+        evaluator = RulesEvaluator(rules_graph=temp_graph)
+
+        result = evaluator.evaluate(
+            origin_country=test_scenario.get("origin_country"),
+            receiving_country=test_scenario.get("receiving_country"),
+            pii=test_scenario.get("pii", False),
+            purposes=test_scenario.get("purposes", []),
+            data_categories=test_scenario.get("data_categories", []),
+            processes=test_scenario.get("processes", []),
+            regulators=test_scenario.get("regulators", []),
+            authorities=test_scenario.get("authorities", []),
+            data_subjects=test_scenario.get("data_subjects", [])
+        )
+
+        # Cleanup sandbox
+        sandbox.cleanup_sandbox(graph_name)
+
+        # Check if rule matched
+        rule_matched = rule_def.get("rule_id") in [r.rule_id for r in result.triggered_rules]
+
+        return {
+            "matched": rule_matched,
+            "evaluation_result": result.model_dump() if hasattr(result, 'model_dump') else result
+        }
+
+    except Exception as e:
+        logger.error(f"Error testing rule: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to test rule: {str(e)}")
+
+
 @router.delete("/rules/{rule_id}")
 async def delete_rule(rule_id: str, db=Depends(get_db)):
     """Delete a rule and its relationships."""
@@ -681,7 +870,14 @@ async def list_dictionary_entries(dict_type: str, db=Depends(get_db)):
     node_type = DICT_TYPE_MAP.get(dict_type)
     if not node_type:
         raise HTTPException(status_code=400, detail=f"Invalid dictionary type: {dict_type}")
-    query = f"MATCH (n:{node_type}) RETURN n.name AS name, n.category AS category ORDER BY n.category, n.name"
+
+    # Validate label to prevent injection
+    try:
+        validated_label = validate_label(node_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid node type: {e}")
+
+    query = f"MATCH (n:{validated_label}) RETURN n.name AS name, n.category AS category ORDER BY n.category, n.name"
     return db.execute_rules_query(query)
 
 
@@ -691,7 +887,14 @@ async def add_dictionary_entry(dict_type: str, entry: DictionaryEntryCreate, db=
     node_type = DICT_TYPE_MAP.get(dict_type)
     if not node_type:
         raise HTTPException(status_code=400, detail=f"Invalid dictionary type: {dict_type}")
-    query = f"MERGE (n:{node_type} {{name: $name}}) SET n.category = $category"
+
+    # Validate label to prevent injection
+    try:
+        validated_label = validate_label(node_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid node type: {e}")
+
+    query = f"MERGE (n:{validated_label} {{name: $name}}) SET n.category = $category"
     db.execute_rules_query(query, params={"name": entry.name, "category": entry.category})
     invalidate_cache()
     return {"status": "created", "type": dict_type, "name": entry.name}
@@ -703,7 +906,14 @@ async def delete_dictionary_entry(dict_type: str, name: str, db=Depends(get_db))
     node_type = DICT_TYPE_MAP.get(dict_type)
     if not node_type:
         raise HTTPException(status_code=400, detail=f"Invalid dictionary type: {dict_type}")
-    query = f"MATCH (n:{node_type} {{name: $name}}) DETACH DELETE n"
+
+    # Validate label to prevent injection
+    try:
+        validated_label = validate_label(node_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid node type: {e}")
+
+    query = f"MATCH (n:{validated_label} {{name: $name}}) DETACH DELETE n"
     db.execute_rules_query(query, params={"name": name})
     invalidate_cache()
     return {"status": "deleted", "type": dict_type, "name": name}
@@ -723,17 +933,32 @@ async def upload_dictionary_csv(dict_type: str, file: UploadFile = File(...), db
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse CSV: {e}")
         
+    # Validate label to prevent injection
+    try:
+        validated_label = validate_label(node_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid node type: {e}")
+
+    from utils.cypher_safety import validate_property_name
+
     for record in records:
         key_field = 'id' if 'id' in record else 'name'
         if not key_field in record: continue
-        
-        props_str = ", ".join([f"n.{k} = ${k}" for k in record.keys() if k != key_field])
-        query = f"MERGE (n:{node_type} {{{key_field}: $key_val}})"
+
+        # Validate all property names to prevent injection
+        try:
+            validated_key = validate_property_name(key_field)
+            validated_props = {validate_property_name(k): v for k, v in record.items() if k != key_field}
+        except ValueError as e:
+            logger.warning(f"Skipping record with invalid property name: {e}")
+            continue
+
+        props_str = ", ".join([f"n.{k} = ${k}" for k in validated_props.keys()])
+        query = f"MERGE (n:{validated_label} {{{validated_key}: ${validated_key}}})"
         if props_str:
             query += f" SET {props_str}"
-            
-        params = {"key_val": record[key_field]}
-        params.update(record)
+
+        params = {validated_key: record[key_field], **validated_props}
         db.execute_rules_query(query, params=params)
         
     invalidate_cache()
@@ -783,38 +1008,56 @@ async def update_mappings(mapping_type: str, mapping: MappingsUpdate, db=Depends
     if mapping_type == "country-group":
         rel = "BELONGS_TO"
         dest_label = "CountryGroup"
-        db.execute_rules_query(f"MERGE (d:{dest_label} {{name: $dest_name}})", params={"dest_name": mapping.source_id})
+
+        # Validate labels and relationships to prevent injection
+        try:
+            validated_dest = validate_label(dest_label)
+            validated_rel = validate_relationship(rel)
+            validated_country = validate_label("Country")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid label or relationship: {e}")
+
+        db.execute_rules_query(f"MERGE (d:{validated_dest} {{name: $dest_name}})", params={"dest_name": mapping.source_id})
         db.execute_rules_query(
-            f"MATCH (c:Country)-[r:{rel}]->(d:{dest_label} {{name: $dest_name}}) DELETE r", 
+            f"MATCH (c:{validated_country})-[r:{validated_rel}]->(d:{validated_dest} {{name: $dest_name}}) DELETE r",
             params={"dest_name": mapping.source_id}
         )
         for target in mapping.target_ids:
             query = f"""
-            MATCH (c:Country {{name: $target_name}})
-            MATCH (d:{dest_label} {{name: $dest_name}})
-            MERGE (c)-[:{rel}]->(d)
+            MATCH (c:{validated_country} {{name: $target_name}})
+            MATCH (d:{validated_dest} {{name: $dest_name}})
+            MERGE (c)-[:{validated_rel}]->(d)
             """
             db.execute_rules_query(query, params={"dest_name": mapping.source_id, "target_name": target})
 
     elif mapping_type == "legal-entity":
         rel = "HAS_LEGAL_ENTITY"
         dest_label = "Country"
+
+        # Validate labels and relationships to prevent injection
+        try:
+            validated_dest = validate_label(dest_label)
+            validated_rel = validate_relationship(rel)
+            validated_legal = validate_label("LegalEntity")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid label or relationship: {e}")
+
         # source_id is the Country, target_ids are the Legal Entities
-        db.execute_rules_query(f"MERGE (d:{dest_label} {{name: $dest_name}})", params={"dest_name": mapping.source_id})
+        db.execute_rules_query(f"MERGE (d:{validated_dest} {{name: $dest_name}})", params={"dest_name": mapping.source_id})
         db.execute_rules_query(
-            f"MATCH (d:{dest_label} {{name: $dest_name}})-[r:{rel}]->(l:LegalEntity) DELETE r", 
+            f"MATCH (d:{validated_dest} {{name: $dest_name}})-[r:{validated_rel}]->(l:{validated_legal}) DELETE r",
             params={"dest_name": mapping.source_id}
         )
         for target in mapping.target_ids:
             query = f"""
-            MATCH (d:{dest_label} {{name: $dest_name}})
-            MERGE (l:LegalEntity {{name: $target_name}})
-            MERGE (d)-[:{rel}]->(l)
+            MATCH (d:{validated_dest} {{name: $dest_name}})
+            MERGE (l:{validated_legal} {{name: $target_name}})
+            MERGE (d)-[:{validated_rel}]->(l)
             """
             db.execute_rules_query(query, params={"dest_name": mapping.source_id, "target_name": target})
     else:
         raise HTTPException(status_code=400, detail="Unknown mapping type")
-        
+
     invalidate_cache()
     return {"status": "success"}
 

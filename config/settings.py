@@ -143,6 +143,22 @@ class AuthSettings(BaseSettings):
     ldap_bind_password: str = Field(default="", validation_alias="LDAP_BIND_PASSWORD")
     ldap_search_base: str = Field(default="DC=example,DC=com", validation_alias="LDAP_SEARCH_BASE")
 
+    # Local fallback authentication (for development only - use LDAP in production)
+    # To generate bcrypt hash: python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())"
+    enable_local_fallback: bool = Field(default=True, validation_alias="ENABLE_LOCAL_FALLBACK")
+    local_admin_username: str = Field(default="admin", validation_alias="LOCAL_ADMIN_USERNAME")
+    local_admin_password_hash: str = Field(
+        # Default hash for password "admin" - CHANGE THIS IN PRODUCTION
+        default="$2b$12$epKJX28HtYovqznAlr3C3eUo6lu0FBdcH4M8UA6Xldr9lLiRXOwv.",
+        validation_alias="LOCAL_ADMIN_PASSWORD_HASH"
+    )
+    local_user_username: str = Field(default="user", validation_alias="LOCAL_USER_USERNAME")
+    local_user_password_hash: str = Field(
+        # Default hash for password "user" - CHANGE THIS IN PRODUCTION
+        default="$2b$12$fPPf65y8hdT5Lx0fTqPim.MGtkXytBrlVmSHVwbXq0MoH.hhPJ/cK",
+        validation_alias="LOCAL_USER_PASSWORD_HASH"
+    )
+
 
 class PathSettings(BaseSettings):
     """File Path Configuration"""

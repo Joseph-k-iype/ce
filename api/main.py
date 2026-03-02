@@ -40,6 +40,8 @@ from api.routers import (
     rule_links,
     jobs,
     auth,
+    graphs,
+    data_sources,
 )
 from api.dependencies.auth import get_current_user, get_current_admin
 
@@ -78,6 +80,11 @@ async def lifespan(app: FastAPI):
     ai = get_ai_service()
     logger.info(f"AI service initialized (enabled={ai.is_enabled})")
 
+    # Initialize graph registry
+    from services.graph_registry import get_graph_registry
+    registry = get_graph_registry()
+    logger.info(f"Graph registry initialized with {len(registry.list_graphs())} graphs")
+
     backup = get_backup_service()
     backup.start_background_task()
     logger.info("Backup service initialized")
@@ -90,10 +97,24 @@ async def lifespan(app: FastAPI):
             r_cnt = rules_count[0].get("cnt", 0) if rules_count else 0
             c_cnt = country_count[0].get("cnt", 0) if country_count else 0
             logger.info(f"Graph validation: {r_cnt} rules, {c_cnt} countries loaded")
-            if r_cnt == 0:
-                logger.warning("No rules found in graph. Run 'python main.py --build-graph' to populate.")
-            if c_cnt == 0:
-                logger.warning("No countries found in graph. Run 'python main.py --build-graph' to populate.")
+
+            # Auto-build graph on first startup if empty
+            if r_cnt == 0 or c_cnt == 0:
+                logger.info("Graph is empty. Building graph automatically on first startup...")
+                try:
+                    from utils.graph_builder import build_rules_graph
+                    build_rules_graph(clear_existing=True)
+                    logger.info("RulesGraph build complete! Graph is now populated.")
+
+                    # Re-validate to confirm
+                    rules_count = db.execute_rules_query("MATCH (r:Rule) RETURN count(r) as cnt")
+                    country_count = db.execute_rules_query("MATCH (c:Country) RETURN count(c) as cnt")
+                    r_cnt = rules_count[0].get("cnt", 0) if rules_count else 0
+                    c_cnt = country_count[0].get("cnt", 0) if country_count else 0
+                    logger.info(f"Graph populated: {r_cnt} rules, {c_cnt} countries loaded")
+                except Exception as build_error:
+                    logger.error(f"Failed to auto-build graph: {build_error}")
+                    logger.warning("You can manually build the graph with: python main.py --build-graph")
         except Exception as e:
             logger.warning(f"Graph validation skipped: {e}")
 
@@ -137,10 +158,14 @@ app.include_router(rules_overview.router, dependencies=[Depends(get_current_user
 app.include_router(graph_data.router, dependencies=[Depends(get_current_admin)])
 app.include_router(wizard.router, dependencies=[Depends(get_current_admin)])
 app.include_router(sandbox.router, dependencies=[Depends(get_current_admin)])
-app.include_router(agent_events.router, dependencies=[Depends(get_current_admin)])
+# Note: agent_events SSE stream cannot use header-based auth (EventSource limitation)
+# Session validation is handled inside the endpoint
+app.include_router(agent_events.router)
 app.include_router(admin.router, dependencies=[Depends(get_current_admin)])
 app.include_router(rule_links.router, dependencies=[Depends(get_current_admin)])
 app.include_router(jobs.router, dependencies=[Depends(get_current_admin)])
+app.include_router(graphs.router, dependencies=[Depends(get_current_admin)])
+app.include_router(data_sources.router, dependencies=[Depends(get_current_admin)])
 
 # Serve React frontend static files
 frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"

@@ -11,7 +11,7 @@ allowing SSE events to stream in real-time.
 import asyncio
 import uuid
 import logging
-from typing import Dict
+from typing import Dict, List
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
@@ -24,6 +24,7 @@ from models.wizard_models import (
     WizardSessionStatus,
     RuleEditRequest,
     TermsEditRequest,
+    ConfigureGraphsRequest,
     WizardApprovalRequest,
     SavedSessionSummary,
 )
@@ -489,6 +490,7 @@ async def sandbox_evaluate(session_id: str, request: dict):
                 regulators=req_regulators,
                 authorities=req_authorities,
                 data_subjects=req_data_subjects,
+                additional_precedent_graphs=session.selected_graphs,
             )
             all_results.append(result)
 
@@ -762,4 +764,158 @@ async def get_trigger_logic(session_id: str) -> dict:
         },
         "attribute_keywords_count": len(rule_def.get("attribute_keywords") or []),
         "requires_pii": rule_def.get("requires_pii", False),
+    }
+
+
+def build_logic_tree_from_dimensions(session: WizardSessionState) -> dict:
+    """Convert AI-extracted entity dimensions to a logic tree format.
+
+    Creates an OR group with CONDITION nodes for each non-empty dimension.
+    This pre-populates the LogicTreeBuilder so users can visually edit the rule logic.
+
+    Returns:
+        Logic tree dict compatible with LogicTreeBuilder component
+    """
+    children = []
+
+    # Helper to add condition if values exist
+    def add_condition(dimension: str, values: list):
+        if values:
+            children.append({
+                "type": "CONDITION",
+                "dimension": dimension,
+                "value": ", ".join(values)
+            })
+
+    # Map session fields to dimension names (matching DIMENSION_CONFIGS)
+    add_condition("DataCategory", session.data_categories or [])
+    add_condition("Purpose", session.purposes_of_processing or [])
+
+    # Combine all process levels
+    all_processes = (session.process_l1 or []) + (session.process_l2 or []) + (session.process_l3 or [])
+    add_condition("Process", all_processes)
+
+    add_condition("GDC", session.group_data_categories or [])
+    add_condition("SensitiveDataCategory", session.sensitive_data_categories or [])
+    add_condition("Regulator", session.regulators or [])
+    add_condition("Authority", session.authorities or [])
+    add_condition("DataSubject", session.data_subjects or [])
+
+    # If no conditions, return empty AND group
+    if not children:
+        return {"type": "AND", "children": []}
+
+    # If only one condition, return it directly
+    if len(children) == 1:
+        return children[0]
+
+    # Multiple conditions: wrap in OR group (any dimension match triggers rule)
+    return {"type": "OR", "children": children}
+
+
+@router.get("/session/{session_id}/logic-tree")
+async def get_logic_tree(session_id: str) -> dict:
+    """Get the logic tree for visual editing in Step 4 Review.
+
+    Returns either the user-edited logic tree or generates one from AI-extracted dimensions.
+    """
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Return existing logic tree if already edited by user
+    if session.logic_tree:
+        return session.logic_tree
+
+    # Generate logic tree from AI-extracted dimensions
+    return build_logic_tree_from_dimensions(session)
+
+
+@router.put("/session/{session_id}/logic-tree")
+async def update_logic_tree(session_id: str, logic_tree: dict) -> dict:
+    """Update the logic tree in Step 4 Review.
+
+    User edits in LogicTreeBuilder component are saved here.
+    """
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session.logic_tree = logic_tree
+    session.updated_at = datetime.now().isoformat()
+
+    # Also update the rule definition if it exists
+    if session.edited_rule_definition:
+        session.edited_rule_definition["logic_tree"] = logic_tree
+
+    return {"status": "success", "logic_tree": logic_tree}
+
+
+@router.put("/session/{session_id}/configure-graphs")
+async def configure_graphs(session_id: str, request: ConfigureGraphsRequest) -> dict:
+    """Configure which graphs to query for precedent search during rule evaluation.
+
+    Args:
+        session_id: Wizard session ID
+        request: Configuration request with list of graph names
+
+    Returns:
+        Success status with selected graphs
+    """
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Validate that graphs exist
+    from services.graph_registry import get_graph_registry
+    registry = get_graph_registry()
+    invalid_graphs = []
+    for graph_name in request.graphs:
+        graph_meta = registry.get_graph(graph_name)
+        if not graph_meta:
+            invalid_graphs.append(graph_name)
+
+    if invalid_graphs:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid graphs: {', '.join(invalid_graphs)}"
+        )
+
+    session.selected_graphs = request.graphs
+    session.updated_at = datetime.now().isoformat()
+
+    logger.info(f"Session {session_id}: configured graphs for precedent search: {request.graphs}")
+    return {
+        "status": "success",
+        "selected_graphs": request.graphs,
+        "message": f"Configured {len(request.graphs)} graph(s) for precedent search"
+    }
+
+
+@router.get("/session/{session_id}/available-graphs")
+async def get_available_graphs(session_id: str) -> dict:
+    """Get list of available graphs that can be queried for precedent search.
+
+    Returns:
+        List of available graphs with metadata
+    """
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    from services.multi_graph_query import MultiGraphQuery
+    multi_query = MultiGraphQuery()
+    graphs = multi_query.list_available_graphs(enabled_only=True)
+
+    # Filter to only include graphs suitable for precedent search
+    # (exclude sandbox and rules graphs)
+    precedent_graphs = [
+        g for g in graphs
+        if g["graph_type"] in ["data_transfer", "external"]
+    ]
+
+    return {
+        "status": "success",
+        "available_graphs": precedent_graphs,
+        "current_selection": session.selected_graphs
     }

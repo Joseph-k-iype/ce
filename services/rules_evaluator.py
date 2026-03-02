@@ -160,14 +160,17 @@ class RulesEvaluator:
     """
     Graph-based rules evaluation engine.
     All rule matching is done via Cypher queries against the RulesGraph.
+    Supports multi-graph precedent search across configured graphs.
     """
 
-    def __init__(self, rules_graph=None):
+    def __init__(self, rules_graph=None, additional_precedent_graphs: Optional[List[str]] = None):
         self.db = get_db_service()
         self.cache = get_cache_service()
         self.attribute_detector = get_attribute_detector()
         self._rules_graph = rules_graph or self.db.get_rules_graph()
         self._templates = get_cypher_templates()
+        # Additional graphs to query for precedent cases (beyond DataTransferGraph)
+        self.additional_precedent_graphs = additional_precedent_graphs or []
 
     def _graph_query(self, query: str, params: dict = None) -> list:
         """Execute a Cypher query against the rules graph."""
@@ -1399,7 +1402,7 @@ class RulesEvaluator:
             matched_entities=matched_entities,
         )
 
-    # ─── Precedent case search (already graph-based on DataTransferGraph) ───
+    # ─── Precedent case search (multi-graph search across DataTransferGraph + external graphs) ───
 
     def _search_precedent_cases(
         self,
@@ -1493,6 +1496,37 @@ LIMIT 10"""
         except Exception as e:
             logger.warning(f"Error searching compliant cases: {e}")
             compliant_result = []
+
+        # Query additional precedent graphs (if configured)
+        if self.additional_precedent_graphs:
+            try:
+                from services.multi_graph_query import MultiGraphQuery
+                multi_query = MultiGraphQuery()
+
+                # Build queries for each additional graph
+                additional_queries = {}
+                for graph_name in self.additional_precedent_graphs:
+                    try:
+                        # Check if graph exists and is enabled
+                        from services.graph_registry import get_graph_registry
+                        registry = get_graph_registry()
+                        graph_meta = registry.get_graph(graph_name)
+                        if graph_meta and graph_meta.enabled:
+                            additional_queries[graph_name] = (compliant_query, params or {})
+                    except Exception:
+                        pass
+
+                if additional_queries:
+                    logger.info(f"Querying {len(additional_queries)} additional precedent graphs: {list(additional_queries.keys())}")
+                    additional_results = multi_query.multi_query(additional_queries)
+
+                    # Merge results from additional graphs
+                    for graph_name, rows in additional_results.items():
+                        if rows:
+                            logger.info(f"Found {len(rows)} precedent cases in {graph_name}")
+                            compliant_result.extend(rows)
+            except Exception as e:
+                logger.warning(f"Error querying additional precedent graphs: {e}")
 
         # Build case matches
         matching_cases = []

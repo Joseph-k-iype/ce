@@ -16,7 +16,8 @@ Models:
 """
 
 import re
-from typing import Optional, List, Dict, Any, Literal, Self
+from typing import Optional, List, Dict, Any, Literal
+from typing_extensions import Self
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from rules.dictionaries.country_groups import COUNTRY_GROUPS

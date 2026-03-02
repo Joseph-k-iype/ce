@@ -169,12 +169,13 @@ async def get_agent_stats():
 
 
 # Cache management
-@router.get("/api/cache/clear")
+@router.post("/api/cache/clear")
+@router.get("/api/cache/clear")  # Keep GET for backward compatibility
 async def clear_cache():
-    """Clear all caches."""
+    """Clear all caches (supports both POST and GET)."""
     cache = get_cache_service()
     cleared = cache.clear()
-    return {"message": f"Cleared {cleared} cache entries"}
+    return {"message": f"Cleared {cleared} cache entries", "count": cleared}
 
 
 @router.get("/api/cache/stats")

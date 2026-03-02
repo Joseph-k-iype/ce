@@ -106,10 +106,17 @@ class WizardSessionState(BaseModel):
     edited_rule_definition: Optional[Dict[str, Any]] = None
     edited_terms_dictionary: Optional[Dict[str, Any]] = None
     review_snapshot: Optional[Dict[str, Any]] = None
+    logic_tree: Optional[Dict[str, Any]] = None  # Visual logic tree from LogicTreeBuilder
 
     # Step 5: Sandbox
     sandbox_graph_name: Optional[str] = None
     sandbox_test_results: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # Multi-graph support: graphs to query for precedent cases
+    selected_graphs: List[str] = Field(
+        default_factory=lambda: ["DataTransferGraph"],
+        description="List of graphs to query for precedent search (default: DataTransferGraph)"
+    )
 
     # Step 6: Approval
     approved: bool = False
@@ -177,6 +184,11 @@ class RuleEditRequest(BaseModel):
 class TermsEditRequest(BaseModel):
     """Request to edit terms dictionary in step 4"""
     terms_dictionary: Dict[str, Any] = Field(..., description="Edited terms dictionary")
+
+
+class ConfigureGraphsRequest(BaseModel):
+    """Request to configure which graphs to query for precedent search"""
+    graphs: List[str] = Field(..., description="List of graph names to query (e.g., ['DataTransferGraph', 'ExternalGraph1'])")
 
 
 class SandboxEvaluationRequest(BaseModel):

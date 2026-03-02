@@ -1223,9 +1223,13 @@ async def create_node_type(
 
     save_schema(schema)
 
-    # Create FalkorDB index
+    # Create FalkorDB index (safe from injection)
     try:
-        db.execute_rules_query(f"CREATE INDEX FOR (n:{request.label}) ON (n.name)")
+        from utils.cypher_safety import build_create_index
+        query, params = build_create_index(request.label, "name")
+        db.execute_rules_query(query, params=params)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid label: {e}")
     except Exception as e:
         logger.warning(f"Index creation for {request.label} may have failed (might already exist): {e}")
 

@@ -4,19 +4,22 @@
 # Web Framework
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-starlette==0.41.2
+starlette>=0.37.2
 
 # Data Validation
-pydantic==2.9.2
+pydantic>=2.11.3
 pydantic-settings==2.5.2
 email-validator>=2.0.0
 
 # Database
 falkordb==1.0.9
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9  # PostgreSQL driver
+pymysql>=1.1.0  # MySQL driver
 
 # HTTP Client (for AI service)
 requests>=2.31.0
-httpx>=0.25.0
+httpx>=0.28.1
 
 # LangGraph for AI agent orchestration
 langgraph>=0.2.0
@@ -37,7 +40,7 @@ python-dotenv>=1.0.0
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 pytest-cov>=4.1.0
-httpx>=0.25.0
+httpx>=0.28.1
 
 # Linting/Formatting (optional)
 black>=23.0.0
@@ -46,3 +49,14 @@ flake8>=6.1.0
 
 # Type checking (optional)
 mypy>=1.5.0
+
+# Typing backports for Python 3.10 compatibility
+typing_extensions>=4.0.0
+
+# Data manipulation
+pandas>=2.0.0
+openpyxl>=3.1.0  # Required for pandas Excel export/import
+
+# JWT authentication
+python-jose[cryptography]>=3.3.0
+bcrypt>=4.0.0
