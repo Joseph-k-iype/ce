@@ -1,4 +1,4 @@
-const steps = ['Rule Input', 'AI Analysis', 'Metadata', 'Review', 'Sandbox Test', 'Approve'];
+const steps = ['Rule Input', 'AI Analysis', 'Metadata', 'Data Sources', 'Review', 'Sandbox Test', 'Approve'];
 
 export function WizardStepper({ currentStep }: { currentStep: number }) {
   return (

@@ -82,3 +82,53 @@ export async function updateLogicTree(sessionId: string, logicTree: LogicNode): 
   const { data } = await api.put(`/wizard/session/${sessionId}/logic-tree`, logicTree);
   return data;
 }
+
+// ===== Graph Selection Functions =====
+
+/**
+ * Get AI-suggested graphs for precedent search
+ */
+export async function getGraphSuggestions(sessionId: string): Promise<{
+  relevant_graphs: Array<{
+    graph_name: string;
+    relevance_score: number;
+    reasoning: string;
+    matched_entities: Record<string, string[]>;
+    sample_data: any[];
+    node_count: number;
+  }>;
+  confidence: number;
+  recommendation: string;
+}> {
+  const { data } = await api.get(`/wizard/session/${sessionId}/graph-suggestions`);
+  return data;
+}
+
+/**
+ * Get list of available graphs for precedent search
+ */
+export async function getAvailableGraphs(sessionId: string): Promise<{
+  available_graphs: Array<{
+    name: string;
+    graph_type: string;
+    description: string;
+    node_labels: string[];
+    relationship_types: string[];
+    enabled: boolean;
+  }>;
+  current_selection: string[];
+}> {
+  const { data } = await api.get(`/wizard/session/${sessionId}/available-graphs`);
+  return data;
+}
+
+/**
+ * Configure which graphs to query for precedent search
+ */
+export async function configureGraphs(sessionId: string, graphs: string[]): Promise<{
+  status: string;
+  selected_graphs: string[];
+}> {
+  const { data } = await api.put(`/wizard/session/${sessionId}/configure-graphs`, { graphs });
+  return data;
+}

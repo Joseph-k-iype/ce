@@ -136,6 +136,57 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
                 )
             # ─────────────────────────────────────────────────────────────────
 
+            # ── Graph Relevance Detection (AI-driven external graph suggestions) ──
+            # After entities are extracted, analyze which external graphs might be
+            # relevant for precedent search based on entity matches and rule text
+            try:
+                from services.graph_relevance_service import get_graph_relevance_service
+
+                relevance_service = get_graph_relevance_service()
+
+                # Collect all processes from L1/L2/L3
+                all_processes = list(set(
+                    (session.process_l1 or []) +
+                    (session.process_l2 or []) +
+                    (session.process_l3 or [])
+                ))
+
+                # Analyze graph relevance
+                graph_suggestions = await asyncio.to_thread(
+                    relevance_service.analyze_graph_relevance,
+                    rule_text=session.rule_text or "",
+                    extracted_entities={
+                        "data_categories": session.data_categories or [],
+                        "purposes": session.purposes_of_processing or [],
+                        "processes": all_processes,
+                        "regulators": session.regulators or [],
+                        "authorities": session.authorities or [],
+                        "sensitive_data_categories": session.sensitive_data_categories or [],
+                        "gdc": session.group_data_categories or [],
+                        "data_subjects": session.data_subjects or [],
+                    }
+                )
+
+                # Store suggestions in session
+                session.graph_suggestions = graph_suggestions
+
+                num_suggestions = len(graph_suggestions.get("relevant_graphs", []))
+                confidence = graph_suggestions.get("confidence", 0.0)
+                logger.info(
+                    f"Graph relevance analysis: {num_suggestions} graphs suggested "
+                    f"(confidence: {confidence:.2f})"
+                )
+
+            except Exception as e:
+                logger.warning(f"Graph relevance detection failed: {e}")
+                # Set empty suggestions on failure (non-critical)
+                session.graph_suggestions = {
+                    "relevant_graphs": [],
+                    "confidence": 0.0,
+                    "recommendation": "none"
+                }
+            # ─────────────────────────────────────────────────────────────────
+
             if result.dictionary_result and not session.edited_terms_dictionary:
                 session.edited_terms_dictionary = result.dictionary_result
             if session.valid_until and session.edited_rule_definition:
@@ -765,6 +816,70 @@ async def get_trigger_logic(session_id: str) -> dict:
         "attribute_keywords_count": len(rule_def.get("attribute_keywords") or []),
         "requires_pii": rule_def.get("requires_pii", False),
     }
+
+
+@router.get("/session/{session_id}/graph-suggestions")
+async def get_graph_suggestions(session_id: str) -> dict:
+    """Get AI-suggested graphs for precedent search.
+
+    Returns graphs ranked by relevance to the current rule based on:
+    - Entity matches (data categories, purposes, etc.)
+    - Keyword matches in rule text
+    - Schema compatibility
+    - Data freshness
+
+    Returns:
+        GraphSuggestionsResponse with relevant_graphs, confidence, and recommendation
+    """
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Return cached suggestions if available
+    if session.graph_suggestions:
+        return session.graph_suggestions
+
+    # Otherwise, trigger on-demand detection
+    try:
+        from services.graph_relevance_service import get_graph_relevance_service
+
+        relevance_service = get_graph_relevance_service()
+
+        # Collect all processes
+        all_processes = list(set(
+            (session.process_l1 or []) +
+            (session.process_l2 or []) +
+            (session.process_l3 or [])
+        ))
+
+        # Analyze graph relevance
+        graph_suggestions = relevance_service.analyze_graph_relevance(
+            rule_text=session.rule_text or "",
+            extracted_entities={
+                "data_categories": session.data_categories or [],
+                "purposes": session.purposes_of_processing or [],
+                "processes": all_processes,
+                "regulators": session.regulators or [],
+                "authorities": session.authorities or [],
+                "sensitive_data_categories": session.sensitive_data_categories or [],
+                "gdc": session.group_data_categories or [],
+                "data_subjects": session.data_subjects or [],
+            }
+        )
+
+        # Cache in session
+        session.graph_suggestions = graph_suggestions
+
+        return graph_suggestions
+
+    except Exception as e:
+        logger.error(f"Graph relevance detection failed: {e}")
+        # Return empty suggestions on error
+        return {
+            "relevant_graphs": [],
+            "confidence": 0.0,
+            "recommendation": "none"
+        }
 
 
 def build_logic_tree_from_dimensions(session: WizardSessionState) -> dict:

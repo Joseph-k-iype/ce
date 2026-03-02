@@ -114,6 +114,62 @@ async def get_graph_schema(name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/{name}/preview")
+async def preview_graph(name: str):
+    """Get preview data for a graph (schema + sample nodes).
+
+    Returns graph schema information along with up to 5 sample nodes
+    to help users understand the data before selecting the graph.
+
+    Args:
+        name: Graph name
+
+    Returns:
+        Dictionary with:
+            - graph_name: Name of the graph
+            - graph_type: Type of graph (rules, data_transfer, external, sandbox)
+            - node_labels: List of all node labels in the graph
+            - relationship_types: List of all relationship types
+            - sample_nodes: Up to 5 sample nodes from the graph
+            - description: Human-readable description
+            - node_count: Total number of nodes (from metadata)
+    """
+    try:
+        registry = get_graph_registry()
+        graph_meta = registry.get_graph(name)
+
+        if not graph_meta:
+            raise HTTPException(status_code=404, detail=f"Graph '{name}' not found")
+
+        # Query for sample nodes (up to 5)
+        multi_query = MultiGraphQuery()
+        sample_nodes = multi_query.query(
+            name,
+            "MATCH (n) RETURN n LIMIT 5",
+            {}
+        )
+
+        # Get node count from metadata if available
+        node_count = graph_meta.metadata.get("row_count", 0)
+
+        return {
+            "status": "success",
+            "graph_name": name,
+            "graph_type": graph_meta.graph_type,
+            "node_labels": list(graph_meta.node_labels),
+            "relationship_types": list(graph_meta.relationship_types),
+            "sample_nodes": sample_nodes,
+            "description": graph_meta.description,
+            "node_count": node_count
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to preview graph '{name}': {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/{name}/query")
 async def query_graph(name: str, request: GraphQueryRequest):
     """Execute Cypher query on specific graph.

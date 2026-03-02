@@ -8,6 +8,7 @@ import { AgentProgressPanel } from './shared/AgentProgressPanel';
 import { Step1RuleInput } from './steps/Step1RuleInput';
 import { Step2AIAnalysis } from './steps/Step2AIAnalysis';
 import { Step2Metadata } from './steps/Step2Metadata';
+import { Step3GraphSelection } from './steps/Step3GraphSelection';
 import { Step4Review } from './steps/Step4Review';
 import { Step5SandboxTest } from './steps/Step5SandboxTest';
 import { Step6Approve } from './steps/Step6Approve';
@@ -17,9 +18,10 @@ const stepComponents: Record<number, React.FC> = {
   1: Step1RuleInput,
   2: Step2AIAnalysis,
   3: Step2Metadata,
-  4: Step4Review,
-  5: Step5SandboxTest,
-  6: Step6Approve,
+  4: Step3GraphSelection,
+  5: Step4Review,
+  6: Step5SandboxTest,
+  7: Step6Approve,
 };
 
 export function WizardContainer() {
@@ -105,8 +107,8 @@ export function WizardContainer() {
         }
 
         if (state.agenticMode) {
-          console.log('[Wizard] Agentic mode: jumping to step 4 (Review)');
-          store.setStep(4);
+          console.log('[Wizard] Agentic mode: jumping to step 5 (Review)');
+          store.setStep(5);
         } else {
           console.log('[Wizard] Standard mode: advancing to step 3 (Metadata)');
           store.setStep(3);
@@ -139,12 +141,20 @@ export function WizardContainer() {
       }
 
       if (step === 4) {
+        // Step 4: Graph Selection (auto-saves graph selection in component)
         store.setStep(5);
         store.setProcessing(false);
         return;
       }
 
-      if (step === 5 && sessionId && !state.sandboxGraphName) {
+      if (step === 5) {
+        // Step 5: Review
+        store.setStep(6);
+        store.setProcessing(false);
+        return;
+      }
+
+      if (step === 6 && sessionId && !state.sandboxGraphName) {
         try {
           const result = await loadSandbox(sessionId);
           store.setSandboxGraphName(result.sandbox_graph);
@@ -163,13 +173,13 @@ export function WizardContainer() {
         return;
       }
 
-      if (step === 5 && state.sandboxGraphName) {
-        store.setStep(6);
+      if (step === 6 && state.sandboxGraphName) {
+        store.setStep(7);
         store.setProcessing(false);
         return;
       }
 
-      if (step === 6 && sessionId) {
+      if (step === 7 && sessionId) {
         await approveWizard(sessionId);
         store.setApproved(true);
         store.setProcessing(false);
@@ -180,7 +190,7 @@ export function WizardContainer() {
         return;
       }
 
-      if (step < 6) {
+      if (step < 7) {
         store.setStep(step + 1);
       }
     } catch (err: any) {
@@ -258,9 +268,10 @@ export function WizardContainer() {
       case 1: return !!store.originCountry && store.ruleText.length > 10;
       case 2: return !store.isProcessing && (!!store.analysisResult || !!store.proposal);
       case 3: return true;
-      case 4: return !!store.editedRuleDefinition;
+      case 4: return true; // Graph selection (optional step)
       case 5: return !!store.editedRuleDefinition;
-      case 6: return true;
+      case 6: return !!store.editedRuleDefinition;
+      case 7: return true;
       default: return false;
     }
   }, [store]);
@@ -269,20 +280,20 @@ export function WizardContainer() {
     const step = store.currentStep;
     if (step === 1) return store.agenticMode ? 'Generate Policy' : 'Analyze Rule';
     if (step === 2) return store.isProcessing ? 'Processing...' : (store.agenticMode ? 'Review Proposal' : 'Configure Metadata');
-    if (step === 5 && !store.sandboxGraphName) return 'Load Sandbox';
-    if (step === 6) return 'Approve & Load';
+    if (step === 6 && !store.sandboxGraphName) return 'Load Sandbox';
+    if (step === 7) return 'Approve & Load';
     return 'Next';
   };
 
   const handleBack = () => {
     if (store.currentStep > 1) {
       store.setError(null);
-      if (store.currentStep >= 5) {
+      if (store.currentStep >= 6) {
         if (store.sandboxGraphName) store.setSandboxGraphName(null);
         store.clearSandboxTestResults();
       }
 
-      if (store.agenticMode && store.currentStep === 4) {
+      if (store.agenticMode && store.currentStep === 5) {
         store.setStep(2);
       } else {
         store.setStep(store.currentStep - 1);

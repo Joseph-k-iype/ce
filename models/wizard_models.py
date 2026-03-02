@@ -129,6 +129,16 @@ class WizardSessionState(BaseModel):
     # Saved state
     saved_session_id: Optional[str] = None
 
+    # Graph relevance suggestions (AI-driven external graph detection)
+    graph_suggestions: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="AI-suggested graphs for precedent search with relevance scores"
+    )
+    graph_selection_method: Optional[str] = Field(
+        default=None,
+        description="How graphs were selected: 'ai_suggested' | 'manual'"
+    )
+
 
 class WizardSessionResponse(BaseModel):
     """Response for getting wizard session state"""
@@ -189,6 +199,32 @@ class TermsEditRequest(BaseModel):
 class ConfigureGraphsRequest(BaseModel):
     """Request to configure which graphs to query for precedent search"""
     graphs: List[str] = Field(..., description="List of graph names to query (e.g., ['DataTransferGraph', 'ExternalGraph1'])")
+
+
+class GraphSuggestion(BaseModel):
+    """Suggestion for a relevant graph with scoring details"""
+    graph_name: str = Field(..., description="Name of the suggested graph")
+    relevance_score: float = Field(..., ge=0.0, le=1.0, description="Relevance score from 0.0 to 1.0")
+    reasoning: str = Field(..., description="Human-readable explanation of why this graph is relevant")
+    matched_entities: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Entities from rule that match graph data (e.g., {'data_categories': ['Health Data']})"
+    )
+    sample_data: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Sample nodes from the graph (max 3-5)"
+    )
+    node_count: int = Field(default=0, description="Total number of nodes in the graph")
+
+
+class GraphSuggestionsResponse(BaseModel):
+    """Response containing AI-suggested graphs for precedent search"""
+    relevant_graphs: List[GraphSuggestion] = Field(
+        default_factory=list,
+        description="List of suggested graphs ranked by relevance"
+    )
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Overall confidence in suggestions (0.0-1.0)")
+    recommendation: str = Field(..., description="Recommendation level: 'high' | 'medium' | 'low' | 'none'")
 
 
 class SandboxEvaluationRequest(BaseModel):

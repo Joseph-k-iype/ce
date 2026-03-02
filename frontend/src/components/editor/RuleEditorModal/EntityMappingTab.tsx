@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import Select from 'react-select';
 import type { RuleFormData } from './types';
 import type { DropdownDataResponse } from '../../shared/LogicTreeBuilder/types';
+import { reactSelectStyles, reactSelectTheme } from '../../../styles/reactSelectTheme';
 
 interface EntityMappingTabProps {
   formData: RuleFormData;
@@ -65,16 +66,6 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
     [dropdownData]
   );
 
-  const selectStyles = {
-    control: (base: any, state: any) => ({
-      ...base,
-      minHeight: '38px',
-      borderColor: state.isFocused ? '#9333ea' : '#d1d5db',
-      '&:hover': { borderColor: '#9333ea' },
-      boxShadow: state.isFocused ? '0 0 0 1px #9333ea' : 'none',
-    }),
-  };
-
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -87,144 +78,176 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
 
       {/* Data Categories */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="entity-data-categories" className="block text-sm font-medium text-gray-700 mb-2">
           Data Categories
         </label>
         <Select
           isMulti
+          inputId="entity-data-categories"
           options={dataCategoryOptions}
           value={formData.data_categories.map(dc => ({ value: dc, label: dc }))}
           onChange={selected => onChange({ data_categories: (selected || []).map(s => s.value) })}
           placeholder="Select data categories..."
-          styles={selectStyles}
+          styles={reactSelectStyles}
+          theme={reactSelectTheme}
+          aria-label="Data categories"
+          aria-describedby="data-categories-help"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p id="data-categories-help" className="mt-1 text-xs text-gray-500">
           Link to data category nodes (e.g., Health Data, Financial Data)
         </p>
       </div>
 
       {/* Purposes */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="entity-purposes" className="block text-sm font-medium text-gray-700 mb-2">
           Purposes
         </label>
         <Select
           isMulti
+          inputId="entity-purposes"
           options={purposeOptions}
           value={formData.purposes.map(p => ({ value: p, label: p }))}
           onChange={selected => onChange({ purposes: (selected || []).map(s => s.value) })}
           placeholder="Select purposes..."
-          styles={selectStyles}
+          styles={reactSelectStyles}
+          theme={reactSelectTheme}
+          aria-label="Purposes"
+          aria-describedby="purposes-help"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p id="purposes-help" className="mt-1 text-xs text-gray-500">
           Link to purpose nodes (e.g., Marketing, Analytics)
         </p>
       </div>
 
       {/* Processes */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="entity-processes" className="block text-sm font-medium text-gray-700 mb-2">
           Processes
         </label>
         <Select
           isMulti
+          inputId="entity-processes"
           options={processOptions}
           value={formData.processes.map(p => ({ value: p, label: p }))}
           onChange={selected => onChange({ processes: (selected || []).map(s => s.value) })}
           placeholder="Select processes..."
-          styles={selectStyles}
+          styles={reactSelectStyles}
+          theme={reactSelectTheme}
+          aria-label="Processes"
+          aria-describedby="processes-help"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p id="processes-help" className="mt-1 text-xs text-gray-500">
           Link to process nodes (L1, L2, L3)
         </p>
       </div>
 
       {/* Regulators */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="entity-regulators" className="block text-sm font-medium text-gray-700 mb-2">
           Regulators
         </label>
         <Select
           isMulti
+          inputId="entity-regulators"
           options={regulatorOptions}
           value={formData.regulators.map(r => ({ value: r, label: r }))}
           onChange={selected => onChange({ regulators: (selected || []).map(s => s.value) })}
           placeholder="Select regulators..."
-          styles={selectStyles}
+          styles={reactSelectStyles}
+          theme={reactSelectTheme}
+          aria-label="Regulators"
+          aria-describedby="regulators-help"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p id="regulators-help" className="mt-1 text-xs text-gray-500">
           Link to regulator nodes (e.g., ICO, CNIL)
         </p>
       </div>
 
       {/* Authorities */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="entity-authorities" className="block text-sm font-medium text-gray-700 mb-2">
           Authorities
         </label>
         <Select
           isMulti
+          inputId="entity-authorities"
           options={authorityOptions}
           value={formData.authorities.map(a => ({ value: a, label: a }))}
           onChange={selected => onChange({ authorities: (selected || []).map(s => s.value) })}
           placeholder="Select authorities..."
-          styles={selectStyles}
+          styles={reactSelectStyles}
+          theme={reactSelectTheme}
+          aria-label="Authorities"
+          aria-describedby="authorities-help"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p id="authorities-help" className="mt-1 text-xs text-gray-500">
           Link to authority nodes
         </p>
       </div>
 
       {/* Data Subjects */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="entity-data-subjects" className="block text-sm font-medium text-gray-700 mb-2">
           Data Subjects
         </label>
         <Select
           isMulti
+          inputId="entity-data-subjects"
           options={dataSubjectOptions}
           value={formData.data_subjects.map(ds => ({ value: ds, label: ds }))}
           onChange={selected => onChange({ data_subjects: (selected || []).map(s => s.value) })}
           placeholder="Select data subjects..."
-          styles={selectStyles}
+          styles={reactSelectStyles}
+          theme={reactSelectTheme}
+          aria-label="Data subjects"
+          aria-describedby="data-subjects-help"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p id="data-subjects-help" className="mt-1 text-xs text-gray-500">
           Link to data subject nodes (e.g., Employee, Customer)
         </p>
       </div>
 
       {/* GDC */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="entity-gdc" className="block text-sm font-medium text-gray-700 mb-2">
           Global Data Categories (GDC)
         </label>
         <Select
           isMulti
+          inputId="entity-gdc"
           options={gdcOptions}
           value={formData.gdc.map(g => ({ value: g, label: g }))}
           onChange={selected => onChange({ gdc: (selected || []).map(s => s.value) })}
           placeholder="Select GDC..."
-          styles={selectStyles}
+          styles={reactSelectStyles}
+          theme={reactSelectTheme}
+          aria-label="Global Data Categories"
+          aria-describedby="gdc-help"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p id="gdc-help" className="mt-1 text-xs text-gray-500">
           Link to global data category nodes
         </p>
       </div>
 
       {/* Sensitive Data Categories */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="entity-sensitive" className="block text-sm font-medium text-gray-700 mb-2">
           Sensitive Data Categories
         </label>
         <Select
           isMulti
+          inputId="entity-sensitive"
           options={sensitiveDataOptions}
           value={formData.sensitive_data_categories.map(sdc => ({ value: sdc, label: sdc }))}
           onChange={selected => onChange({ sensitive_data_categories: (selected || []).map(s => s.value) })}
           placeholder="Select sensitive data categories..."
-          styles={selectStyles}
+          styles={reactSelectStyles}
+          theme={reactSelectTheme}
+          aria-label="Sensitive Data Categories"
+          aria-describedby="sensitive-help"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p id="sensitive-help" className="mt-1 text-xs text-gray-500">
           Link to sensitive data category nodes (e.g., Biometric, Genetic)
         </p>
       </div>
