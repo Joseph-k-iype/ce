@@ -65,8 +65,19 @@ class MultiGraphQuery:
                 # Fallback: generate column names
                 columns = [f"col{i}" for i in range(len(result.result_set[0]))]
 
+            def _serialize(val):
+                if hasattr(val, 'labels') and hasattr(val, 'properties'):
+                    return {"labels": list(val.labels) if val.labels else [], "properties": val.properties or {}}
+                if hasattr(val, 'relation') and hasattr(val, 'properties'):
+                    return {"type": getattr(val, 'relation', ''), "properties": getattr(val, 'properties', {})}
+                if isinstance(val, list):
+                    return [_serialize(v) for v in val]
+                if isinstance(val, dict):
+                    return {k: _serialize(v) for k, v in val.items()}
+                return val
+
             return [
-                dict(zip(columns, row))
+                {k: _serialize(v) for k, v in zip(columns, row)}
                 for row in result.result_set
             ]
 

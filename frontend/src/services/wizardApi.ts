@@ -86,6 +86,35 @@ export async function updateLogicTree(sessionId: string, logicTree: LogicNode): 
 // ===== Graph Selection Functions =====
 
 /**
+ * Get a preview of a graph's schema and sample data.
+ * Uses the authenticated axios instance to include JWT token.
+ */
+export async function getGraphPreview(graphName: string): Promise<{
+  graph_name: string;
+  graph_type: string;
+  node_labels: string[];
+  relationship_types: string[];
+  sample_nodes: any[];
+  description: string;
+  node_count: number;
+}> {
+  const { data } = await api.get(`/graphs/${encodeURIComponent(graphName)}/preview`);
+  return data;
+}
+
+/**
+ * Get entity values from selected graphs for use in the logic builder.
+ */
+export async function getGraphEntities(sessionId: string): Promise<{
+  dimension_options: Record<string, string[]>;
+}> {
+  const { data } = await api.get(`/wizard/session/${sessionId}/graph-entities`);
+  return data;
+}
+
+
+
+/**
  * Get AI-suggested graphs for precedent search
  */
 export async function getGraphSuggestions(sessionId: string): Promise<{

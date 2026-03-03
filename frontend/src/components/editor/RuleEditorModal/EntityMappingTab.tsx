@@ -86,7 +86,7 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
           inputId="entity-data-categories"
           options={dataCategoryOptions}
           value={formData.data_categories.map(dc => ({ value: dc, label: dc }))}
-          onChange={selected => onChange({ data_categories: (selected || []).map(s => s.value) })}
+          onChange={selected => onChange({ data_categories: (selected || []).map((s: any) => s.value) })}
           placeholder="Select data categories..."
           styles={reactSelectStyles}
           theme={reactSelectTheme}
@@ -108,7 +108,7 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
           inputId="entity-purposes"
           options={purposeOptions}
           value={formData.purposes.map(p => ({ value: p, label: p }))}
-          onChange={selected => onChange({ purposes: (selected || []).map(s => s.value) })}
+          onChange={selected => onChange({ purposes: (selected || []).map((s: any) => s.value) })}
           placeholder="Select purposes..."
           styles={reactSelectStyles}
           theme={reactSelectTheme}
@@ -130,7 +130,7 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
           inputId="entity-processes"
           options={processOptions}
           value={formData.processes.map(p => ({ value: p, label: p }))}
-          onChange={selected => onChange({ processes: (selected || []).map(s => s.value) })}
+          onChange={selected => onChange({ processes: (selected || []).map((s: any) => s.value) })}
           placeholder="Select processes..."
           styles={reactSelectStyles}
           theme={reactSelectTheme}
@@ -152,7 +152,7 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
           inputId="entity-regulators"
           options={regulatorOptions}
           value={formData.regulators.map(r => ({ value: r, label: r }))}
-          onChange={selected => onChange({ regulators: (selected || []).map(s => s.value) })}
+          onChange={selected => onChange({ regulators: (selected || []).map((s: any) => s.value) })}
           placeholder="Select regulators..."
           styles={reactSelectStyles}
           theme={reactSelectTheme}
@@ -174,7 +174,7 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
           inputId="entity-authorities"
           options={authorityOptions}
           value={formData.authorities.map(a => ({ value: a, label: a }))}
-          onChange={selected => onChange({ authorities: (selected || []).map(s => s.value) })}
+          onChange={selected => onChange({ authorities: (selected || []).map((s: any) => s.value) })}
           placeholder="Select authorities..."
           styles={reactSelectStyles}
           theme={reactSelectTheme}
@@ -196,7 +196,7 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
           inputId="entity-data-subjects"
           options={dataSubjectOptions}
           value={formData.data_subjects.map(ds => ({ value: ds, label: ds }))}
-          onChange={selected => onChange({ data_subjects: (selected || []).map(s => s.value) })}
+          onChange={selected => onChange({ data_subjects: (selected || []).map((s: any) => s.value) })}
           placeholder="Select data subjects..."
           styles={reactSelectStyles}
           theme={reactSelectTheme}
@@ -218,7 +218,7 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
           inputId="entity-gdc"
           options={gdcOptions}
           value={formData.gdc.map(g => ({ value: g, label: g }))}
-          onChange={selected => onChange({ gdc: (selected || []).map(s => s.value) })}
+          onChange={selected => onChange({ gdc: (selected || []).map((s: any) => s.value) })}
           placeholder="Select GDC..."
           styles={reactSelectStyles}
           theme={reactSelectTheme}
@@ -240,7 +240,7 @@ export function EntityMappingTab({ formData, onChange, dropdownData }: EntityMap
           inputId="entity-sensitive"
           options={sensitiveDataOptions}
           value={formData.sensitive_data_categories.map(sdc => ({ value: sdc, label: sdc }))}
-          onChange={selected => onChange({ sensitive_data_categories: (selected || []).map(s => s.value) })}
+          onChange={selected => onChange({ sensitive_data_categories: (selected || []).map((s: any) => s.value) })}
           placeholder="Select sensitive data categories..."
           styles={reactSelectStyles}
           theme={reactSelectTheme}

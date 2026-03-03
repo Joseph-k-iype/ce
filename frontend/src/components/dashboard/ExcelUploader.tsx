@@ -25,9 +25,24 @@ interface ParsedRule {
     linked_attributes?: string[];
 }
 
+/** Download a file from an authenticated endpoint by fetching as a blob. */
+async function downloadAuthenticatedFile(url: string, filename: string) {
+    const res = await api.get(url, { responseType: 'blob' });
+    const blobUrl = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(blobUrl);
+}
+
 export function ExcelUploader() {
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+    const [downloadingExport, setDownloadingExport] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [parsedRules, setParsedRules] = useState<ParsedRule[]>([]);
     const [success, setSuccess] = useState(false);
@@ -54,7 +69,8 @@ export function ExcelUploader() {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            setParsedRules(res.data.rules);
+            // parse-excel returns {rules, upserted, parsed, total}
+            setParsedRules(res.data.rules || []);
         } catch (err: any) {
             setError(err.response?.data?.detail || err.message || 'Failed to parse file');
         } finally {
@@ -120,16 +136,36 @@ export function ExcelUploader() {
                     <span className="text-gray-300 font-light mx-2">|</span>
 
                     <button
-                        onClick={() => window.open('/api/admin/rules/template', '_blank')}
-                        className="px-6 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-100 border border-purple-100 shadow-sm"
+                        onClick={async () => {
+                            setDownloadingTemplate(true);
+                            try {
+                                await downloadAuthenticatedFile('/admin/rules/template', 'rules_template.xlsx');
+                            } catch {
+                                setError('Failed to download template');
+                            } finally {
+                                setDownloadingTemplate(false);
+                            }
+                        }}
+                        disabled={downloadingTemplate}
+                        className="px-6 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-100 border border-purple-100 shadow-sm disabled:opacity-50"
                     >
-                        Download Template
+                        {downloadingTemplate ? 'Downloading…' : 'Download Template'}
                     </button>
                     <button
-                        onClick={() => window.open('/api/admin/rules/export', '_blank')}
-                        className="px-6 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 border border-gray-200 shadow-sm"
+                        onClick={async () => {
+                            setDownloadingExport(true);
+                            try {
+                                await downloadAuthenticatedFile('/admin/rules/export', 'rules_export.xlsx');
+                            } catch {
+                                setError('Failed to export rules');
+                            } finally {
+                                setDownloadingExport(false);
+                            }
+                        }}
+                        disabled={downloadingExport}
+                        className="px-6 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 border border-gray-200 shadow-sm disabled:opacity-50"
                     >
-                        Export Rules
+                        {downloadingExport ? 'Exporting…' : 'Export Rules'}
                     </button>
                 </div>
                 {error && <p className="mt-3 text-sm text-red-600 font-medium">{error}</p>}

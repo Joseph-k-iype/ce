@@ -99,6 +99,7 @@ export function Step2Metadata() {
       <div className="card-dark p-5 space-y-5">
         {/* Data Categories — multiselect with AI pre-fill */}
         <AccessibleSelect
+          variant="dark"
           id="metadata-data-categories"
           label={`Data Categories ${dataCategories.length > 0 && editedRuleDefinition ? '(AI suggested)' : ''}`}
           value={dataCategories}
@@ -114,6 +115,7 @@ export function Step2Metadata() {
 
         {/* Purpose of Processing */}
         <AccessibleSelect
+          variant="dark"
           id="metadata-purposes"
           label={`Purpose of Processing ${purposesOfProcessing.length > 0 && editedRuleDefinition ? '(AI suggested)' : ''}`}
           value={purposesOfProcessing}
@@ -129,6 +131,7 @@ export function Step2Metadata() {
         {/* Processes L1, L2, L3 */}
         <div className="grid grid-cols-3 gap-4">
           <AccessibleSelect
+          variant="dark"
             id="metadata-process-l1"
             label={`Process L1 ${processL1.length > 0 && editedRuleDefinition ? '(AI)' : ''}`}
             value={processL1}
@@ -138,6 +141,7 @@ export function Step2Metadata() {
             placeholder="Select L1..."
           />
           <AccessibleSelect
+          variant="dark"
             id="metadata-process-l2"
             label={`Process L2 ${processL2.length > 0 && editedRuleDefinition ? '(AI)' : ''}`}
             value={processL2}
@@ -147,6 +151,7 @@ export function Step2Metadata() {
             placeholder="Select L2..."
           />
           <AccessibleSelect
+          variant="dark"
             id="metadata-process-l3"
             label={`Process L3 ${processL3.length > 0 && editedRuleDefinition ? '(AI)' : ''}`}
             value={processL3}
@@ -159,6 +164,7 @@ export function Step2Metadata() {
 
         {/* Group Data Categories (GDC) — multiselect */}
         <AccessibleSelect
+          variant="dark"
           id="metadata-gdc"
           label={`Group Data Categories ${groupDataCategories.length > 0 && editedRuleDefinition ? '(AI suggested)' : ''}`}
           value={groupDataCategories}
@@ -173,6 +179,7 @@ export function Step2Metadata() {
 
         {/* Sensitive Data Categories — AI-suggested, user-confirmable */}
         <AccessibleSelect
+          variant="dark"
           id="metadata-sensitive"
           label="Sensitive Data Categories (AI suggested)"
           value={sensitiveDataCategories}
@@ -188,6 +195,7 @@ export function Step2Metadata() {
         {/* Regulator & Authority — AI-suggested, user-confirmable */}
         <div className="grid grid-cols-2 gap-4">
           <AccessibleSelect
+          variant="dark"
             id="metadata-regulators"
             label="Regulator (AI suggested)"
             value={regulators}
@@ -200,6 +208,7 @@ export function Step2Metadata() {
             placeholder="Select regulators..."
           />
           <AccessibleSelect
+          variant="dark"
             id="metadata-authorities"
             label="Authority (AI suggested)"
             value={authorities}
@@ -215,6 +224,7 @@ export function Step2Metadata() {
 
         {/* Data Subjects — AI-suggested */}
         <AccessibleSelect
+          variant="dark"
           id="metadata-data-subjects"
           label="Data Subjects (AI suggested)"
           value={dataSubjects}

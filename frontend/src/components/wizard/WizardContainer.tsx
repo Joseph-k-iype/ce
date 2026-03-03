@@ -75,11 +75,11 @@ export function WizardContainer() {
         // Race condition fix: retry fetching session results if results are missing
         let session = await getWizardSession(sessionId);
         let retries = 0;
-        const maxRetries = 5;
+        const maxRetries = 15;
 
         while (session.status !== 'failed' && !session.analysis_result && retries < maxRetries) {
           console.log(`[Wizard] Results not ready (attempt ${retries + 1}/${maxRetries}), waiting...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 + (retries * 500)));
+          await new Promise(resolve => setTimeout(resolve, 3000));
           session = await getWizardSession(sessionId);
           retries++;
         }

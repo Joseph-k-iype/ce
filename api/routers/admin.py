@@ -219,8 +219,8 @@ class DictionaryEntryCreate(BaseModel):
 @router.post("/rules/create")
 async def create_rule(db=Depends(get_db)):
     """Create a new blank rule in the graph with a generated ID."""
-    rule_id = f"RULE_CUSTOM_{uuid.uuid4().hex[:8].upper()}"
-    
+    rule_id = str(uuid.uuid4())
+
     query = """
     MERGE (r:Rule {rule_id: $rule_id})
     SET r.name = "New Custom Rule",
@@ -277,17 +277,17 @@ async def list_rules(db=Depends(get_db)):
 
 @router.get("/rules/template")
 async def download_template():
-    """Download an empty Excel rules template."""
-    columns = [
-        "Rule ID", "Rule Name", "Description", "Priority", "Outcome", "Rule Type",
-        "Origin Countries", "Receiving Countries", "Required Actions", "Required Assessments",
-        "Regulators", "Data Categories", "Purposes", "Processes", "Data Subjects", "Authorities",
-        "Valid Until", "Requires PII"
-    ]
-    df = pd.DataFrame(columns=columns)
+    """Download an empty Excel rules template (2-sheet graph format)."""
+    nodes_df = pd.DataFrame(columns=[
+        "id", "name", "attribute"
+    ])
+    rels_df = pd.DataFrame(columns=[
+        "source_id", "target_id"
+    ])
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
+        nodes_df.to_excel(writer, sheet_name="Nodes", index=False)
+        rels_df.to_excel(writer, sheet_name="Relationships", index=False)
     buffer.seek(0)
     return StreamingResponse(
         buffer,
@@ -298,30 +298,59 @@ async def download_template():
 
 @router.get("/rules/export")
 async def export_rules(db=Depends(get_db)):
-    """Export all rules to an Excel file."""
+    """Export all rules to an Excel file in generic 2-sheet graph format (Nodes + Relationships)."""
     results = await list_rules(db)
-    rows = []
+    import json
+
+    # Sheet 1: Rule nodes
+    node_rows = []
     for r in results:
-        rows.append({
-            "Rule ID": r.get("rule_id", ""),
-            "Rule Name": r.get("name", ""),
-            "Description": r.get("description", ""),
-            "Priority": r.get("priority", "medium"),
-            "Outcome": r.get("outcome", "permission"),
-            "Rule Type": r.get("rule_type", "case_matching"),
-            "Origin Countries": ",".join(r.get("origin_scopes") or []),
-            "Receiving Countries": ",".join(r.get("receiving_scopes") or []),
-            "Required Actions": ",".join(r.get("required_actions") or []),
-            "Required Assessments": ",".join(r.get("required_assessments") or []),
-            "Attributes": ",".join(r.get("linked_attributes") or []),
-            "Valid Until": r.get("valid_until", ""),
-            "Requires PII": "TRUE" if r.get("requires_pii") else "FALSE",
-            "Logic Tree JSON": r.get("logic_tree", "")
+        dynamic_attrs = {
+            "description": r.get("description", ""),
+            "outcome": r.get("outcome", "permission"),
+            "priority": r.get("priority", "medium"),
+            "requires_pii": r.get("requires_pii", False),
+            "valid_until": r.get("valid_until", ""),
+            "logic_tree": r.get("logic_tree", ""),
+            "rule_type": r.get("rule_type", "case_matching")
+        }
+        node_rows.append({
+            "id": r.get("rule_id", ""),
+            "name": r.get("name", ""),
+            "attribute": json.dumps(dynamic_attrs)
         })
-    df = pd.DataFrame(rows)
+    nodes_df = pd.DataFrame(node_rows)
+
+    # Sheet 2: Relationships (origin countries, receiving countries, attributes)
+    rel_rows = []
+    for r in results:
+        rule_id = r.get("rule_id", "")
+        for country in (r.get("origin_scopes") or []):
+            if country:
+                rel_rows.append({"source_id": rule_id, "relationship_type": "TRIGGERED_BY_ORIGIN", "target_id": country})
+        for country in (r.get("receiving_scopes") or []):
+            if country:
+                rel_rows.append({"source_id": rule_id, "relationship_type": "TRIGGERED_BY_RECEIVING", "target_id": country})
+        for attr in (r.get("linked_attributes") or []):
+            if attr:
+                rel_rows.append({"source_id": rule_id, "relationship_type": "HAS_ATTRIBUTE", "target_id": attr})
+        for assessment in (r.get("required_assessments") or []):
+            if assessment:
+                rel_rows.append({"source_id": rule_id, "relationship_type": "REQUIRES_ASSESSMENT", "target_id": assessment})
+        for action in (r.get("required_actions") or []):
+            if action:
+                rel_rows.append({"source_id": rule_id, "relationship_type": "REQUIRES_ACTION", "target_id": action})
+    
+    # Optionally drop relationship_type if strict export is needed, but retaining it prevents data loss.
+    # We will keep it but as a trailing column so it matches `source_id, target_id` expectations.
+    rels_df = pd.DataFrame(rel_rows) if rel_rows else pd.DataFrame(
+        columns=["source_id", "target_id", "relationship_type"]
+    )
+
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
+        nodes_df.to_excel(writer, sheet_name="Nodes", index=False)
+        rels_df.to_excel(writer, sheet_name="Relationships", index=False)
     buffer.seek(0)
     return StreamingResponse(
         buffer,
@@ -513,7 +542,7 @@ async def create_rule_full(request: RuleUpdate, db=Depends(get_db)):
     import json
 
     # Generate new rule ID
-    rule_id = f"RULE_CUSTOM_{uuid.uuid4().hex[:8].upper()}"
+    rule_id = str(uuid.uuid4())
 
     # Build rule properties
     rule_props = {
@@ -692,99 +721,227 @@ async def bulk_create_rules(rules: List[RuleCreate], db=Depends(get_db)):
 
 
 @router.post("/rules/parse-excel")
-async def parse_excel(file: UploadFile = File(...)):
-    """Parse a flexible Excel rules template and generate structural Logic Trees for UI review."""
+async def parse_excel(file: UploadFile = File(...), db=Depends(get_db)):
+    """Parse an Excel rules file in 2-sheet graph format and upsert rules by ID.
+
+    Accepts both the new 2-sheet format (Nodes + Relationships sheets) and the
+    legacy single-sheet format for backward compatibility.
+    """
+    import json as _json
     if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
         raise HTTPException(400, "File must be an Excel or CSV file")
-        
+
     try:
         content = await file.read()
+
+        # Detect format: try to load as 2-sheet Excel
+        nodes_df = None
+        rels_df = None
+        legacy_df = None
+
         if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(content))
+            legacy_df = pd.read_csv(io.BytesIO(content))
         else:
-            df = pd.read_excel(io.BytesIO(content))
-            
-        # Clean col names
-        df.columns = [str(c).strip().lower() for c in df.columns]
-        
+            xf = pd.ExcelFile(io.BytesIO(content))
+            sheet_names_lower = [s.lower() for s in xf.sheet_names]
+            if 'nodes' in sheet_names_lower:
+                nodes_df = xf.parse(xf.sheet_names[sheet_names_lower.index('nodes')])
+                if 'relationships' in sheet_names_lower:
+                    rels_df = xf.parse(xf.sheet_names[sheet_names_lower.index('relationships')])
+            else:
+                legacy_df = xf.parse(xf.sheet_names[0])
+
+        upserted = 0
+        created = 0
         parsed_rules = []
-        for idx, row in df.iterrows():
-            def val(col_names):
-                for c in col_names:
-                    if c in df.columns:
-                        v = row[c]
-                        if pd.isna(v): return ""
-                        return str(v).strip()
-                return ""
-            
-            rule_id = val(['rule id', 'rule_id', 'id']) or f"RULE_{uuid.uuid4().hex[:8].upper()}"
-            name = val(['rule name', 'name', 'title']) or f"Imported Rule {idx+1}"
-            desc = val(['description', 'desc', 'summary'])
-            r_type = val(['rule type', 'type']) or 'attribute'
-            outcome = val(['outcome', 'action']).lower() or 'permission'
-            priority = val(['priority', 'severity']).lower() or 'medium'
-            
-            required_actions = [x.strip() for x in val(['required actions', 'actions', 'duties']).split(',') if x.strip()]
-            
-            # Entities
-            regulators = [x.strip() for x in val(['regulators', 'required regulators']).split(',') if x.strip()]
-            data_cats = [x.strip() for x in val(['data categories', 'categories']).split(',') if x.strip()]
-            purposes = [x.strip() for x in val(['purposes', 'purpose of processing']).split(',') if x.strip()]
-            processes = [x.strip() for x in val(['processes']).split(',') if x.strip()]
-            data_subs = [x.strip() for x in val(['data subjects']).split(',') if x.strip()]
-            authorities = [x.strip() for x in val(['authorities', 'supervisory authorities']).split(',') if x.strip()]
-            
-            # Additional export columns
-            origin_countries = [x.strip() for x in val(['origin countries', 'origin_countries', 'origin']).split(',') if x.strip()]
-            receiving_countries = [x.strip() for x in val(['receiving countries', 'receiving_countries', 'receiving']).split(',') if x.strip()]
-            valid_until = val(['valid until', 'valid_until']) or None
-            requires_pii_val = val(['requires pii', 'requires_pii']).lower()
-            requires_pii = requires_pii_val in ['true', 'yes', '1', 'y']
-            required_assessments = [x.strip() for x in val(['required assessments', 'assessments']).split(',') if x.strip()]
-            linked_attributes = [x.strip() for x in val(['attributes', 'linked attributes', 'linked_attributes']).split(',') if x.strip()]
-            
-            # Build Logic Tree (auto-assemble all parsed columns into an AND tree)
-            children = []
-            for r in regulators: children.append({"type": "CONDITION", "dimension": "Regulator", "value": r})
-            for c in data_cats: children.append({"type": "CONDITION", "dimension": "DataCategory", "value": c})
-            for p in purposes: children.append({"type": "CONDITION", "dimension": "Purpose", "value": p})
-            for pr in processes: children.append({"type": "CONDITION", "dimension": "Process", "value": pr})
-            for ds in data_subs: children.append({"type": "CONDITION", "dimension": "DataSubject", "value": ds})
-            for a in authorities: children.append({"type": "CONDITION", "dimension": "Authority", "value": a})
-            
-            logic_tree_json_str = val(['logic tree json', 'logic_tree_json', 'logic tree'])
-            logic_tree = None
-            if logic_tree_json_str:
-                import json
-                try:
-                    logic_tree = json.loads(logic_tree_json_str)
-                except Exception:
-                    pass
-            elif children:
-                logic_tree = {
-                    "type": "AND",
-                    "children": children
-                }
+
+        def _str_val(row, col_names):
+            for c in col_names:
+                if c in row.index:
+                    v = row[c]
+                    if pd.isna(v):
+                        return ""
+                    return str(v).strip()
+            return ""
+
+        if nodes_df is not None:
+            # --- 2-sheet format ---
+            nodes_df.columns = [str(c).strip().lower() for c in nodes_df.columns]
+
+            for idx, row in nodes_df.iterrows():
+                rule_id = _str_val(row, ['id', 'rule_id']) or str(uuid.uuid4())
+                name = _str_val(row, ['name', 'rule name']) or f"Imported Node {idx + 1}"
                 
-            parsed_rules.append(RuleCreate(
-                rule_id=rule_id,
-                name=name,
-                description=desc,
-                rule_type=r_type,
-                outcome=outcome,
-                priority=priority,
-                required_actions=required_actions,
-                logic_tree=logic_tree,
-                origin_countries=origin_countries,
-                receiving_countries=receiving_countries,
-                valid_until=valid_until,
-                requires_pii=requires_pii,
-                required_assessments=required_assessments,
-                linked_attributes=linked_attributes
-            ))
-            
-        return {"status": "success", "rules": [r.model_dump() for r in parsed_rules]}
-        
+                attr_val = _str_val(row, ['attribute', 'rule type', 'rule_type'])
+                
+                description = ""
+                outcome = "permission"
+                priority = "medium"
+                requires_pii = False
+                valid_until = None
+                logic_tree = None
+                rule_type = "attribute"
+                
+                try:
+                    # Attempt to deserialize complex payload from 'attribute'
+                    parsed_attrs = _json.loads(attr_val)
+                    if isinstance(parsed_attrs, dict):
+                        description = parsed_attrs.get("description", "")
+                        outcome = parsed_attrs.get("outcome", "permission")
+                        priority = parsed_attrs.get("priority", "medium")
+                        requires_pii = parsed_attrs.get("requires_pii", False)
+                        valid_until = parsed_attrs.get("valid_until")
+                        logic_tree = parsed_attrs.get("logic_tree")
+                        rule_type = parsed_attrs.get("rule_type", "attribute")
+                    else:
+                        rule_type = attr_val
+                except Exception:
+                    rule_type = attr_val or 'attribute'
+
+                # Gracefully override if specific columns happen to exist
+                description = _str_val(row, ['description', 'desc']) or description
+                outcome = _str_val(row, ['outcome', 'action']).lower() or outcome
+                priority = _str_val(row, ['priority', 'severity']).lower() or priority
+                
+                requires_pii_val = _str_val(row, ['requires_pii', 'requires pii']).lower()
+                if requires_pii_val:
+                    requires_pii = requires_pii_val in ['true', 'yes', '1', 'y']
+                
+                valid_until = _str_val(row, ['valid_until', 'valid until']) or valid_until
+                
+                logic_tree_str = _str_val(row, ['logic_tree', 'logic tree json'])
+                if logic_tree_str:
+                    try:
+                        logic_tree = _json.loads(logic_tree_str)
+                    except Exception:
+                        pass
+
+                rule_props = {
+                    "rule_id": rule_id,
+                    "name": name,
+                    "description": description,
+                    "outcome": outcome,
+                    "priority": priority,
+                    "rule_type": rule_type,
+                    "enabled": True,
+                    "odrl_type": "Prohibition" if outcome == "prohibition" else "Permission",
+                    "has_pii_required": requires_pii,
+                    "requires_personal_data": requires_pii,
+                    "logic_tree": _json.dumps(logic_tree) if logic_tree else '{"type":"AND","children":[]}',
+                }
+                if valid_until:
+                    rule_props["valid_until"] = valid_until
+
+                set_parts = [f"r.{k} = ${k}" for k in rule_props.keys() if k != "rule_id"]
+                db.execute_rules_query(
+                    f"MERGE (r:Rule {{rule_id: $rule_id}}) SET {', '.join(set_parts)}",
+                    params=rule_props
+                )
+                if logic_tree:
+                    _sync_logic_tree_edges(db, rule_id, logic_tree)
+                upserted += 1
+
+                parsed_rules.append({"rule_id": rule_id, "name": name})
+
+            # Process relationships sheet
+            if rels_df is not None and not rels_df.empty:
+                rels_df.columns = [str(c).strip().lower() for c in rels_df.columns]
+                for _, row in rels_df.iterrows():
+                    src = _str_val(row, ['source_id', 'source'])
+                    tgt = _str_val(row, ['target_id', 'target'])
+                    rel_type = _str_val(row, ['relationship_type', 'relationship']) or 'RELATED_TO'
+                    
+                    if not src or not tgt:
+                        continue
+                    try:
+                        from utils.cypher_safety import validate_relationship
+                        validate_relationship(rel_type)
+                        db.execute_rules_query(
+                            f"""
+                            MATCH (r:Rule {{rule_id: $src}})
+                            MERGE (t {{name: $tgt}})
+                            MERGE (r)-[:{rel_type}]->(t)
+                            """,
+                            params={"src": src, "tgt": tgt}
+                        )
+                    except Exception as rel_err:
+                        logger.warning(f"Skipping relationship {src}-[{rel_type}]->{tgt}: {rel_err}")
+
+        else:
+            # --- Legacy single-sheet format ---
+            df = legacy_df
+            df.columns = [str(c).strip().lower() for c in df.columns]
+
+            for idx, row in df.iterrows():
+                def val(col_names):
+                    return _str_val(row, col_names)
+
+                rule_id = val(['rule id', 'rule_id', 'id']) or f"RULE_{str(uuid.uuid4())}"
+                name = val(['rule name', 'name', 'title']) or f"Imported Rule {idx + 1}"
+                desc = val(['description', 'desc', 'summary'])
+                r_type = val(['rule type', 'type']) or 'attribute'
+                outcome = val(['outcome', 'action']).lower() or 'permission'
+                priority = val(['priority', 'severity']).lower() or 'medium'
+                required_actions = [x.strip() for x in val(['required actions', 'actions', 'duties']).split(',') if x.strip()]
+                regulators = [x.strip() for x in val(['regulators', 'required regulators']).split(',') if x.strip()]
+                data_cats = [x.strip() for x in val(['data categories', 'categories']).split(',') if x.strip()]
+                purposes = [x.strip() for x in val(['purposes', 'purpose of processing']).split(',') if x.strip()]
+                processes = [x.strip() for x in val(['processes']).split(',') if x.strip()]
+                data_subs = [x.strip() for x in val(['data subjects']).split(',') if x.strip()]
+                authorities = [x.strip() for x in val(['authorities', 'supervisory authorities']).split(',') if x.strip()]
+                origin_countries = [x.strip() for x in val(['origin countries', 'origin_countries', 'origin']).split(',') if x.strip()]
+                receiving_countries = [x.strip() for x in val(['receiving countries', 'receiving_countries', 'receiving']).split(',') if x.strip()]
+                valid_until = val(['valid until', 'valid_until']) or None
+                requires_pii_val = val(['requires pii', 'requires_pii']).lower()
+                requires_pii = requires_pii_val in ['true', 'yes', '1', 'y']
+                required_assessments = [x.strip() for x in val(['required assessments', 'assessments']).split(',') if x.strip()]
+                linked_attributes = [x.strip() for x in val(['attributes', 'linked attributes', 'linked_attributes']).split(',') if x.strip()]
+
+                children = []
+                for r_val in regulators: children.append({"type": "CONDITION", "dimension": "Regulator", "value": r_val})
+                for c_val in data_cats: children.append({"type": "CONDITION", "dimension": "DataCategory", "value": c_val})
+                for p_val in purposes: children.append({"type": "CONDITION", "dimension": "Purpose", "value": p_val})
+                for pr_val in processes: children.append({"type": "CONDITION", "dimension": "Process", "value": pr_val})
+                for ds_val in data_subs: children.append({"type": "CONDITION", "dimension": "DataSubject", "value": ds_val})
+                for a_val in authorities: children.append({"type": "CONDITION", "dimension": "Authority", "value": a_val})
+
+                logic_tree_json_str = val(['logic tree json', 'logic_tree_json', 'logic tree', 'logic_tree'])
+                logic_tree = None
+                if logic_tree_json_str:
+                    try:
+                        logic_tree = _json.loads(logic_tree_json_str)
+                    except Exception:
+                        pass
+                elif children:
+                    logic_tree = {"type": "AND", "children": children}
+
+                parsed_rules.append(RuleCreate(
+                    rule_id=rule_id,
+                    name=name,
+                    description=desc,
+                    rule_type=r_type,
+                    outcome=outcome,
+                    priority=priority,
+                    required_actions=required_actions,
+                    logic_tree=logic_tree,
+                    origin_countries=origin_countries,
+                    receiving_countries=receiving_countries,
+                    valid_until=valid_until,
+                    requires_pii=requires_pii,
+                    required_assessments=required_assessments,
+                    linked_attributes=linked_attributes
+                ).model_dump())
+                created += 1
+
+        invalidate_cache()
+        return {
+            "status": "success",
+            "upserted": upserted,
+            "parsed": created,
+            "rules": parsed_rules,
+            "total": upserted + created,
+        }
+
     except Exception as e:
         logger.error(f"Excel parsing failed: {e}")
         raise HTTPException(500, f"Failed to parse file: {str(e)}")
@@ -1110,3 +1267,57 @@ async def get_graph_stats(db=Depends(get_db)):
     from config.settings import settings
     stats = db.get_graph_stats(settings.database.rules_graph_name)
     return stats
+
+
+class NodeCreate(BaseModel):
+    label: str
+    properties: dict = {}
+
+
+@router.post("/nodes")
+async def create_node(node_data: NodeCreate, db=Depends(get_db)):
+    """Create a new node in the RulesGraph with an auto-generated UUID."""
+    try:
+        validate_label(node_data.label)
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"Invalid node label: {node_data.label}")
+
+    node_uuid = str(uuid.uuid4())
+    props = {k: v for k, v in node_data.properties.items() if isinstance(k, str)}
+    props["uuid"] = node_uuid
+
+    # Build SET clause from properties
+    set_parts = [f"n.{k} = ${k}" for k in props]
+    query = f"CREATE (n:{node_data.label} {{}}) SET {', '.join(set_parts)} RETURN n.uuid AS uuid"
+
+    try:
+        result = db.execute_rules_query(query, params=props)
+        invalidate_cache()
+        return {"status": "created", "uuid": node_uuid, "label": node_data.label}
+    except Exception as e:
+        logger.error(f"Error creating node: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create node: {str(e)}")
+
+
+@router.patch("/nodes/{node_uuid}/properties")
+async def update_node_properties(node_uuid: str, properties: dict, db=Depends(get_db)):
+    """Update properties of a node identified by its UUID."""
+    if not properties:
+        raise HTTPException(status_code=400, detail="No properties provided")
+
+    set_parts = [f"n.{k} = ${k}" for k in properties]
+    params = dict(properties)
+    params["node_uuid"] = node_uuid
+
+    query = f"MATCH (n {{uuid: $node_uuid}}) SET {', '.join(set_parts)} RETURN n.uuid AS uuid"
+    try:
+        result = db.execute_rules_query(query, params=params)
+        if not result:
+            raise HTTPException(status_code=404, detail="Node not found")
+        invalidate_cache()
+        return {"status": "updated", "uuid": node_uuid}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating node properties: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update node: {str(e)}")

@@ -915,6 +915,48 @@ class RulesEvaluator:
                 # User provided data categories → check for overlap
                 rule_cats_norm = {_normalize_text(str(c)) for c in linked_cats if c}
                 rule_gdcs_norm = {_normalize_text(str(g)) for g in linked_gdcs if g}
+                
+                # Expand GDCs into their constituent DataCategories using graph queries
+                if rule_gdcs_norm:
+                    try:
+                        query = """
+                        MATCH (gdc:GDC)-[:HAS_DATA_CATEGORY]->(cat:DataCategory)
+                        WHERE toLower(gdc.name) IN $gdc_names
+                        RETURN DISTINCT cat.name AS cat_name
+                        """
+                        params = {"gdc_names": [g.lower() for g in rule_gdcs_norm]}
+                        
+                        # Check RulesGraph first
+                        gdc_result = self._graph_query(query, params)
+                        for row in gdc_result:
+                            c = row.get('cat_name')
+                            if c:
+                                rule_gdcs_norm.add(_normalize_text(str(c)))
+                                
+                        # Check additional selected graphs for GDC definitions
+                        if self.additional_precedent_graphs:
+                            from services.multi_graph_query import MultiGraphQuery
+                            from services.graph_registry import get_graph_registry
+                            multi_query = MultiGraphQuery()
+                            registry = get_graph_registry()
+                            
+                            additional_queries = {}
+                            for g_name in self.additional_precedent_graphs:
+                                g_meta = registry.get_graph(g_name)
+                                if g_meta and g_meta.enabled:
+                                    additional_queries[g_name] = (query, params)
+                            
+                            if additional_queries:
+                                additional_results = multi_query.multi_query(additional_queries)
+                                for g_name, rows in additional_results.items():
+                                    for row in rows:
+                                        c = row.get('cat_name')
+                                        if c:
+                                            rule_gdcs_norm.add(_normalize_text(str(c)))
+                    except Exception as e:
+                        logger.warning(f"Error expanding GDCs: {e}")
+                        pass
+
                 combined_rule_cats = (rule_cats_norm | rule_gdcs_norm) - {''}
 
                 matched_norm = combined_rule_cats & ctx_cats_norm
@@ -924,9 +966,15 @@ class RulesEvaluator:
                     for c in linked_cats:
                         if c and _normalize_text(str(c)) in matched_norm:
                             matched_originals.append(str(c))
+                    # For GDCs, if the user's data category matched a GDC's child,
+                    # we should include the GDC name or the child name as the match
                     for g in linked_gdcs:
-                        if g and _normalize_text(str(g)) in matched_norm:
+                        g_norm = _normalize_text(str(g))
+                        if g and g_norm in matched_norm:
                             matched_originals.append(str(g))
+                        # Note: we don't easily have the parent->child association here
+                        # without slowing down to map them. It's enough to trigger the match
+                        # and let the UI know DataCategory dimension matched.
                     current_matches["DataCategory"] = list(set(matched_originals))
                     logger.debug(f"Tier 1: data_categories/GDC matched: {matched_originals}")
                 else:
@@ -977,16 +1025,42 @@ class RulesEvaluator:
                 ancestor_set = set(ctx_processes)
                 for proc_name in list(ctx_processes_raw):
                     try:
-                        ancestor_result = self._graph_query("""
+                        query = """
                         MATCH (ancestor:Process)-[:HAS_SUBPROCESS*1..3]->(child:Process)
                         WHERE toLower(child.name) = toLower($name)
                         RETURN DISTINCT ancestor.name AS ancestor_name
-                        """, {"name": proc_name})
+                        """
+                        params = {"name": proc_name}
+
+                        # Check RulesGraph first
+                        ancestor_result = self._graph_query(query, params)
                         for row in ancestor_result:
                             a = row.get('ancestor_name')
                             if a:
                                 ancestor_set.add(_normalize_text(str(a)))
-                    except Exception:
+
+                        # Check additional selected graphs for hierarchy definitions
+                        if self.additional_precedent_graphs:
+                            from services.multi_graph_query import MultiGraphQuery
+                            from services.graph_registry import get_graph_registry
+                            multi_query = MultiGraphQuery()
+                            registry = get_graph_registry()
+                            
+                            additional_queries = {}
+                            for g_name in self.additional_precedent_graphs:
+                                g_meta = registry.get_graph(g_name)
+                                if g_meta and g_meta.enabled:
+                                    additional_queries[g_name] = (query, params)
+                            
+                            if additional_queries:
+                                additional_results = multi_query.multi_query(additional_queries)
+                                for g_name, rows in additional_results.items():
+                                    for row in rows:
+                                        a = row.get('ancestor_name')
+                                        if a:
+                                            ancestor_set.add(_normalize_text(str(a)))
+                    except Exception as e:
+                        logger.warning(f"Error checking Process hierarchy for {proc_name}: {e}")
                         pass
                 ancestor_set -= {''}
 

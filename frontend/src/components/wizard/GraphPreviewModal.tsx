@@ -28,7 +28,6 @@ interface GraphPreviewModalProps {
 }
 
 export function GraphPreviewModal({
-  graphName,
   data,
   onClose,
 }: GraphPreviewModalProps) {

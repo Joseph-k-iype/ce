@@ -7,6 +7,7 @@ Converts data from external sources to graph nodes and relationships.
 from typing import Dict, List, Any, Optional
 import logging
 import uuid
+import re
 from services.database import get_db_service
 from services.data_source_connector import (
     DataSourceManager,
@@ -151,7 +152,8 @@ class GraphImportService:
                 properties = {}
                 for source_field, node_prop in mapping.property_mappings.items():
                     if source_field in row:
-                        properties[node_prop] = row[source_field]
+                        clean_prop = re.sub(r'[^a-zA-Z0-9_]', '_', node_prop)
+                        properties[clean_prop] = row[source_field]
 
                 # Add ID to properties
                 properties["id"] = str(node_id)
@@ -194,7 +196,8 @@ class GraphImportService:
                 props = {}
                 for source_field, rel_prop in mapping.properties.items():
                     if source_field in row:
-                        props[rel_prop] = row[source_field]
+                        clean_prop = re.sub(r'[^a-zA-Z0-9_]', '_', rel_prop)
+                        props[clean_prop] = row[source_field]
 
                 # In RedisGraph/FalkorDB, property types matter.
                 # If a node was saved with an integer ID but we check for a string, MATCH fails.

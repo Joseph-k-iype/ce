@@ -107,35 +107,64 @@ export function KanbanEdgeOverlay() {
     };
   }, [edges, throttledUpdate, updatePositions]);
 
+  // Cap rendered edges to prevent SVG performance issues when no selection active
+  const EDGE_RENDER_LIMIT = 50;
+
   const renderedEdges = useMemo(() => {
     const highlightSet = new Set(highlightedEdgeIds);
     const hasActiveSelection = selectedNodeIds.length > 0;
 
-    // Build a map of lane-pair edge counts for staggering
-    const lanePairCounts = new Map<string, number>();
-    const lanePairIndex = new Map<string, number>();
+    // Prioritise highlighted/selection-relevant edges; cap the rest
+    const relevantEdges = hasActiveSelection
+      ? edges.filter(
+        (e) =>
+          selectedNodeIds.includes(e.source) ||
+          selectedNodeIds.includes(e.target)
+      )
+      : edges.slice(0, EDGE_RENDER_LIMIT);
 
-    edges.forEach((edge) => {
+    // Build a map of node-pair edge counts for bundling (per source-target pair)
+    const pairCounts = new Map<string, number>();
+    const pairIndex = new Map<string, number>();
+
+    relevantEdges.forEach((edge) => {
       const sourceRect = positions.get(edge.source);
       const targetRect = positions.get(edge.target);
       if (!sourceRect || !targetRect) return;
-      // Use x-position buckets (lane columns) as lane pair key
-      const key = `${Math.round(sourceRect.x / 100)}-${Math.round(targetRect.x / 100)}`;
-      lanePairCounts.set(key, (lanePairCounts.get(key) || 0) + 1);
+      const key = `${edge.source}::${edge.target}`;
+      pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
     });
 
-    return edges.map((edge) => {
+    // Stroke dash patterns per relationship type for visual distinction
+    const DASH_PATTERNS: Record<string, string | undefined> = {
+      TRIGGERED_BY_ORIGIN: undefined,
+      TRIGGERED_BY_RECEIVING: '8 3',
+      HAS_DATA_CATEGORY: '4 4',
+      HAS_PURPOSE: '2 4',
+      HAS_GDC: '6 2',
+      HAS_PROCESS: '10 3 2 3',
+      HAS_PERMISSION: undefined,
+      HAS_PROHIBITION: '3 3',
+      HAS_DUTY: '5 5',
+      HAS_AUTHORITY: '7 2',
+      HAS_REGULATOR: '2 2',
+      HAS_SENSITIVE_DATA_CATEGORY: '12 3',
+      HAS_ATTRIBUTE: '6 3 2 3',
+    };
+
+    return relevantEdges.map((edge) => {
       const sourceRect = positions.get(edge.source);
       const targetRect = positions.get(edge.target);
 
       if (!sourceRect || !targetRect) return null;
 
       const relType = (edge.data as { relationship?: string })?.relationship || '';
-      const color = RELATIONSHIP_COLORS[relType] || '#94a3b8'; // gray-400
+      const color = RELATIONSHIP_COLORS[relType] || '#94a3b8';
+      const dashArray = DASH_PATTERNS[relType];
 
       const isHighlighted = highlightSet.has(edge.id);
 
-      // Points
+      // Anchor: exit from right edge of source card, enter left edge of target card
       const start: Point = {
         x: sourceRect.right,
         y: sourceRect.top + sourceRect.height / 2,
@@ -145,40 +174,40 @@ export function KanbanEdgeOverlay() {
         y: targetRect.top + targetRect.height / 2,
       };
 
-      // If source is to the right of target (backward edge), adjust anchors
+      // Backward edge (right-to-left): flip anchors
       const isBackward = start.x > end.x;
       if (isBackward) {
         start.x = sourceRect.left;
         end.x = targetRect.right;
       }
 
-      // Stagger multiple edges between same lane pair
-      const laneKey = `${Math.round(sourceRect.x / 100)}-${Math.round(targetRect.x / 100)}`;
-      const totalInPair = lanePairCounts.get(laneKey) || 1;
-      const idx = lanePairIndex.get(laneKey) || 0;
-      lanePairIndex.set(laneKey, idx + 1);
-      const staggerOffset = totalInPair > 1
-        ? (idx - (totalInPair - 1) / 2) * 6
-        : 0;
+      // Bundle: offset edges sharing the same source-target node pair
+      const pairKey = `${edge.source}::${edge.target}`;
+      const totalInPair = pairCounts.get(pairKey) || 1;
+      const pairIdx = pairIndex.get(pairKey) || 0;
+      pairIndex.set(pairKey, pairIdx + 1);
 
-      // Control points for cubic bezier with vertical adjustment
+      // Vertical stagger: 14px per edge in same pair, centred on midpoint
+      const STAGGER_PX = 14;
+      const verticalOffset =
+        totalInPair > 1 ? (pairIdx - (totalInPair - 1) / 2) * STAGGER_PX : 0;
+
+      // Cubic bezier control points (clean horizontal S-curve)
       const dx = Math.abs(end.x - start.x);
-      const dy = end.y - start.y;
-      const curveIntensity = Math.min(dx / 2, 100);
-      const verticalPull = dy * 0.15;
+      const curveIntensity = Math.max(dx * 0.6, 50);
 
       const cp1: Point = {
         x: start.x + (isBackward ? -curveIntensity : curveIntensity),
-        y: start.y + verticalPull + staggerOffset,
+        y: start.y + verticalOffset,
       };
       const cp2: Point = {
         x: end.x + (isBackward ? curveIntensity : -curveIntensity),
-        y: end.y - verticalPull + staggerOffset,
+        y: end.y + verticalOffset,
       };
 
       const path = `M ${start.x} ${start.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${end.x} ${end.y}`;
 
-      const opacity = isHighlighted ? 0.8 : (hasActiveSelection ? 0.05 : 0.2);
+      const opacity = isHighlighted ? 0.85 : hasActiveSelection ? 0.06 : 0.22;
       const strokeWidth = isHighlighted ? 2.5 : 1.5;
 
       return (
@@ -189,6 +218,8 @@ export function KanbanEdgeOverlay() {
           strokeWidth={strokeWidth}
           fill="none"
           strokeOpacity={opacity}
+          strokeDasharray={dashArray}
+          markerEnd={isHighlighted ? 'url(#arrowhead)' : undefined}
           className="transition-all duration-300 pointer-events-none"
         />
       );

@@ -17,6 +17,7 @@ import {
   getGraphSuggestions,
   getAvailableGraphs,
   configureGraphs,
+  getGraphPreview,
 } from '../../../services/wizardApi';
 import { GraphSuggestionCard } from '../GraphSuggestionCard';
 import { GraphPreviewModal } from '../GraphPreviewModal';
@@ -108,17 +109,7 @@ export function Step3GraphSelection() {
   const handlePreview = async (graphName: string) => {
     try {
       setLoadingPreview(true);
-      const response = await fetch(`/api/graphs/${graphName}/preview`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load preview');
-      }
-
-      const data = await response.json();
+      const data = await getGraphPreview(graphName);
       setPreviewData(data);
       setPreviewGraph(graphName);
     } catch (err) {

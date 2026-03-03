@@ -463,10 +463,10 @@ def load_json_to_graph(json_file: str, clear_graph: bool = False, batch_size: in
         logger.error(f"File not found: {json_file}")
         return False
 
-    # Load JSON with UTF-8 encoding
+    # Load JSON with UTF-8 encoding (newline='' handles Windows CRLF line endings)
     try:
-        logger.info(f"Loading JSON file: {json_file}")
-        with open(json_path, 'r', encoding='utf-8') as f:
+        logger.info(f"Loading JSON file: {str(json_path)}")
+        with open(json_path, 'r', encoding='utf-8', newline='') as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON: {e}")

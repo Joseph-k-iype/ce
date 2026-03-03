@@ -231,7 +231,7 @@ async def _run_workflow_background(session: WizardSessionState, session_id: str)
 @router.post("/start-session", response_model=WizardStartResponse)
 async def start_session(request: WizardStartRequest):
     """Start a new wizard session."""
-    session_id = f"wiz_{uuid.uuid4().hex[:12]}"
+    session_id = str(uuid.uuid4())
     now = datetime.now().isoformat()
 
     session = WizardSessionState(
@@ -1034,3 +1034,61 @@ async def get_available_graphs(session_id: str) -> dict:
         "available_graphs": precedent_graphs,
         "current_selection": session.selected_graphs
     }
+
+
+@router.get("/session/{session_id}/graph-entities")
+async def get_graph_entities(session_id: str) -> dict:
+    """Get entity values from selected graphs for use in the logic builder.
+
+    Queries node instances from selected graphs so dimension dropdowns in Step 4
+    LogicTreeBuilder can offer graph-specific values (e.g. actual DataCategory names).
+
+    Returns:
+        dimension_options: dict mapping dimension name to list of values
+    """
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    from services.database import get_db_service
+
+    db = get_db_service()
+
+    # Dimension → (graph_label, node_property)
+    DIMENSION_LABEL_MAP = {
+        "DataCategory": ("DataCategory", "name"),
+        "Purpose": ("PurposeOfProcessing", "name"),
+        "Process": ("Process", "name"),
+        "Regulator": ("Regulator", "name"),
+        "Authority": ("Authority", "name"),
+        "DataSubject": ("DataSubject", "name"),
+        "GDC": ("GDC", "name"),
+        "SensitiveDataCategory": ("SensitiveDataCategory", "name"),
+        "OriginCountry": ("Country", "name"),
+        "ReceivingCountry": ("Country", "name"),
+    }
+
+    dimension_options: dict = {}
+
+    selected_graphs = session.selected_graphs or ["DataTransferGraph"]
+
+    try:
+        for graph_name in selected_graphs:
+            try:
+                # Execute a schema introspection query on this graph
+                for dimension, (label, prop) in DIMENSION_LABEL_MAP.items():
+                    result = db.execute_query(
+                        f"MATCH (n:{label}) RETURN n.{prop} AS value LIMIT 100",
+                        graph_name=graph_name
+                    )
+                    values = [r.get("value") for r in result if r.get("value")]
+                    if values:
+                        existing = dimension_options.get(dimension, [])
+                        dimension_options[dimension] = list(dict.fromkeys(existing + values))
+            except Exception as graph_err:
+                logger.warning(f"Could not query graph {graph_name} for entities: {graph_err}")
+
+    except Exception as e:
+        logger.error(f"Failed to fetch graph entities: {e}")
+
+    return {"dimension_options": dimension_options}

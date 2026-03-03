@@ -12,7 +12,7 @@
  */
 
 import Select, { type MultiValue } from 'react-select';
-import { reactSelectStyles, reactSelectTheme } from '../../styles/reactSelectTheme';
+import { reactSelectStyles, reactSelectTheme, reactSelectDarkStyles, reactSelectDarkTheme } from '../../styles/reactSelectTheme';
 
 interface Option {
   value: string;
@@ -31,6 +31,8 @@ interface AccessibleSelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** 'dark' applies dark-background-safe styles for wizard steps on dark cards */
+  variant?: 'light' | 'dark';
 }
 
 /**
@@ -67,6 +69,7 @@ export function AccessibleSelect({
   placeholder = 'Select...',
   disabled = false,
   className = '',
+  variant = 'light',
 }: AccessibleSelectProps) {
   const helpId = `${id}-help`;
   const errorId = `${id}-error`;
@@ -87,7 +90,8 @@ export function AccessibleSelect({
       {/* Label */}
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2"
+        className={`block text-sm font-medium mb-2 ${variant === 'dark' ? 'text-gray-200' : 'text-gray-700'
+          }`}
       >
         {label}
         {required && (
@@ -107,8 +111,8 @@ export function AccessibleSelect({
         options={options}
         value={selectedOptions}
         onChange={handleChange}
-        styles={reactSelectStyles}
-        theme={reactSelectTheme}
+        styles={variant === 'dark' ? reactSelectDarkStyles : reactSelectStyles}
+        theme={variant === 'dark' ? reactSelectDarkTheme : reactSelectTheme}
         placeholder={placeholder}
         isDisabled={disabled}
         // Accessibility attributes
@@ -124,7 +128,8 @@ export function AccessibleSelect({
       {helpText && !error && (
         <p
           id={helpId}
-          className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+          className={`mt-1 text-xs ${variant === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            }`}
         >
           {helpText}
         </p>
@@ -134,7 +139,8 @@ export function AccessibleSelect({
       {error && (
         <p
           id={errorId}
-          className="mt-1 text-xs text-red-600 dark:text-red-400"
+          className={`mt-1 text-xs font-semibold ${variant === 'dark' ? 'text-red-400' : 'text-red-600'
+            }`}
           role="alert"
         >
           {error}

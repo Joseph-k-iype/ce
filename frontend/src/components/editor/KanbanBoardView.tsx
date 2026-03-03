@@ -3,6 +3,7 @@ import { useEditorStore } from '../../stores/editorStore';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanEdgeOverlay } from './KanbanEdgeOverlay';
 import { KanbanContextMenuMemo } from './KanbanContextMenu';
+import { AddNodeModal } from './AddNodeModal';
 import type { LaneDefinition } from '../../types/editor';
 
 const COMMON_RELATIONSHIP_TYPES = [
@@ -50,6 +51,7 @@ function KanbanBoardViewInner() {
 
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const sortedLanes = useMemo(
     () => [...lanes].sort((a, b) => a.order - b.order),
@@ -158,6 +160,14 @@ function KanbanBoardViewInner() {
         </div>
         <div className="h-4 w-px bg-gray-200 mx-1" />
 
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowAddModal(true); }}
+          className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg shadow-sm transition-all flex items-center gap-1"
+        >
+          <span className="text-sm">+</span> Add Entity
+        </button>
+        <div className="h-4 w-px bg-gray-200 mx-1" />
+
         <div className="relative">
           <input
             type="text"
@@ -213,6 +223,9 @@ function KanbanBoardViewInner() {
 
       {/* Context Menu */}
       <KanbanContextMenuMemo />
+
+      {/* Add Node Modal */}
+      {showAddModal && <AddNodeModal onClose={() => setShowAddModal(false)} />}
     </div>
   );
 }

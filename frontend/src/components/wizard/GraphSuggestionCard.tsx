@@ -11,7 +11,7 @@
  * - Reasoning text
  */
 
-import { ReactNode } from 'react';
+
 
 interface GraphSuggestionCardProps {
   graph: {
@@ -50,11 +50,10 @@ export function GraphSuggestionCard({
 
   return (
     <div
-      className={`border rounded-lg p-4 transition-all ${
-        selected
+      className={`border rounded-lg p-4 transition-all ${selected
           ? 'border-purple-500 bg-purple-500/10 shadow-md'
           : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-      }`}
+        }`}
     >
       <div className="flex items-start gap-3">
         {/* Checkbox */}
