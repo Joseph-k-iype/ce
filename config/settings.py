@@ -88,6 +88,15 @@ class APISettings(BaseSettings):
     # CORS
     cors_origins: List[str] = Field(default=["*"], validation_alias="CORS_ORIGINS")
 
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, list):
+            return v
+        if v is None:
+            return ["*"]
+        return [x.strip() for x in str(v).split(",") if x.strip()]
+
     # Rate Limiting
     rate_limit_requests: int = Field(default=100, validation_alias="RATE_LIMIT_REQUESTS")
     rate_limit_window_seconds: int = Field(default=60, validation_alias="RATE_LIMIT_WINDOW")
@@ -153,9 +162,13 @@ class AuthSettings(BaseSettings):
     @field_validator("ldap_admin_employee_ids", mode="before")
     @classmethod
     def parse_employee_ids(cls, v):
-        if isinstance(v, str):
-            return [x.strip() for x in v.split(",") if x.strip()]
-        return v
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        # pydantic-settings JSON-parses env vars, so a plain number like 45326624
+        # arrives here as int rather than str — convert anything non-list to str first
+        if v is None:
+            return []
+        return [x.strip() for x in str(v).split(",") if x.strip()]
 
     # Local fallback authentication (for development only - use LDAP in production)
     # Credentials must come from .env — no hardcoded hashes in source
