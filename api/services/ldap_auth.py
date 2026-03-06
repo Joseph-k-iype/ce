@@ -36,14 +36,12 @@ def authenticate_ldap(employee_id: str, password: str) -> Optional[dict]:
     try:
         from ldap3 import Server, Connection, ALL, SUBTREE
 
-        user_dn = settings.auth.ldap_base_dn_template.format(employee_id=employee_id)
+        user_dn = settings.auth.ldap_base_dn_template.format(employee_id)
         server = Server(settings.auth.ldap_server_url, get_info=ALL)
         conn = Connection(server, user=user_dn, password=password, auto_bind=True)
 
         # Search for user attributes after successful bind
-        search_filter = settings.auth.ldap_search_filter_template.format(
-            employee_id=employee_id
-        )
+        search_filter = settings.auth.ldap_search_filter_template.format(employee_id)
         conn.search(
             search_base=settings.auth.ldap_search_base,
             search_filter=search_filter,

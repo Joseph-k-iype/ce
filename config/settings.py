@@ -140,12 +140,12 @@ class AuthSettings(BaseSettings):
     enable_ldap: bool = Field(default=False, validation_alias="ENABLE_LDAP")
     ldap_server_url: str = Field(default="ldap://localhost:389", validation_alias="LDAP_SERVER_URL")
     ldap_base_dn_template: str = Field(
-        default="CN={employee_id},OU=users,DC=example,DC=com",
+        default="CN={0},OU=users,DC=example,DC=com",
         validation_alias="LDAP_BASE_DN_TEMPLATE"
     )
     ldap_search_base: str = Field(default="DC=example,DC=com", validation_alias="LDAP_SEARCH_BASE")
     ldap_search_filter_template: str = Field(
-        default="(&(|(objectclass=userproxy)(objectclass=user))(cn={employee_id}))",
+        default="(&(|(objectclass=userproxy)(objectclass=user))(cn={0}))",
         validation_alias="LDAP_SEARCH_FILTER_TEMPLATE"
     )
     ldap_admin_employee_ids: List[str] = Field(default=[], validation_alias="LDAP_ADMIN_EMPLOYEE_IDS")
