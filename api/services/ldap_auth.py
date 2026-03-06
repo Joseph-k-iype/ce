@@ -1,40 +1,69 @@
+import re
 import logging
+from typing import Optional
+
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
-def authenticate_ldap(username: str, password: str) -> bool:
+# Allow only alphanumeric and safe characters for employee IDs
+_SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9_\-\.]+$')
+
+
+def authenticate_ldap(employee_id: str, password: str) -> Optional[dict]:
     """
-    Attempts to bind to the LDAP server with the given credentials.
-    If ENABLE_LDAP is False, returns False immediately.
+    Authenticate against LDAP using an employee ID.
+
+    Constructs the bind DN from the LDAP_BASE_DN_TEMPLATE setting, performs
+    a bind with the supplied password, then searches for the user's displayName
+    and mail attributes.
+
+    Returns:
+        dict with {employee_id, display_name, email} on success.
+        None on authentication failure or when LDAP is disabled.
+
+    Security note: the password is only held as a local variable during the
+    bind call and is never persisted or logged.
     """
     if not settings.auth.enable_ldap:
         logger.info("LDAP authentication is disabled.")
-        return False
-        
-    # Prevent basic LDAP injection by restricting characters
-    # (assuming UPN or standard sAMAccountName limits in AD)
-    import re
-    if not re.match(r'^[a-zA-Z0-9_\-\.\@]+$', username):
-        logger.warning(f"LDAP bind failed: invalid characters in username: {username}")
-        return False
-        
-    server_url = settings.auth.ldap_server_url
-    # Depending on setup, username might need to be domain\\username or username@domain.com
-    # This is highly dependent on the Active Directory / LDAP setup. We will assume UPN/simple for now.
-    user_dn = username  
-    
+        return None
+
+    if not _SAFE_ID_RE.match(employee_id):
+        logger.warning("LDAP bind rejected: invalid characters in employee_id")
+        return None
+
     try:
-        from ldap3 import Server, Connection, ALL
-        server = Server(server_url, get_info=ALL)
+        from ldap3 import Server, Connection, ALL, SUBTREE
+
+        user_dn = settings.auth.ldap_base_dn_template.format(employee_id=employee_id)
+        server = Server(settings.auth.ldap_server_url, get_info=ALL)
         conn = Connection(server, user=user_dn, password=password, auto_bind=True)
-        if conn.bind():
-            logger.info(f"LDAP bind successful for {username}")
-            conn.unbind()
-            return True
-        else:
-            logger.warning(f"LDAP bind failed for {username}")
-            return False
+
+        # Search for user attributes after successful bind
+        search_filter = settings.auth.ldap_search_filter_template.format(
+            employee_id=employee_id
+        )
+        conn.search(
+            search_base=settings.auth.ldap_search_base,
+            search_filter=search_filter,
+            search_scope=SUBTREE,
+            attributes=["displayName", "mail"],
+        )
+
+        display_name = employee_id  # fallback if attribute not found
+        email = ""
+        if conn.entries:
+            entry = conn.entries[0]
+            if entry.displayName:
+                display_name = str(entry.displayName)
+            if entry.mail:
+                email = str(entry.mail)
+
+        conn.unbind()
+        logger.info("LDAP authentication successful for employee_id=%s", employee_id)
+        return {"employee_id": employee_id, "display_name": display_name, "email": email}
+
     except Exception as e:
-        logger.error(f"LDAP authentication error: {e}")
-        return False
+        logger.warning("LDAP authentication failed for employee_id=%s: %s", employee_id, e)
+        return None

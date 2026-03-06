@@ -161,3 +161,26 @@ export async function configureGraphs(sessionId: string, graphs: string[]): Prom
   const { data } = await api.put(`/wizard/session/${sessionId}/configure-graphs`, { graphs });
   return data;
 }
+
+// ===== Graph Trigger Mappings =====
+
+export interface GraphTriggerMapping {
+  graph_name: string;
+  node_label: string;
+  field: string;
+  dimension: string;
+  filter_expr: string;
+}
+
+export async function getGraphTriggerMappings(sessionId: string): Promise<{ mappings: GraphTriggerMapping[] }> {
+  const { data } = await api.get(`/wizard/session/${sessionId}/graph-trigger-mappings`);
+  return data;
+}
+
+export async function saveGraphTriggerMappings(
+  sessionId: string,
+  mappings: GraphTriggerMapping[]
+): Promise<{ status: string; mappings: GraphTriggerMapping[] }> {
+  const { data } = await api.put(`/wizard/session/${sessionId}/graph-trigger-mappings`, { mappings });
+  return data;
+}

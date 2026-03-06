@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore, type UserRole } from '../../stores/authStore';
 
 interface Props {
-  requiredRole?: UserRole;
+  requiredRole?: UserRole | UserRole[];
 }
 
 export function ProtectedRoute({ requiredRole }: Props) {
@@ -12,8 +12,11 @@ export function ProtectedRoute({ requiredRole }: Props) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && role !== requiredRole) {
-    return <Navigate to="/" replace />;
+  if (requiredRole) {
+    const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!role || !allowed.includes(role)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <Outlet />;

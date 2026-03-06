@@ -57,18 +57,21 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     username = form_data.username
     password = form_data.password
 
-    role = "user" # Default
+    role = "user"  # Default
     authenticated = False
+    display_name = username  # overwritten by LDAP result if available
+    email = ""
 
     # 1. Try LDAP First (preferred for production)
     if settings.auth.enable_ldap:
-        logger.info(f"Attempting LDAP auth for {username}")
-        if authenticate_ldap(username, password):
+        logger.info(f"Attempting LDAP auth for employee_id={username}")
+        ldap_result = authenticate_ldap(username, password)
+        if ldap_result:
             authenticated = True
-            # Basic mapping logic - could be expanded to parse LDAP groups
-            if "admin" in username.lower():
-                role = "admin"
-            logger.info(f"LDAP authentication successful for {username}")
+            # Role determined by explicit admin employee-ID whitelist only
+            role = "admin" if username in settings.auth.ldap_admin_employee_ids else "user"
+            display_name = ldap_result.get("display_name", username)
+            email = ldap_result.get("email", "")
 
     # 2. Try Local Fallback if LDAP fails or is disabled
     if not authenticated and settings.auth.enable_local_fallback:
@@ -86,9 +89,35 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Look up or auto-create user in SQLite operational store
+    user_id = None
+    workspace_id = "default"
+    try:
+        from services.operational_store import get_operational_store
+        store = get_operational_store()
+        db_user = store.get_user_by_username(username)
+        if db_user:
+            user_id = db_user.get("user_id")
+            workspace_id = db_user.get("workspace_id") or "default"
+            # Keep auth-derived role authoritative (admin list may have changed)
+            if db_user.get("role") != role:
+                store.update_user(user_id, role=role)
+        else:
+            # Auto-create user record on first login; password_hash stays NULL for LDAP users
+            user_id = store.create_user(
+                username=username,
+                email=email,
+                role=role,
+                workspace_id=workspace_id,
+            )
+            logger.info(f"Auto-created user record for {username} with role {role}")
+    except Exception as e:
+        logger.warning(f"Could not sync user with operational store: {e}")
+
     access_token_expires = timedelta(minutes=settings.auth.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": username, "role": role}, expires_delta=access_token_expires
+        data={"sub": username, "role": role, "user_id": user_id, "workspace_id": workspace_id},
+        expires_delta=access_token_expires
     )
 
     logger.info(f"Access token generated for {username} with role: {role}")
@@ -97,5 +126,5 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         "access_token": access_token,
         "token_type": "bearer",
         "role": role,
-        "username": username
+        "username": display_name,  # LDAP displayName shown in UI; falls back to employee_id
     }

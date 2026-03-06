@@ -52,6 +52,18 @@ async def health_check():
     )
 
 
+@router.get("/api/env")
+async def get_environment():
+    """Return current environment name for UI badge display."""
+    env = settings.environment.lower()
+    # Normalize common variations
+    if env in ("development",):
+        env = "dev"
+    elif env in ("production",):
+        env = "prod"
+    return {"env": env}
+
+
 @router.get("/api/stats", response_model=StatsResponse)
 async def get_stats(db=Depends(get_db)):
     """Get dashboard statistics."""

@@ -197,6 +197,7 @@ export interface RuleTableRow {
   permission_prohibition: string;
   duty: string;
   priority: string;
+  status?: 'draft' | 'in_progress' | 'live';
 }
 
 export interface RulesOverviewTableResponse {

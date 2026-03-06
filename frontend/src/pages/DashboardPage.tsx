@@ -2,9 +2,19 @@ import { useState } from 'react';
 import { ExcelUploader } from '../components/dashboard/ExcelUploader';
 import { LogicBuilder } from '../components/dashboard/LogicBuilder';
 import { TaxonomyManager } from '../components/dashboard/TaxonomyManager';
+import { RBACAdminPage } from './RBACAdminPage';
+
+type Tab = 'upload' | 'builder' | 'taxonomy' | 'access';
 
 export function DashboardPage() {
-    const [activeTab, setActiveTab] = useState<'upload' | 'builder' | 'taxonomy'>('upload');
+    const [activeTab, setActiveTab] = useState<Tab>('upload');
+
+    const tabs: { id: Tab; label: string }[] = [
+        { id: 'upload', label: 'Excel Upload' },
+        { id: 'builder', label: 'Logic Builder' },
+        { id: 'taxonomy', label: 'Taxonomy' },
+        { id: 'access', label: 'Access Control' },
+    ];
 
     return (
         <div className="flex-1 flex flex-col h-full bg-slate-50">
@@ -13,31 +23,23 @@ export function DashboardPage() {
                 <div className="relative z-10">
                     <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Rules Administration</h1>
                     <p className="text-sm text-gray-500 mt-1.5 font-medium">
-                        Upload Excel policy maps or visually edit complex compliance logic.
+                        Upload Excel policy maps, edit compliance logic, and manage access control.
                     </p>
                 </div>
                 <div className="flex bg-slate-100 p-1.5 rounded-xl shadow-inner relative z-10">
-                    <button
-                        onClick={() => setActiveTab('upload')}
-                        className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-2 ${activeTab === 'upload' ? 'bg-white shadow-md text-purple-700' : 'text-slate-600 hover:text-purple-600 hover:bg-slate-200/50'
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                                activeTab === tab.id
+                                    ? 'bg-white shadow-md text-purple-700'
+                                    : 'text-slate-600 hover:text-purple-600 hover:bg-slate-200/50'
                             }`}
-                    >
-                        Excel Upload
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('builder')}
-                        className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-2 ${activeTab === 'builder' ? 'bg-white shadow-md text-purple-700' : 'text-slate-600 hover:text-purple-600 hover:bg-slate-200/50'
-                            }`}
-                    >
-                        Logic Builder
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('taxonomy')}
-                        className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-2 ${activeTab === 'taxonomy' ? 'bg-white shadow-md text-purple-700' : 'text-slate-600 hover:text-purple-600 hover:bg-slate-200/50'
-                            }`}
-                    >
-                        Taxonomy
-                    </button>
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -55,6 +57,11 @@ export function DashboardPage() {
                 {activeTab === 'taxonomy' && (
                     <div className="absolute inset-0 p-8 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-bottom-2 duration-300 bg-slate-50">
                         <TaxonomyManager />
+                    </div>
+                )}
+                {activeTab === 'access' && (
+                    <div className="absolute inset-0 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
+                        <RBACAdminPage />
                     </div>
                 )}
             </div>

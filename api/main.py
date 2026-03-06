@@ -42,6 +42,7 @@ from api.routers import (
     auth,
     graphs,
     data_sources,
+    rbac,
 )
 from api.dependencies.auth import get_current_user, get_current_admin
 
@@ -77,6 +78,14 @@ async def lifespan(app: FastAPI):
     get_cache_service()
     logger.info(f"Cache initialized (enabled={settings.cache.enable_cache})")
 
+    # Initialize operational SQLite store (data sources, RBAC)
+    try:
+        from services.operational_store import get_operational_store
+        get_operational_store().init()
+        logger.info("Operational store initialized")
+    except Exception as e:
+        logger.warning(f"Operational store initialization failed: {e}")
+
     ai = get_ai_service()
     logger.info(f"AI service initialized (enabled={ai.is_enabled})")
 
@@ -105,18 +114,25 @@ async def lifespan(app: FastAPI):
                     from utils.graph_builder import build_rules_graph
                     build_rules_graph(clear_existing=True)
                     logger.info("RulesGraph build complete! Graph is now populated.")
-
-                    # Re-validate to confirm
-                    rules_count = db.execute_rules_query("MATCH (r:Rule) RETURN count(r) as cnt")
-                    country_count = db.execute_rules_query("MATCH (c:Country) RETURN count(c) as cnt")
-                    r_cnt = rules_count[0].get("cnt", 0) if rules_count else 0
-                    c_cnt = country_count[0].get("cnt", 0) if country_count else 0
-                    logger.info(f"Graph populated: {r_cnt} rules, {c_cnt} countries loaded")
                 except Exception as build_error:
                     logger.error(f"Failed to auto-build graph: {build_error}")
                     logger.warning("You can manually build the graph with: python main.py --build-graph")
         except Exception as e:
             logger.warning(f"Graph validation skipped: {e}")
+
+        # Migrate existing Rule nodes to add lifecycle fields if missing
+        try:
+            from datetime import date, datetime as dt
+            today = date.today().isoformat()
+            now = dt.utcnow().isoformat()
+            db.execute_rules_query(
+                "MATCH (r:Rule) WHERE r.valid_from IS NULL "
+                f"SET r.valid_from = '{today}', r.status = 'live', r.version_id = 1, "
+                f"r.workspace_id = 'default', r.created_at = '{now}', r.updated_at = '{now}'"
+            )
+            logger.info("Rule lifecycle migration complete")
+        except Exception as e:
+            logger.warning(f"Rule lifecycle migration skipped: {e}")
 
     yield
 
@@ -166,6 +182,7 @@ app.include_router(rule_links.router, dependencies=[Depends(get_current_admin)])
 app.include_router(jobs.router, dependencies=[Depends(get_current_admin)])
 app.include_router(graphs.router, dependencies=[Depends(get_current_admin)])
 app.include_router(data_sources.router, dependencies=[Depends(get_current_admin)])
+app.include_router(rbac.router)
 
 # Serve React frontend static files
 frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"

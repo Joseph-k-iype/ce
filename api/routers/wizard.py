@@ -11,9 +11,11 @@ allowing SSE events to stream in real-time.
 import asyncio
 import uuid
 import logging
-from typing import Dict, List
+from typing import Annotated, Any, Dict, List, Optional
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from api.dependencies.auth import get_current_user, User
 
 from models.wizard_models import (
     WizardStartRequest,
@@ -1092,3 +1094,44 @@ async def get_graph_entities(session_id: str) -> dict:
         logger.error(f"Failed to fetch graph entities: {e}")
 
     return {"dimension_options": dimension_options}
+
+
+# ===== Graph Trigger Mappings =====
+
+class GraphTriggerMappingItem(BaseModel):
+    graph_name: str
+    node_label: str
+    field: str
+    dimension: str
+    filter_expr: str = ""
+
+
+class GraphTriggerMappingsRequest(BaseModel):
+    mappings: List[GraphTriggerMappingItem]
+
+
+@router.get("/session/{session_id}/graph-trigger-mappings")
+async def get_graph_trigger_mappings(
+    session_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Get the graph trigger mappings for a wizard session."""
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"mappings": session.graph_trigger_mappings or []}
+
+
+@router.put("/session/{session_id}/graph-trigger-mappings")
+async def save_graph_trigger_mappings(
+    session_id: str,
+    request: GraphTriggerMappingsRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Save graph trigger mappings to a wizard session."""
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session.graph_trigger_mappings = [m.model_dump() for m in request.mappings]
+    return {"status": "ok", "mappings": session.graph_trigger_mappings}
+

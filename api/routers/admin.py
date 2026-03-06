@@ -6,6 +6,9 @@ All mutations go directly to FalkorDB and invalidate cache.
 """
 
 import logging
+import uuid
+import json
+from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -16,10 +19,26 @@ from services.sandbox_service import get_sandbox_service
 from utils.cypher_safety import validate_label, validate_relationship
 
 def _sync_logic_tree_edges(db, rule_id: str, logic_tree: dict):
+    """Sync logic tree to graph.
+
+    1. Rebuilds entity dimension edges (HAS_DATA_CATEGORY, etc.)
+    2. Stores the full logic tree structure as LogicNode graph nodes,
+       enabling graph traversal queries like "find all rules with DataCategory=X
+       nested under OR".
+    """
     # Wipe old graph edges driven by logic tree
     db.execute_rules_query("""
     MATCH (r:Rule {rule_id: $rule_id})-[rel:HAS_DATA_CATEGORY|HAS_PURPOSE|HAS_PROCESS|HAS_REGULATOR|HAS_AUTHORITY|HAS_DATA_SUBJECT|HAS_SENSITIVE_DATA_CATEGORY|HAS_GDC|TRIGGERED_BY_ORIGIN|TRIGGERED_BY_RECEIVING|ORIGINATES_FROM|RECEIVED_IN]->()
     DELETE rel
+    """, {"rule_id": rule_id})
+
+    # Wipe old LogicNode tree for this rule
+    db.execute_rules_query("""
+    MATCH (r:Rule {rule_id: $rule_id})-[:HAS_LOGIC_TREE]->(root:LogicNode)
+    MATCH path = (root)-[:HAS_CHILD*0..]->(n:LogicNode)
+    WITH collect(DISTINCT n) AS nodes
+    UNWIND nodes AS n
+    DETACH DELETE n
     """, {"rule_id": rule_id})
 
     if not logic_tree:
@@ -37,12 +56,57 @@ def _sync_logic_tree_edges(db, rule_id: str, logic_tree: dict):
         'GDC': ('GDC', 'HAS_GDC'),
         'OriginCountry': ('Country', 'ORIGINATES_FROM'),
         'ReceivingCountry': ('Country', 'RECEIVED_IN'),
-        'LegalEntity': ('LegalEntity', 'TRIGGERED_BY_ORIGIN')  # Treating all logic_tree LEs as origins for simplicity or just general triggers
+        'LegalEntity': ('LegalEntity', 'TRIGGERED_BY_ORIGIN')
     }
-    
+
     # Also collect group bindings separately
     origin_countries = set()
     receiving_countries = set()
+
+    # Collect all LogicNodes and edges in Python, then batch-create (2 queries vs N+1)
+    _nodes: list[dict] = []
+    _edges: list[dict] = []
+
+    def _collect_logic_nodes(node, parent_id: str | None = None, depth: int = 0, order: int = 0) -> str | None:
+        if not isinstance(node, dict):
+            return None
+        node_id = f"ln_{uuid.uuid4().hex[:12]}"
+        _nodes.append({
+            "node_id": node_id,
+            "rule_id": rule_id,
+            "node_type": node.get("type", "AND"),
+            "dimension": node.get("dimension") or "",
+            "value": node.get("value") or "",
+            "depth": depth,
+            "order": order,
+        })
+        if parent_id:
+            _edges.append({"parent_id": parent_id, "child_id": node_id, "order": order})
+        for i, child in enumerate(node.get("children", [])):
+            _collect_logic_nodes(child, node_id, depth + 1, i)
+        return node_id
+
+    root_id = _collect_logic_nodes(logic_tree)
+
+    if _nodes:
+        db.execute_rules_query(
+            "UNWIND $nodes AS n CREATE (ln:LogicNode) SET ln = n",
+            {"nodes": _nodes}
+        )
+    if _edges:
+        db.execute_rules_query(
+            "UNWIND $edges AS e "
+            "MATCH (p:LogicNode {node_id: e.parent_id}) "
+            "MATCH (c:LogicNode {node_id: e.child_id}) "
+            "CREATE (p)-[:HAS_CHILD {order: e.order}]->(c)",
+            {"edges": _edges}
+        )
+    if root_id:
+        db.execute_rules_query("""
+        MATCH (r:Rule {rule_id: $rule_id})
+        MATCH (root:LogicNode {node_id: $root_id})
+        MERGE (r)-[:HAS_LOGIC_TREE]->(root)
+        """, {"rule_id": rule_id, "root_id": root_id})
 
     def walk_tree(node):
         if not isinstance(node, dict): return
@@ -50,16 +114,16 @@ def _sync_logic_tree_edges(db, rule_id: str, logic_tree: dict):
             dim = node.get('dimension')
             val = node.get('value')
             if not val: return
-            
+
             # Values can be comma separated
             values = [v.strip() for v in val.split(',') if v.strip()]
-            
+
             for v in values:
                 if dim == 'OriginCountry':
                     origin_countries.add(v)
                 elif dim == 'ReceivingCountry':
                     receiving_countries.add(v)
-                
+
                 if dim in dim_maps:
                     label, rel = dim_maps[dim]
                     # Create the physical linkage
@@ -68,7 +132,7 @@ def _sync_logic_tree_edges(db, rule_id: str, logic_tree: dict):
                     MERGE (n:{label} {{name: $val_name}})
                     MERGE (r)-[:{rel}]->(n)
                     """, {"rule_id": rule_id, "val_name": v})
-                    
+
         elif node.get('type') in ['AND', 'OR', 'NOT']:
             for child in node.get('children', []):
                 walk_tree(child)
@@ -116,9 +180,7 @@ def _sync_logic_tree_edges(db, rule_id: str, logic_tree: dict):
         link_scopes(receiving_countries, is_origin=False)
 from pydantic import BaseModel, field_validator
 import pandas as pd
-import io
 import math
-import uuid
 from models.schemas import MappingsUpdate
 
 from services.database import get_db_service
@@ -152,6 +214,10 @@ class RuleUpdate(BaseModel):
     linked_attributes: Optional[List[str]] = None
     requires_pii: Optional[bool] = None
     valid_until: Optional[str] = None
+    valid_from: Optional[str] = None
+    valid_till: Optional[str] = None
+    status: Optional[str] = None
+    workspace_id: Optional[str] = None
     required_assessments: Optional[List[str]] = None
     required_actions: Optional[List[str]] = None
 
@@ -198,6 +264,10 @@ class RuleCreate(BaseModel):
     required_actions: List[str] = []
     logic_tree: Optional[dict] = None
     valid_until: Optional[str] = None
+    valid_from: Optional[str] = None
+    valid_till: Optional[str] = None
+    status: str = "draft"
+    workspace_id: str = "default"
     required_assessments: Optional[List[str]] = None
     linked_attributes: Optional[List[str]] = None
 
@@ -220,6 +290,9 @@ class DictionaryEntryCreate(BaseModel):
 async def create_rule(db=Depends(get_db)):
     """Create a new blank rule in the graph with a generated ID."""
     rule_id = str(uuid.uuid4())
+    _now_dt = datetime.now(timezone.utc)
+    now = _now_dt.isoformat()
+    today = _now_dt.date().isoformat()
 
     query = """
     MERGE (r:Rule {rule_id: $rule_id})
@@ -236,11 +309,17 @@ async def create_rule(db=Depends(get_db)):
         r.requires_any_data = false,
         r.requires_personal_data = false,
         r.priority_order = 100,
-        r.logic_tree = '{"type":"AND","children":[]}'
+        r.logic_tree = '{"type":"AND","children":[]}',
+        r.status = 'draft',
+        r.version_id = 1,
+        r.workspace_id = 'default',
+        r.valid_from = $today,
+        r.created_at = $now,
+        r.updated_at = $now
     RETURN r.rule_id as rule_id
     """
     try:
-        db.execute_rules_query(query, {"rule_id": rule_id})
+        db.execute_rules_query(query, {"rule_id": rule_id, "now": now, "today": today})
         invalidate_cache()
         return {"status": "success", "rule_id": rule_id}
     except Exception as e:
@@ -359,6 +438,101 @@ async def export_rules(db=Depends(get_db)):
     )
 
 
+# ── JSON Full Export / Import ────────────────────────────────────────────────
+
+@router.get("/export/full")
+async def export_full_json(db=Depends(get_db)):
+    """Export all rules as a structured JSON bundle."""
+    from fastapi.responses import JSONResponse as _JSONResponse
+    from config.settings import settings as _settings
+
+    results = await list_rules(db)
+    rules = []
+    for r in results:
+        rule = dict(r)
+        if isinstance(rule.get("logic_tree"), str):
+            try:
+                rule["logic_tree"] = json.loads(rule["logic_tree"])
+            except Exception:
+                pass
+        rules.append(rule)
+
+    bundle = {
+        "format_version": "1.0",
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "environment": _settings.environment,
+        "rules": rules,
+    }
+    return _JSONResponse(
+        content=bundle,
+        headers={"Content-Disposition": "attachment; filename=compliance_export.json"}
+    )
+
+
+class ImportBundleRequest(BaseModel):
+    format_version: str = "1.0"
+    rules: list = []
+
+
+@router.post("/import/full")
+async def import_full_json(bundle: ImportBundleRequest, db=Depends(get_db)):
+    """Import a JSON bundle of rules (MERGE upsert by rule_id). Imported rules land in 'draft'."""
+    _now_dt = datetime.now(timezone.utc)
+    now = _now_dt.isoformat()
+    today = _now_dt.date().isoformat()
+    imported = 0
+    skipped = 0
+    errors = []
+
+    for rule in bundle.rules:
+        rule_id = rule.get("rule_id") if isinstance(rule, dict) else None
+        if not rule_id:
+            errors.append({"error": "missing rule_id", "rule": str(rule)[:100]})
+            skipped += 1
+            continue
+        try:
+            logic_tree_str = json.dumps(rule.get("logic_tree") or {"type": "AND", "children": []})
+            db.execute_rules_query("""
+                MERGE (r:Rule {rule_id: $rule_id})
+                SET r.name = $name,
+                    r.description = $description,
+                    r.rule_type = $rule_type,
+                    r.priority = $priority,
+                    r.outcome = $outcome,
+                    r.odrl_type = $odrl_type,
+                    r.odrl_action = $odrl_action,
+                    r.enabled = $enabled,
+                    r.logic_tree = $logic_tree,
+                    r.status = 'draft',
+                    r.version_id = coalesce(r.version_id, 0) + 1,
+                    r.valid_from = $valid_from,
+                    r.workspace_id = $workspace_id,
+                    r.created_at = coalesce(r.created_at, $now),
+                    r.updated_at = $now
+            """, {
+                "rule_id": rule_id,
+                "name": rule.get("name", "Imported Rule"),
+                "description": rule.get("description", ""),
+                "rule_type": rule.get("rule_type", "case_matching"),
+                "priority": rule.get("priority", "medium"),
+                "outcome": rule.get("outcome", "permission"),
+                "odrl_type": rule.get("odrl_type", "Permission"),
+                "odrl_action": rule.get("odrl_action", "transfer"),
+                "enabled": rule.get("enabled", True),
+                "logic_tree": logic_tree_str,
+                "valid_from": rule.get("valid_from") or today,
+                "workspace_id": rule.get("workspace_id", "default"),
+                "now": now,
+            })
+            imported += 1
+        except Exception as e:
+            errors.append({"rule_id": rule_id, "error": str(e)})
+            skipped += 1
+
+    invalidate_cache()
+    return {"imported": imported, "skipped": skipped, "errors": errors}
+
+
 @router.get("/rules/{rule_id}")
 async def get_rule(rule_id: str, db=Depends(get_db)):
     """Get a single rule by ID."""
@@ -425,14 +599,41 @@ async def update_rule(rule_id: str, update: RuleUpdate, db=Depends(get_db)):
     if update.requires_pii is not None:
         set_parts.append("r.has_pii_required = $has_pii_required")
         params["has_pii_required"] = update.requires_pii
-        
+
     if update.valid_until is not None:
-        # If passed an empty string, set it back to null
         if update.valid_until.strip() == "":
             set_parts.append("r.valid_until = null")
         else:
             set_parts.append("r.valid_until = $valid_until")
             params["valid_until"] = update.valid_until
+
+    if update.valid_from is not None:
+        set_parts.append("r.valid_from = $valid_from")
+        params["valid_from"] = update.valid_from
+
+    if update.valid_till is not None:
+        if update.valid_till.strip() == "":
+            set_parts.append("r.valid_till = null")
+        else:
+            set_parts.append("r.valid_till = $valid_till")
+            params["valid_till"] = update.valid_till
+
+    if update.status is not None:
+        valid_statuses = {'draft', 'in_progress', 'live'}
+        if update.status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+        set_parts.append("r.status = $status")
+        params["status"] = update.status
+
+    if update.workspace_id is not None:
+        set_parts.append("r.workspace_id = $workspace_id")
+        params["workspace_id"] = update.workspace_id
+
+    # Always bump version_id and updated_at on any update
+    if set_parts:
+        set_parts.append("r.version_id = coalesce(r.version_id, 0) + 1")
+        set_parts.append("r.updated_at = $updated_at")
+        params["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     if not set_parts and update.linked_attributes is None and update.outcome is None and update.required_assessments is None and update.required_actions is None:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -468,57 +669,103 @@ async def update_rule(rule_id: str, update: RuleUpdate, db=Depends(get_db)):
             MERGE (r)-[:HAS_PERMISSION]->(p)
             """, params={"rule_id": rule_id})
 
-    # If attributes were provided, map them
+    # If attributes were provided, replace them in a single batched query
     if update.linked_attributes is not None:
+        attr_names = [a.strip() for a in update.linked_attributes if a.strip()]
         db.execute_rules_query("""
-        MATCH (r:Rule {rule_id: $rule_id})-[rel:HAS_ATTRIBUTE]->()
-        DELETE rel
+        MATCH (r:Rule {rule_id: $rule_id})-[rel:HAS_ATTRIBUTE]->() DELETE rel
         """, params={"rule_id": rule_id})
-        
-        for attr in update.linked_attributes:
-            if attr.strip():
-                db.execute_rules_query("""
-                MATCH (r:Rule {rule_id: $rule_id})
-                MERGE (a:Attribute {name: $attr_name})
-                MERGE (r)-[:HAS_ATTRIBUTE]->(a)
-                """, params={"rule_id": rule_id, "attr_name": attr.strip()})
+        if attr_names:
+            db.execute_rules_query("""
+            MATCH (r:Rule {rule_id: $rule_id})
+            UNWIND $attr_names AS attr_name
+            MERGE (a:Attribute {name: attr_name})
+            MERGE (r)-[:HAS_ATTRIBUTE]->(a)
+            """, params={"rule_id": rule_id, "attr_names": attr_names})
 
-    # If assessments or actions were provided, rebuild the duties
+    # If assessments or actions were provided, rebuild the duties in two batched queries
     if update.required_assessments is not None or update.required_actions is not None:
         db.execute_rules_query("""
         MATCH (r:Rule {rule_id: $rule_id})-[:HAS_PERMISSION]->(p:Permission)-[rel:CAN_HAVE_DUTY]->(d:Duty)
         DELETE rel
         """, params={"rule_id": rule_id})
 
-        # Find rule and permission 
         rule_data = db.execute_rules_query("MATCH (r:Rule {rule_id: $rule_id}) RETURN r.outcome AS outcome", {"rule_id": rule_id})
         current_outcome = rule_data[0]['outcome'] if rule_data else 'permission'
 
         if current_outcome != 'prohibition':
-            if update.required_assessments is not None:
-                for assessment in update.required_assessments:
-                    if assessment.strip():
-                        assessment_upper = str(assessment).strip().upper()
-                        duty_name = f"Complete {assessment_upper} Module"
-                        db.execute_rules_query("""
-                        MERGE (d:Duty {name: $duty_name, module: $module, value: 'Completed'})
-                        WITH d
-                        MATCH (r:Rule {rule_id: $rule_id})-[:HAS_PERMISSION]->(p:Permission)
-                        MERGE (p)-[:CAN_HAVE_DUTY]->(d)
-                        """, params={"duty_name": duty_name, "module": assessment_upper, "rule_id": rule_id})
-                        
-            if update.required_actions is not None:
-                for action in update.required_actions:
-                    if action.strip():
-                        db.execute_rules_query("""
-                        MERGE (d:Duty {name: $action_name, module: 'action', value: 'required'})
-                        WITH d
-                        MATCH (r:Rule {rule_id: $rule_id})-[:HAS_PERMISSION]->(p:Permission)
-                        MERGE (p)-[:CAN_HAVE_DUTY]->(d)
-                        """, params={"action_name": action.strip(), "rule_id": rule_id})
+            if update.required_assessments:
+                assessments = [
+                    {"duty_name": f"Complete {a.strip().upper()} Module", "module": a.strip().upper()}
+                    for a in update.required_assessments if a.strip()
+                ]
+                if assessments:
+                    db.execute_rules_query("""
+                    MATCH (r:Rule {rule_id: $rule_id})-[:HAS_PERMISSION]->(p:Permission)
+                    UNWIND $assessments AS item
+                    MERGE (d:Duty {name: item.duty_name, module: item.module, value: 'Completed'})
+                    MERGE (p)-[:CAN_HAVE_DUTY]->(d)
+                    """, params={"rule_id": rule_id, "assessments": assessments})
+
+            if update.required_actions:
+                actions = [a.strip() for a in update.required_actions if a.strip()]
+                if actions:
+                    db.execute_rules_query("""
+                    MATCH (r:Rule {rule_id: $rule_id})-[:HAS_PERMISSION]->(p:Permission)
+                    UNWIND $actions AS action_name
+                    MERGE (d:Duty {name: action_name, module: 'action', value: 'required'})
+                    MERGE (p)-[:CAN_HAVE_DUTY]->(d)
+                    """, params={"rule_id": rule_id, "actions": actions})
 
     invalidate_cache()
     return {"status": "updated", "rule_id": rule_id}
+
+
+# ── Rule Status Workflow ─────────────────────────────────────────────────────
+
+def _transition_rule_status(
+    db,
+    rule_id: str,
+    new_status: str,
+    allowed_from: list | None,  # None = any status allowed
+    action_label: str,
+) -> dict:
+    """Shared helper: validates current status, applies transition, invalidates cache."""
+    result = db.execute_rules_query(
+        "MATCH (r:Rule {rule_id: $rule_id}) RETURN r.status AS status", {"rule_id": rule_id}
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    current_status = result[0].get("status", "draft")
+    if allowed_from is not None and current_status not in allowed_from:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot {action_label} rule with status '{current_status}'. Allowed from: {allowed_from}."
+        )
+    db.execute_rules_query(
+        "MATCH (r:Rule {rule_id: $rule_id}) SET r.status = $new_status, r.updated_at = $now",
+        {"rule_id": rule_id, "new_status": new_status, "now": datetime.now(timezone.utc).isoformat()}
+    )
+    invalidate_cache()
+    return {"status": action_label, "rule_id": rule_id, "new_status": new_status}
+
+
+@router.post("/rules/{rule_id}/submit")
+async def submit_rule(rule_id: str, db=Depends(get_db)):
+    """Submit a rule for review: draft → in_progress. Admin only."""
+    return _transition_rule_status(db, rule_id, "in_progress", ["draft"], "submitted")
+
+
+@router.post("/rules/{rule_id}/approve")
+async def approve_rule(rule_id: str, db=Depends(get_db)):
+    """Approve a rule: any status → live. Requires editor or admin role."""
+    return _transition_rule_status(db, rule_id, "live", None, "approved")
+
+
+@router.post("/rules/{rule_id}/revert")
+async def revert_rule(rule_id: str, db=Depends(get_db)):
+    """Revert a live rule back to draft. Admin only."""
+    return _transition_rule_status(db, rule_id, "draft", ["live"], "reverted")
 
 
 @router.post("/rules")

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-03T02:44:29.814145",
+  "timestamp": "2026-03-06T11:38:11.652567",
   "nodes": [
     {
       "id": 0,
@@ -3783,7 +3783,13 @@
         "has_pii_required": false,
         "requires_any_data": false,
         "requires_personal_data": true,
-        "enabled": true
+        "enabled": true,
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -3827,7 +3833,13 @@
         "has_pii_required": false,
         "requires_any_data": false,
         "requires_personal_data": false,
-        "enabled": true
+        "enabled": true,
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -3871,7 +3883,13 @@
         "has_pii_required": false,
         "requires_any_data": false,
         "requires_personal_data": false,
-        "enabled": true
+        "enabled": true,
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -3904,7 +3922,13 @@
         "has_pii_required": false,
         "requires_any_data": false,
         "requires_personal_data": false,
-        "enabled": true
+        "enabled": true,
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -3937,7 +3961,13 @@
         "has_pii_required": false,
         "requires_any_data": false,
         "requires_personal_data": false,
-        "enabled": true
+        "enabled": true,
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -3970,7 +4000,13 @@
         "has_pii_required": false,
         "requires_any_data": false,
         "requires_personal_data": false,
-        "enabled": true
+        "enabled": true,
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -4003,7 +4039,13 @@
         "has_pii_required": false,
         "requires_any_data": false,
         "requires_personal_data": false,
-        "enabled": true
+        "enabled": true,
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -4047,7 +4089,13 @@
         "has_pii_required": false,
         "requires_any_data": false,
         "requires_personal_data": false,
-        "enabled": true
+        "enabled": true,
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6503,7 +6551,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\":\"AND\",\"children\":[]}"
+        "logic_tree": "{\"type\":\"AND\",\"children\":[]}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6526,7 +6580,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\":\"AND\",\"children\":[]}"
+        "logic_tree": "{\"type\":\"AND\",\"children\":[]}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6549,7 +6609,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\":\"AND\",\"children\":[]}"
+        "logic_tree": "{\"type\":\"AND\",\"children\":[]}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6572,7 +6638,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\": \"AND\", \"children\": []}"
+        "logic_tree": "{\"type\": \"AND\", \"children\": []}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6604,7 +6676,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\":\"AND\",\"children\":[]}"
+        "logic_tree": "{\"type\":\"AND\",\"children\":[]}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6627,7 +6705,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\":\"AND\",\"children\":[]}"
+        "logic_tree": "{\"type\":\"AND\",\"children\":[]}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6650,7 +6734,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\":\"AND\",\"children\":[]}"
+        "logic_tree": "{\"type\":\"AND\",\"children\":[]}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6673,7 +6763,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\":\"AND\",\"children\":[]}"
+        "logic_tree": "{\"type\":\"AND\",\"children\":[]}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {
@@ -6705,7 +6801,13 @@
         "requires_any_data": false,
         "requires_personal_data": false,
         "priority_order": 100,
-        "logic_tree": "{\"type\": \"CONDITION\", \"dimension\": \"DataCategory\", \"value\": \"Health\"}"
+        "logic_tree": "{\"type\": \"CONDITION\", \"dimension\": \"DataCategory\", \"value\": \"Health\"}",
+        "valid_from": "2026-03-04",
+        "status": "live",
+        "version_id": 1,
+        "workspace_id": "default",
+        "created_at": "2026-03-04T05:50:07.267509",
+        "updated_at": "2026-03-04T05:50:07.267509"
       }
     },
     {

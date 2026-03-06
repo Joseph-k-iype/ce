@@ -471,36 +471,123 @@ class CSVConnector(DataSourceConnector):
             return []
 
 
+import hashlib
+
+
 class DataSourceManager:
-    """Manages data source configurations and connectors."""
+    """Manages data source configurations and connectors.
+
+    In-memory cache is always in sync with the SQLite operational store.
+    On startup, sources are loaded from SQLite so they survive restarts.
+    """
 
     def __init__(self):
         self._sources: Dict[str, DataSourceConfig] = {}
+        self._store_loaded = False
+
+    def _ensure_store_loaded(self):
+        """Lazy-load persisted sources from SQLite on first access."""
+        if self._store_loaded:
+            return
+        try:
+            from services.operational_store import get_operational_store
+            store = get_operational_store()
+            for row in store.list_data_sources():
+                config = DataSourceConfig(
+                    source_id=row["source_id"],
+                    name=row["name"],
+                    source_type=DataSourceType(row["source_type"]),
+                    description=row.get("description", ""),
+                    config=row.get("config", {}),
+                    auth_config=row.get("auth_config", {}),
+                    enabled=row.get("enabled", True),
+                    created_at=datetime.fromisoformat(row["created_at"]) if row.get("created_at") else datetime.now(),
+                )
+                self._sources[config.source_id] = config
+            logger.info(f"Loaded {len(self._sources)} data sources from operational store")
+        except Exception as e:
+            logger.warning(f"Could not load data sources from operational store: {e}")
+        self._store_loaded = True
+
+    @staticmethod
+    def _config_hash(config: dict) -> str:
+        return hashlib.md5(json.dumps(config, sort_keys=True).encode()).hexdigest()
 
     def register_source(self, config: DataSourceConfig) -> str:
-        """Register a new data source."""
+        """Register a new data source, deduplicating by name+type+config hash."""
+        self._ensure_store_loaded()
+
+        # Deduplication check
+        config_hash = self._config_hash(config.config)
+        for existing in self._sources.values():
+            if (existing.name == config.name
+                    and existing.source_type == config.source_type
+                    and self._config_hash(existing.config) == config_hash):
+                logger.info(f"Deduplicating data source '{config.name}' — using existing {existing.source_id}")
+                return existing.source_id
+
         self._sources[config.source_id] = config
+
+        # Persist to SQLite
+        try:
+            from services.operational_store import get_operational_store
+            store = get_operational_store()
+            store.upsert_data_source(
+                source_id=config.source_id,
+                name=config.name,
+                source_type=config.source_type.value,
+                description=config.description,
+                config=config.config,
+                auth_config=config.auth_config,
+                enabled=config.enabled,
+            )
+        except Exception as e:
+            logger.warning(f"Could not persist data source to operational store: {e}")
+
         logger.info(f"Registered data source: {config.name} ({config.source_type})")
         return config.source_id
 
     def get_source(self, source_id: str) -> Optional[DataSourceConfig]:
         """Get data source configuration."""
+        self._ensure_store_loaded()
         return self._sources.get(source_id)
 
     def list_sources(self, source_type: Optional[DataSourceType] = None) -> List[DataSourceConfig]:
         """List all data sources, optionally filtered by type."""
+        self._ensure_store_loaded()
         sources = list(self._sources.values())
         if source_type:
             sources = [s for s in sources if s.source_type == source_type]
         return sources
 
     def delete_source(self, source_id: str) -> bool:
-        """Delete a data source."""
-        if source_id in self._sources:
-            del self._sources[source_id]
-            logger.info(f"Deleted data source: {source_id}")
-            return True
-        return False
+        """Delete a data source from memory and SQLite."""
+        self._ensure_store_loaded()
+        if source_id not in self._sources:
+            return False
+        del self._sources[source_id]
+
+        # Persist deletion to SQLite
+        try:
+            from services.operational_store import get_operational_store
+            store = get_operational_store()
+            store.delete_data_source(source_id)
+        except Exception as e:
+            logger.warning(f"Could not delete data source from operational store: {e}")
+
+        logger.info(f"Deleted data source: {source_id}")
+        return True
+
+    def get_existing_source_id(self, name: str, source_type: DataSourceType, config: dict) -> Optional[str]:
+        """Return existing source_id if identical source already registered."""
+        self._ensure_store_loaded()
+        config_hash = self._config_hash(config)
+        for existing in self._sources.values():
+            if (existing.name == name
+                    and existing.source_type == source_type
+                    and self._config_hash(existing.config) == config_hash):
+                return existing.source_id
+        return None
 
     def get_connector(self, source_id: str) -> Optional[DataSourceConnector]:
         """Get a connector instance for a data source."""

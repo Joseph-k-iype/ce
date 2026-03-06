@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWizardStore } from '../../../stores/wizardStore';
 import { useDropdownData } from '../../../hooks/useDropdownData';
+import { DataDictionaryEditor } from '../DataDictionaryEditor';
 import { editRule, editTerms, getTriggerLogic, getLogicTree, updateLogicTree } from '../../../services/wizardApi';
 import { LogicTreeBuilder } from '../../shared/LogicTreeBuilder';
 import { DIMENSION_CONFIGS } from '../../../services/dimensionConfig';
@@ -8,7 +9,7 @@ import type { TriggerLogicResponse } from '../../../types/wizard';
 import type { LogicNode } from '../../shared/LogicTreeBuilder/types';
 
 export function Step4Review() {
-  const { data: dropdowns } = useDropdownData();
+  const { data: dropdowns, isLoading: dropdownsLoading, error: dropdownsError } = useDropdownData();
   const {
     editedRuleDefinition,
     editedTermsDictionary,
@@ -60,19 +61,16 @@ export function Step4Review() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Fetch trigger logic and logic tree from backend
+  // Fetch trigger logic and logic tree in parallel
   useEffect(() => {
     if (!sessionId) return;
-
-    // Fetch trigger logic for display
-    getTriggerLogic(sessionId)
-      .then(setTriggerLogic)
-      .catch(() => { /* trigger logic is optional — ignore errors */ });
-
-    // Fetch logic tree for visual editing
-    getLogicTree(sessionId)
-      .then(setLogicTree)
-      .catch(() => { /* logic tree is optional — use default */ });
+    Promise.all([
+      getTriggerLogic(sessionId).catch(() => null),
+      getLogicTree(sessionId).catch(() => null),
+    ]).then(([triggerResult, treeResult]) => {
+      if (triggerResult) setTriggerLogic(triggerResult);
+      if (treeResult) setLogicTree(treeResult);
+    });
   }, [sessionId]);
 
   const handleLogicTreeChange = useCallback(async (tree: LogicNode) => {
@@ -140,9 +138,6 @@ export function Step4Review() {
     setEditableTerms(entries);
   }, [terms]);
 
-  const handleTermChange = useCallback((key: string, value: string) => {
-    setEditableTerms(prev => ({ ...prev, [key]: value }));
-  }, []);
 
   const handleSave = async () => {
     if (!sessionId || !rule) return;
@@ -339,7 +334,7 @@ export function Step4Review() {
         </div>
       </div>
 
-      {/* Editable Entity Dimensions — collapsible */}
+      {/* Editable Entity Dimensions — always visible compact summary + expand-to-edit */}
       <div className="card-dark p-5 space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Entity Trigger Conditions</h4>
@@ -353,8 +348,59 @@ export function Step4Review() {
         <p className="text-[10px] text-gray-500">
           These are the entity dimensions that will trigger this rule. Editing here updates your confirmed selections.
         </p>
+
+        {/* Compact read-only summary — always visible */}
+        {!editingEntities && (
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {[
+              { label: 'Data Categories', values: dataCategories },
+              { label: 'Purposes', values: purposesOfProcessing },
+              { label: 'Process L1', values: processL1 },
+              { label: 'Process L2', values: processL2 },
+              { label: 'Process L3', values: processL3 },
+              { label: 'GDC', values: groupDataCategories },
+              { label: 'Sensitive Data', values: sensitiveDataCategories },
+              { label: 'Regulators', values: regulators },
+              { label: 'Authorities', values: authorities },
+              { label: 'Data Subjects', values: dataSubjects },
+            ].map(({ label, values }) => (
+              <div key={label} className="flex items-start gap-2">
+                <span className="text-gray-500 shrink-0 w-28">{label}:</span>
+                {values.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {values.map(v => (
+                      <span key={v} className="px-1.5 py-0.5 bg-purple-900/40 text-purple-300 rounded text-[10px]">{v}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-600 italic">—</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {editingEntities && (
           <div className="space-y-4 pt-2">
+            {/* Dropdown loading/error states */}
+            {dropdownsLoading && (
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" />
+                Loading entity options from graph...
+              </div>
+            )}
+            {dropdownsError && (
+              <div className="px-3 py-2 bg-red-900/30 border border-red-700/50 rounded-lg text-xs text-red-300">
+                Failed to load dropdown options. The graph may have no entity data yet.
+                You can still type values manually after saving.
+              </div>
+            )}
+            {!dropdownsLoading && !dropdownsError && !dropdowns && (
+              <div className="px-3 py-2 bg-yellow-900/20 border border-yellow-700/30 rounded-lg text-xs text-yellow-300">
+                No entity data found in the connected graph. Select a graph in Step 3 to populate options.
+              </div>
+            )}
+
             {/* Data Categories */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -367,6 +413,9 @@ export function Step4Review() {
                     return <option key={v} value={v}>{v}</option>;
                   })}
                 </select>
+                {!dropdownsLoading && (dropdowns?.data_categories || []).length === 0 && (
+                  <p className="text-[10px] text-gray-600 mt-0.5">No options — graph has no DataCategory nodes</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-300 mb-1">Purposes of Processing</label>
@@ -378,6 +427,9 @@ export function Step4Review() {
                     return <option key={v} value={v}>{v}</option>;
                   })}
                 </select>
+                {!dropdownsLoading && (dropdowns?.purpose_of_processing || dropdowns?.purposes || []).length === 0 && (
+                  <p className="text-[10px] text-gray-600 mt-0.5">No options — graph has no Purpose nodes</p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -633,39 +685,12 @@ export function Step4Review() {
         </div>
       )}
 
-      {/* Data Dictionaries — Fully Editable */}
+      {/* Data Dictionaries — Structured UI */}
       {Object.keys(editableTerms).length > 0 && (
-        <div className="card-dark p-5 space-y-3">
-          <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Data Dictionaries</h4>
-          <p className="text-[10px] text-gray-500">Edit JSON values directly. Changes are saved when you click "Save Changes".</p>
-          <div className="max-h-96 overflow-y-auto space-y-3">
-            {Object.entries(editableTerms).map(([key, value]) => {
-              // Determine if this is a JSON object/array or a simple value
-              const isMultiLine = value.includes('\n') || value.length > 80;
-              return (
-                <div key={key} className="border border-gray-700 rounded-lg p-3">
-                  <label className="block text-xs font-semibold text-gray-300 mb-1 capitalize">
-                    {key.replace(/_/g, ' ')}
-                  </label>
-                  {isMultiLine ? (
-                    <textarea
-                      value={value}
-                      onChange={e => handleTermChange(key, e.target.value)}
-                      rows={Math.min(10, value.split('\n').length + 1)}
-                      className="input-dark text-xs font-mono resize-y w-full"
-                    />
-                  ) : (
-                    <input
-                      value={value}
-                      onChange={e => handleTermChange(key, e.target.value)}
-                      className="input-dark text-xs w-full"
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <DataDictionaryEditor
+          terms={editableTerms}
+          onChange={setEditableTerms}
+        />
       )}
     </div>
   );

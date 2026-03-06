@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useEditorData } from '../hooks/useEditorData';
 import { useEditorStore } from '../stores/editorStore';
-import { PolicyEditorCanvas } from '../components/editor/PolicyEditorCanvas';
 import { NodeDetailsSidebar } from '../components/editor/NodeDetailsSidebar';
 import { RulesOverviewTable } from '../components/editor/RulesOverviewTable';
 import { KanbanBoardView } from '../components/editor/KanbanBoardView';
 
-type EditorView = 'table' | 'kanban' | 'graph';
+type EditorView = 'table' | 'kanban';
 
 export function EditorPage() {
   const [view, setView] = useState<EditorView>('table');
@@ -35,14 +34,6 @@ export function EditorPage() {
           >
             Kanban Board
           </button>
-          <button
-            onClick={() => setView('graph')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              view === 'graph' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Full Graph
-          </button>
         </div>
       </div>
 
@@ -69,7 +60,7 @@ export function EditorPage() {
             <ReactFlowProvider>
               <div className="flex-1 flex overflow-hidden">
                 <div className="flex-1 overflow-hidden">
-                  {view === 'kanban' ? <KanbanBoardView /> : <PolicyEditorCanvas />}
+                  <KanbanBoardView />
                 </div>
                 {sidebarNodeId && <NodeDetailsSidebar />}
               </div>

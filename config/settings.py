@@ -7,7 +7,7 @@ Pydantic v2 compatible.
 from pathlib import Path
 from typing import Optional, List
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 from functools import lru_cache
 
 
@@ -139,25 +139,31 @@ class AuthSettings(BaseSettings):
     # LDAP Details
     enable_ldap: bool = Field(default=False, validation_alias="ENABLE_LDAP")
     ldap_server_url: str = Field(default="ldap://localhost:389", validation_alias="LDAP_SERVER_URL")
-    ldap_bind_dn: str = Field(default="", validation_alias="LDAP_BIND_DN")
-    ldap_bind_password: str = Field(default="", validation_alias="LDAP_BIND_PASSWORD")
+    ldap_base_dn_template: str = Field(
+        default="CN={employee_id},OU=users,DC=example,DC=com",
+        validation_alias="LDAP_BASE_DN_TEMPLATE"
+    )
     ldap_search_base: str = Field(default="DC=example,DC=com", validation_alias="LDAP_SEARCH_BASE")
+    ldap_search_filter_template: str = Field(
+        default="(&(|(objectclass=userproxy)(objectclass=user))(cn={employee_id}))",
+        validation_alias="LDAP_SEARCH_FILTER_TEMPLATE"
+    )
+    ldap_admin_employee_ids: List[str] = Field(default=[], validation_alias="LDAP_ADMIN_EMPLOYEE_IDS")
+
+    @field_validator("ldap_admin_employee_ids", mode="before")
+    @classmethod
+    def parse_employee_ids(cls, v):
+        if isinstance(v, str):
+            return [x.strip() for x in v.split(",") if x.strip()]
+        return v
 
     # Local fallback authentication (for development only - use LDAP in production)
-    # To generate bcrypt hash: python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())"
+    # Credentials must come from .env — no hardcoded hashes in source
     enable_local_fallback: bool = Field(default=True, validation_alias="ENABLE_LOCAL_FALLBACK")
     local_admin_username: str = Field(default="admin", validation_alias="LOCAL_ADMIN_USERNAME")
-    local_admin_password_hash: str = Field(
-        # Default hash for password "admin" - CHANGE THIS IN PRODUCTION
-        default="$2b$12$epKJX28HtYovqznAlr3C3eUo6lu0FBdcH4M8UA6Xldr9lLiRXOwv.",
-        validation_alias="LOCAL_ADMIN_PASSWORD_HASH"
-    )
+    local_admin_password_hash: str = Field(default="", validation_alias="LOCAL_ADMIN_PASSWORD_HASH")
     local_user_username: str = Field(default="user", validation_alias="LOCAL_USER_USERNAME")
-    local_user_password_hash: str = Field(
-        # Default hash for password "user" - CHANGE THIS IN PRODUCTION
-        default="$2b$12$fPPf65y8hdT5Lx0fTqPim.MGtkXytBrlVmSHVwbXq0MoH.hhPJ/cK",
-        validation_alias="LOCAL_USER_PASSWORD_HASH"
-    )
+    local_user_password_hash: str = Field(default="", validation_alias="LOCAL_USER_PASSWORD_HASH")
 
 
 class PathSettings(BaseSettings):
@@ -222,10 +228,25 @@ class Settings(BaseSettings):
     paths: PathSettings = Field(default_factory=PathSettings)
 
 
+def _resolve_env_files() -> list:
+    """Return ordered list of env files: base .env, then .env.{ENV}."""
+    import os
+    base = Path(__file__).parent.parent
+    files = [str(base / ".env")]
+    # Allow ENV var to specify environment (e.g. ENV=uat → loads .env.uat)
+    env_name = os.environ.get("ENV", os.environ.get("ENVIRONMENT", "")).lower()
+    if env_name and env_name not in ("development", "production", "testing"):
+        env_file = base / f".env.{env_name}"
+        if env_file.exists():
+            files.append(str(env_file))
+    return files
+
+
 @lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance"""
-    return Settings()
+    """Get cached settings instance, loading env-specific overrides if ENV is set."""
+    env_files = _resolve_env_files()
+    return Settings(_env_file=env_files)  # type: ignore[call-arg]
 
 
 # Convenience function for accessing settings

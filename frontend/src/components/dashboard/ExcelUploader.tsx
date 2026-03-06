@@ -43,6 +43,7 @@ export function ExcelUploader() {
     const [loading, setLoading] = useState(false);
     const [downloadingTemplate, setDownloadingTemplate] = useState(false);
     const [downloadingExport, setDownloadingExport] = useState(false);
+    const [downloadingJson, setDownloadingJson] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [parsedRules, setParsedRules] = useState<ParsedRule[]>([]);
     const [success, setSuccess] = useState(false);
@@ -165,7 +166,23 @@ export function ExcelUploader() {
                         disabled={downloadingExport}
                         className="px-6 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 border border-gray-200 shadow-sm disabled:opacity-50"
                     >
-                        {downloadingExport ? 'Exporting…' : 'Export Rules'}
+                        {downloadingExport ? 'Exporting…' : 'Export Excel'}
+                    </button>
+                    <button
+                        onClick={async () => {
+                            setDownloadingJson(true);
+                            try {
+                                await downloadAuthenticatedFile('/admin/export/full', 'compliance_export.json');
+                            } catch {
+                                setError('Failed to export JSON');
+                            } finally {
+                                setDownloadingJson(false);
+                            }
+                        }}
+                        disabled={downloadingJson}
+                        className="px-6 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 border border-gray-200 shadow-sm disabled:opacity-50"
+                    >
+                        {downloadingJson ? 'Exporting…' : 'Export JSON'}
                     </button>
                 </div>
                 {error && <p className="mt-3 text-sm text-red-600 font-medium">{error}</p>}

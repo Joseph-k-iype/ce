@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import axios from 'axios';
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'editor' | 'user';
 
 interface AuthState {
   isAuthenticated: boolean;

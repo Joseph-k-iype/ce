@@ -66,6 +66,7 @@ async def get_rules_overview_table(
             r.odrl_type AS odrl_type,
             r.origin_match_type AS origin_match_type,
             r.receiving_match_type AS receiving_match_type,
+            r.status AS status,
             collect(DISTINCT oc.name) AS origin_names,
             collect(DISTINCT rc.name) AS receiving_names,
             collect(DISTINCT d.name) AS duties,
@@ -161,6 +162,7 @@ async def get_rules_overview_table(
             permission_prohibition=perm_prohib,
             duty=duty_str,
             priority=row.get('priority', 'low'),
+            status=row.get('status', 'live') or 'live',
         ))
 
     # Apply filters

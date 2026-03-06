@@ -360,6 +360,7 @@ class RuleTableRow(BaseModel):
     permission_prohibition: str
     duty: str
     priority: str = "low"
+    status: str = "live"
 
 
 class RulesOverviewTableResponse(BaseModel):

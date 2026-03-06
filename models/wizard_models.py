@@ -139,6 +139,12 @@ class WizardSessionState(BaseModel):
         description="How graphs were selected: 'ai_suggested' | 'manual'"
     )
 
+    # Graph trigger mappings: how graph node fields map to trigger dimensions
+    graph_trigger_mappings: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Mappings from graph node fields to trigger dimensions"
+    )
+
 
 class WizardSessionResponse(BaseModel):
     """Response for getting wizard session state"""

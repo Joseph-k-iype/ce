@@ -11,16 +11,20 @@
  * - Auto-save on selection changes
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWizardStore } from '../../../stores/wizardStore';
 import {
   getGraphSuggestions,
   getAvailableGraphs,
   configureGraphs,
   getGraphPreview,
+  getGraphTriggerMappings,
+  saveGraphTriggerMappings,
 } from '../../../services/wizardApi';
+import type { GraphTriggerMapping } from '../../../services/wizardApi';
 import { GraphSuggestionCard } from '../GraphSuggestionCard';
 import { GraphPreviewModal } from '../GraphPreviewModal';
+import { GraphTriggerMappingPanel } from '../GraphTriggerMappingPanel';
 
 interface GraphSuggestion {
   graph_name: string;
@@ -54,6 +58,7 @@ export function Step3GraphSelection() {
   const [confidence, setConfidence] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [triggerMappings, setTriggerMappings] = useState<Record<string, GraphTriggerMapping[]>>({});
 
   // Fetch graph suggestions and available graphs on mount
   useEffect(() => {
@@ -64,15 +69,22 @@ export function Step3GraphSelection() {
         setLoading(true);
         setError(null);
 
-        const [suggestionsRes, graphsRes] = await Promise.all([
+        const [suggestionsRes, graphsRes, mappingsRes] = await Promise.all([
           getGraphSuggestions(sessionId),
           getAvailableGraphs(sessionId),
+          getGraphTriggerMappings(sessionId).catch(() => ({ mappings: [] })),
         ]);
 
         setSuggestions(suggestionsRes.relevant_graphs || []);
         setConfidence(suggestionsRes.confidence || 0);
         setAllGraphs(graphsRes.available_graphs || []);
         setSelectedGraphs(graphsRes.current_selection || ['DataTransferGraph']);
+
+        const grouped: Record<string, GraphTriggerMapping[]> = {};
+        for (const m of mappingsRes.mappings || []) {
+          grouped[m.graph_name] = [...(grouped[m.graph_name] || []), m];
+        }
+        setTriggerMappings(grouped);
       } catch (err: any) {
         console.error('Failed to load graph data:', err);
         setError(err?.message || 'Failed to load graph data');
@@ -125,6 +137,20 @@ export function Step3GraphSelection() {
     setPreviewGraph(null);
     setPreviewData(null);
   };
+
+  // Handle trigger mapping changes for a specific graph
+  const handleTriggerMappingChange = useCallback(async (graphName: string, mappings: GraphTriggerMapping[]) => {
+    const updated = { ...triggerMappings, [graphName]: mappings };
+    setTriggerMappings(updated);
+    if (sessionId) {
+      try {
+        const allMappings = Object.values(updated).flat();
+        await saveGraphTriggerMappings(sessionId, allMappings);
+      } catch (err) {
+        console.error('Failed to save trigger mappings:', err);
+      }
+    }
+  }, [triggerMappings, sessionId]);
 
   // Loading state
   if (loading) {
@@ -282,32 +308,41 @@ export function Step3GraphSelection() {
             {allGraphs
               .filter((g) => g.graph_type !== 'rules') // Exclude system graphs from manual selection
               .map((graph) => (
-                <div
-                  key={graph.name}
-                  className={`border rounded-lg p-3 flex items-center gap-3 transition-all ${
-                    selectedGraphs.includes(graph.name)
-                      ? 'border-purple-500 bg-purple-500/10'
-                      : 'border-gray-600 hover:border-gray-500'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedGraphs.includes(graph.name)}
-                    onChange={() => toggleGraph(graph.name)}
-                    className="w-4 h-4 rounded border-gray-400 text-purple-600 focus:ring-purple-500"
-                    aria-label={`Select ${graph.name}`}
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-white">{graph.name}</div>
-                    <div className="text-xs text-gray-400">{graph.description}</div>
-                  </div>
-                  <button
-                    onClick={() => handlePreview(graph.name)}
-                    disabled={loadingPreview}
-                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                <div key={graph.name}>
+                  <div
+                    className={`border rounded-lg p-3 flex items-center gap-3 transition-all ${
+                      selectedGraphs.includes(graph.name)
+                        ? 'border-purple-500 bg-purple-500/10'
+                        : 'border-gray-600 hover:border-gray-500'
+                    }`}
                   >
-                    Preview
-                  </button>
+                    <input
+                      type="checkbox"
+                      checked={selectedGraphs.includes(graph.name)}
+                      onChange={() => toggleGraph(graph.name)}
+                      className="w-4 h-4 rounded border-gray-400 text-purple-600 focus:ring-purple-500"
+                      aria-label={`Select ${graph.name}`}
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-white">{graph.name}</div>
+                      <div className="text-xs text-gray-400">{graph.description}</div>
+                    </div>
+                    <button
+                      onClick={() => handlePreview(graph.name)}
+                      disabled={loadingPreview}
+                      className="text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                    >
+                      Preview
+                    </button>
+                  </div>
+                  {selectedGraphs.includes(graph.name) && (
+                    <GraphTriggerMappingPanel
+                      graphName={graph.name}
+                      nodeLabels={graph.node_labels || []}
+                      mappings={triggerMappings[graph.name] || []}
+                      onChange={mappings => handleTriggerMappingChange(graph.name, mappings)}
+                    />
+                  )}
                 </div>
               ))}
           </div>

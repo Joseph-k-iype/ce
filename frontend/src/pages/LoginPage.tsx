@@ -27,13 +27,13 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
             <input
               type="text"
               value={username}
               onChange={(e) => { setUsername(e.target.value); setError(''); }}
               className="w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm focus:outline-none focus:border-gray-500"
-              placeholder="Enter username"
+              placeholder="Enter employee ID"
               required
             />
           </div>
@@ -52,9 +52,6 @@ export function LoginPage() {
           <button type="submit" className="btn-red w-full py-2.5">
             Sign In
           </button>
-          <p className="text-xs text-gray-400 text-center mt-4">
-            admin/admin (full access) or user/user (read-only)
-          </p>
         </form>
       </div>
     </div>

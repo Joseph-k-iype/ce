@@ -175,7 +175,20 @@ async def create_data_source(request: DataSourceCreateRequest):
                     detail=f"Connection test failed: {message}"
                 )
 
-        # Register source
+        # Deduplication check — return 409 if identical source already exists
+        existing_id = manager.get_existing_source_id(
+            request.name, request.source_type, request.config
+        )
+        if existing_id:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": f"Data source '{request.name}' with identical config already exists",
+                    "source_id": existing_id,
+                }
+            )
+
+        # Register source (also persists to SQLite)
         manager.register_source(config)
 
         return {

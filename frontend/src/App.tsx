@@ -13,6 +13,7 @@ import { SavedPoliciesPage } from './pages/SavedPoliciesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DataSourcesPage } from './pages/DataSourcesPage';
+import { RBACAdminPage } from './pages/RBACAdminPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,13 +35,18 @@ function App() {
               <Route element={<AppLayout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/evaluator" element={<EvaluatorPage />} />
+                {/* Admin-only routes */}
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
                   <Route path="/saved-policies" element={<SavedPoliciesPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/generator" element={<WizardPage />} />
+                  <Route path="/data-sources" element={<DataSourcesPage />} />
+                  <Route path="/access-control" element={<RBACAdminPage />} />
+                </Route>
+                {/* Editor + Admin routes */}
+                <Route element={<ProtectedRoute requiredRole={['admin', 'editor']} />}>
                   <Route path="/editor" element={<EditorPage />} />
                   <Route path="/editor/:ruleId" element={<RuleEditorPage />} />
-                  <Route path="/data-sources" element={<DataSourcesPage />} />
                 </Route>
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
