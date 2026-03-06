@@ -40,5 +40,10 @@
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
     "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "@floating-ui/dom": "1.6.13",
+    "@floating-ui/core": "1.6.9",
+    "@floating-ui/utils": "0.2.9"
   }
 }
