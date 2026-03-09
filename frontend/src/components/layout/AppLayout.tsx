@@ -25,9 +25,9 @@ export function AppLayout() {
   // Show nav when cursor is near the top of the screen
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (e.clientY < 64) {
+      if (e.clientY < 8) {
         setNavVisible(true);
-      } else if (e.clientY > 80 && !navRef.current?.matches(':hover')) {
+      } else if (e.clientY > 64 && !navRef.current?.matches(':hover')) {
         setNavVisible(false);
       }
     };

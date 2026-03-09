@@ -25,7 +25,7 @@ export function EvaluatorPage() {
   }, [result]);
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col">
+    <div className="h-full flex flex-col">
       <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 bg-white">
         <h1 className="text-2xl font-bold text-gray-800">Policy Evaluator</h1>
 

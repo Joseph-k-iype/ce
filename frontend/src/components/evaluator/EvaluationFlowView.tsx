@@ -49,20 +49,25 @@ function EvaluationFlowViewInner() {
     if (!result?.evaluation_graph) return { rfNodes: [], rfEdges: [] };
 
     const { nodes: rawNodes, edges: rawEdges } = result.evaluation_graph;
+
+    // Deduplicate nodes and edges by id to prevent React "duplicate key" warnings
+    const uniqueNodes = rawNodes.filter((n, i, arr) => arr.findIndex(x => x.id === n.id) === i);
+    const uniqueEdges = rawEdges.filter((e, i, arr) => arr.findIndex(x => x.id === e.id) === i);
+
     const laneRanges = computeLaneRanges(lanes);
     const laneCounters: Record<string, number> = {};
+    const fallbackCounters: Record<string, number> = {};
 
-    const nodes: Node[] = rawNodes.reduce<Node[]>((acc, node) => {
-        const laneId = node.data.lane;
-        const range = laneRanges.find((r) => r.id === laneId)
-          || laneRanges.find(r => r.id === 'extra')
-          || laneRanges[0];
+    const nodes: Node[] = uniqueNodes.reduce<Node[]>((acc, node) => {
+      const laneId = node.data.lane;
+      const range = laneRanges.find((r) => r.id === laneId)
+        || laneRanges.find(r => r.id === 'extra')
+        || laneRanges[0];
 
-        if (!range) return acc;
-
+      if (range) {
+        // Lane-based positioning
         const count = laneCounters[laneId] || 0;
         laneCounters[laneId] = count + 1;
-
         acc.push({
           id: node.id,
           type: node.type,
@@ -73,10 +78,28 @@ function EvaluationFlowViewInner() {
           },
           draggable: true,
         } as Node);
-        return acc;
-      }, []);
+      } else {
+        // Fallback: group by node type in columns when no lane config is available
+        const col = node.type || 'default';
+        const typeIdx = Object.keys(fallbackCounters).indexOf(col);
+        const colIndex = typeIdx === -1 ? Object.keys(fallbackCounters).length : typeIdx;
+        const rowCount = fallbackCounters[col] || 0;
+        fallbackCounters[col] = rowCount + 1;
+        acc.push({
+          id: node.id,
+          type: node.type,
+          data: node.data,
+          position: {
+            x: colIndex * (NODE_WIDTH + 40),
+            y: 20 + rowCount * (NODE_HEIGHT + NODE_VERTICAL_GAP),
+          },
+          draggable: true,
+        } as Node);
+      }
+      return acc;
+    }, []);
 
-    const edges: Edge[] = rawEdges.map((edge) => ({
+    const edges: Edge[] = uniqueEdges.map((edge) => ({
       id: edge.id,
       source: edge.source,
       target: edge.target,

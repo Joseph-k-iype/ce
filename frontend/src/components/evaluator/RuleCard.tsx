@@ -26,6 +26,19 @@ export function RuleCard({ rule, index }: RuleCardProps) {
         }`}
       >
         <div className="flex items-center gap-2 min-w-0">
+          <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
+            isProhibition ? 'bg-red-500' : 'bg-green-500'
+          }`}>
+            {isProhibition ? (
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
           <span className="text-xs text-gray-400 shrink-0">#{index + 1}</span>
           <span className="text-sm font-medium text-gray-800 truncate">{rule.rule_name}</span>
         </div>

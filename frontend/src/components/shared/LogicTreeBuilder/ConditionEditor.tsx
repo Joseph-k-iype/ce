@@ -137,10 +137,33 @@ export function ConditionEditor({
             control: (base, state) => ({
               ...base,
               minHeight: '38px',
+              backgroundColor: '#ffffff',
               borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
               '&:hover': {
                 borderColor: state.isFocused ? '#3b82f6' : '#9ca3af'
               }
+            }),
+            menu: (base) => ({
+              ...base,
+              backgroundColor: '#ffffff',
+              zIndex: 9999,
+            }),
+            option: (base, state) => ({
+              ...base,
+              backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#eff6ff' : '#ffffff',
+              color: state.isSelected ? '#ffffff' : '#111827',
+            }),
+            input: (base) => ({
+              ...base,
+              color: '#111827',
+            }),
+            singleValue: (base) => ({
+              ...base,
+              color: '#111827',
+            }),
+            placeholder: (base) => ({
+              ...base,
+              color: '#9ca3af',
             }),
             multiValue: (base) => ({
               ...base,

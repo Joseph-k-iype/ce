@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWizardStore } from '../../../stores/wizardStore';
 import { useDropdownData } from '../../../hooks/useDropdownData';
 import { DataDictionaryEditor } from '../DataDictionaryEditor';
-import { editRule, editTerms, getTriggerLogic, getLogicTree, updateLogicTree } from '../../../services/wizardApi';
+import { editRule, editTerms, getTriggerLogic, getLogicTree, updateLogicTree, getGraphTriggerMappings } from '../../../services/wizardApi';
+import type { GraphTriggerMapping } from '../../../services/wizardApi';
 import { LogicTreeBuilder } from '../../shared/LogicTreeBuilder';
 import { DIMENSION_CONFIGS } from '../../../services/dimensionConfig';
 import type { TriggerLogicResponse } from '../../../types/wizard';
@@ -50,6 +51,9 @@ export function Step4Review() {
   // Trigger logic state
   const [triggerLogic, setTriggerLogic] = useState<TriggerLogicResponse | null>(null);
 
+  // Graph trigger mappings from Step 3
+  const [graphMappings, setGraphMappings] = useState<GraphTriggerMapping[]>([]);
+
   // Logic tree state (visual editor)
   const [logicTree, setLogicTree] = useState<LogicNode>({ type: 'AND', children: [] });
   const [editingLogicTree, setEditingLogicTree] = useState(false);
@@ -61,15 +65,17 @@ export function Step4Review() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Fetch trigger logic and logic tree in parallel
+  // Fetch trigger logic, logic tree, and graph trigger mappings in parallel
   useEffect(() => {
     if (!sessionId) return;
     Promise.all([
       getTriggerLogic(sessionId).catch(() => null),
       getLogicTree(sessionId).catch(() => null),
-    ]).then(([triggerResult, treeResult]) => {
+      getGraphTriggerMappings(sessionId).catch(() => null),
+    ]).then(([triggerResult, treeResult, mappingsResult]) => {
       if (triggerResult) setTriggerLogic(triggerResult);
       if (treeResult) setLogicTree(treeResult);
+      if (mappingsResult?.mappings) setGraphMappings(mappingsResult.mappings);
     });
   }, [sessionId]);
 
@@ -574,6 +580,72 @@ export function Step4Review() {
           </table>
         </div>
       </div>
+
+      {/* Graph Trigger Conditions — from Step 3 data source configuration */}
+      {graphMappings.length > 0 && (
+        <div className="card-dark p-5 space-y-3">
+          <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Graph Trigger Conditions</h4>
+          <p className="text-[10px] text-gray-500">
+            Conditions configured in Step 3 (data sources) that determine when this rule fires based on graph data.
+          </p>
+          <div className="space-y-3">
+            {(() => {
+              // Group mappings by graph_name
+              const byGraph = graphMappings.reduce<Record<string, GraphTriggerMapping[]>>((acc, m) => {
+                if (!acc[m.graph_name]) acc[m.graph_name] = [];
+                acc[m.graph_name].push(m);
+                return acc;
+              }, {});
+              return Object.entries(byGraph).map(([graphName, mappings]) => (
+                <div key={graphName} className="bg-gray-900 border border-gray-700 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 3 8 3s8-.79 8-3V7M4 7c0 2.21 3.582 3 8 3s8-.79 8-3M4 7c0-2.21 3.582 3-8 3s8 .79 8 3" />
+                    </svg>
+                    <span className="text-xs font-semibold text-purple-300">{graphName}</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {mappings.map((m, idx) => {
+                      let conditions: Array<{ attribute: string; operator: string; values: string[] }> = [];
+                      try {
+                        const parsed = JSON.parse(m.filter_expr || '[]');
+                        conditions = Array.isArray(parsed) ? parsed : [];
+                      } catch {
+                        conditions = m.filter_expr ? [{ attribute: m.field, operator: '=', values: [m.filter_expr] }] : [];
+                      }
+                      return (
+                        <div key={idx} className="pl-3 border-l-2 border-gray-700">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[10px] text-gray-500">Node:</span>
+                            <span className="text-[10px] font-medium text-gray-300 bg-gray-800 px-1.5 py-0.5 rounded">{m.node_label}</span>
+                            {m.dimension && (
+                              <>
+                                <span className="text-[10px] text-gray-600">→</span>
+                                <span className="text-[10px] text-blue-400">maps to: {m.dimension}</span>
+                              </>
+                            )}
+                          </div>
+                          {conditions.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {conditions.map((cond, ci) => (
+                                <span key={ci} className="text-[10px] bg-purple-900/40 text-purple-200 px-2 py-0.5 rounded font-mono">
+                                  {cond.attribute} {cond.operator} [{cond.values.join(', ')}]
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-gray-600 italic">No conditions — matches all {m.node_label} nodes</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Visual Logic Tree Builder — NEW! */}
       <div className="card-dark p-5 space-y-3">
