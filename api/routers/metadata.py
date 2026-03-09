@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from services.database import get_db_service
 from services.cache import get_cache_service
+from utils.schema_manager import load_schema
 
 logger = logging.getLogger(__name__)
 
@@ -514,6 +515,12 @@ async def get_all_dropdown_values(db=Depends(get_db)):
 
     cache.set("all_dropdown_values", result, "metadata", ttl=600)
     return result
+
+
+@router.get("/graph-schema")
+async def get_graph_schema():
+    """Return graph schema (nodeTypes, lanes, relationshipTypes) for all authenticated users."""
+    return load_schema()
 
 
 @router.post("/metadata/nodes")

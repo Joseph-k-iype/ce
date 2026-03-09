@@ -6,11 +6,11 @@ type Tab = 'users' | 'roles' | 'workspaces' | 'audit';
 
 // ── API helpers ──────────────────────────────────────────────────────────────
 
-const fetchUsers = () => api.get('/api/rbac/users').then(r => r.data);
-const fetchRoles = () => api.get('/api/rbac/roles').then(r => r.data);
-const fetchWorkspaces = () => api.get('/api/rbac/workspaces').then(r => r.data);
+const fetchUsers = () => api.get('/rbac/users').then(r => r.data);
+const fetchRoles = () => api.get('/rbac/roles').then(r => r.data);
+const fetchWorkspaces = () => api.get('/rbac/workspaces').then(r => r.data);
 const fetchAudit = (offset: number) =>
-  api.get('/api/rbac/audit-log', { params: { limit: 50, offset } }).then(r => r.data);
+  api.get('/rbac/audit-log', { params: { limit: 50, offset } }).then(r => r.data);
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
@@ -24,18 +24,18 @@ function UsersTab() {
   const [newRole, setNewRole] = useState('user');
 
   const createUser = useMutation({
-    mutationFn: (payload: object) => api.post('/api/rbac/users', payload),
+    mutationFn: (payload: object) => api.post('/rbac/users', payload),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rbac-users'] }); setNewUsername(''); setNewEmail(''); },
   });
 
   const updateUserRole = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      api.put(`/api/rbac/users/${userId}`, { role }),
+      api.put(`/rbac/users/${userId}`, { role }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rbac-users'] }),
   });
 
   const deactivateUser = useMutation({
-    mutationFn: (userId: string) => api.delete(`/api/rbac/users/${userId}`),
+    mutationFn: (userId: string) => api.delete(`/rbac/users/${userId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rbac-users'] }),
   });
 
@@ -140,13 +140,13 @@ function RolesTab() {
   const [editingPerms, setEditingPerms] = useState<Record<string, string>>({});
 
   const createRole = useMutation({
-    mutationFn: (payload: object) => api.post('/api/rbac/roles', payload),
+    mutationFn: (payload: object) => api.post('/rbac/roles', payload),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rbac-roles'] }); setNewRoleName(''); setNewPermissions(''); },
   });
 
   const updateRole = useMutation({
     mutationFn: ({ roleId, permissions }: { roleId: string; permissions: string[] }) =>
-      api.put(`/api/rbac/roles/${roleId}`, { permissions }),
+      api.put(`/rbac/roles/${roleId}`, { permissions }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rbac-roles'] }),
   });
 
@@ -223,7 +223,7 @@ function WorkspacesTab() {
   const [newEnv, setNewEnv] = useState('dev');
 
   const createWs = useMutation({
-    mutationFn: (payload: object) => api.post('/api/rbac/workspaces', payload),
+    mutationFn: (payload: object) => api.post('/rbac/workspaces', payload),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rbac-workspaces'] }); setNewName(''); setNewDesc(''); },
   });
 

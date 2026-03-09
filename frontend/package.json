@@ -44,6 +44,7 @@
   "overrides": {
     "@floating-ui/dom": "1.6.13",
     "@floating-ui/core": "1.6.9",
-    "@floating-ui/utils": "0.2.9"
+    "@floating-ui/utils": "0.2.9",
+    "minimatch": "10.2.3"
   }
 }

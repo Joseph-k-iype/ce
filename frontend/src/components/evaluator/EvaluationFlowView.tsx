@@ -52,23 +52,29 @@ function EvaluationFlowViewInner() {
     const laneRanges = computeLaneRanges(lanes);
     const laneCounters: Record<string, number> = {};
 
-    const nodes: Node[] = rawNodes.map((node) => {
-      const laneId = node.data.lane;
-      const range = laneRanges.find((r) => r.id === laneId) || laneRanges.find(r => r.id === 'extra') || laneRanges[0];
-      const count = laneCounters[laneId] || 0;
-      laneCounters[laneId] = count + 1;
+    const nodes: Node[] = rawNodes.reduce<Node[]>((acc, node) => {
+        const laneId = node.data.lane;
+        const range = laneRanges.find((r) => r.id === laneId)
+          || laneRanges.find(r => r.id === 'extra')
+          || laneRanges[0];
 
-      return {
-        id: node.id,
-        type: node.type,
-        data: node.data,
-        position: {
-          x: range.xCenter - NODE_WIDTH / 2,
-          y: LANE_HEADER_HEIGHT + 20 + count * (NODE_HEIGHT + NODE_VERTICAL_GAP),
-        },
-        draggable: true,
-      };
-    });
+        if (!range) return acc;
+
+        const count = laneCounters[laneId] || 0;
+        laneCounters[laneId] = count + 1;
+
+        acc.push({
+          id: node.id,
+          type: node.type,
+          data: node.data,
+          position: {
+            x: range.xCenter - NODE_WIDTH / 2,
+            y: LANE_HEADER_HEIGHT + 20 + count * (NODE_HEIGHT + NODE_VERTICAL_GAP),
+          },
+          draggable: true,
+        } as Node);
+        return acc;
+      }, []);
 
     const edges: Edge[] = rawEdges.map((edge) => ({
       id: edge.id,

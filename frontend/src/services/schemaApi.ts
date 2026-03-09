@@ -30,7 +30,7 @@ export interface GraphSchema {
 }
 
 export async function getSchema(): Promise<GraphSchema> {
-  const { data } = await api.get<GraphSchema>('/graph/schema');
+  const { data } = await api.get<GraphSchema>('/graph-schema');
   return data;
 }
 
