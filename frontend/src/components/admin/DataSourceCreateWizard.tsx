@@ -48,6 +48,7 @@ export function DataSourceCreateWizard({ onClose, onSuccess }: CreateWizardProps
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [creating, setCreating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [existingSourceId, setExistingSourceId] = useState<string | null>(null);
 
   const handleTypeSelect = (type: DataSourceType) => {
     setSourceType(type);
@@ -108,18 +109,34 @@ export function DataSourceCreateWizard({ onClose, onSuccess }: CreateWizardProps
         message: response.data.test_result || 'Connection successful'
       });
     } catch (error: any) {
-      setTestResult({
-        success: false,
-        message: error.response?.data?.detail || 'Connection failed'
-      });
+      if (error.response?.status === 409) {
+        const detail = error.response.data?.detail;
+        const existId = typeof detail === 'object' ? detail?.source_id : null;
+        setExistingSourceId(existId);
+        setTestResult({
+          success: true,
+          message: `Source already exists (${existId ?? 'existing'}). Will reuse it.`,
+        });
+      } else {
+        setTestResult({
+          success: false,
+          message: error.response?.data?.detail || 'Connection failed',
+        });
+      }
     } finally {
       setTesting(false);
     }
   };
 
   const handleCreate = async () => {
-    setCreating(true);
+    // If we already know it exists from the test phase, skip creation
+    if (existingSourceId) {
+      onSuccess();
+      onClose();
+      return;
+    }
 
+    setCreating(true);
     try {
       const config: any = {};
       const auth_config: any = {};
@@ -152,13 +169,19 @@ export function DataSourceCreateWizard({ onClose, onSuccess }: CreateWizardProps
         source_type: sourceType,
         description,
         config,
-        auth_config
+        auth_config,
       });
 
       onSuccess();
       onClose();
     } catch (error: any) {
-      alert(error.response?.data?.detail || 'Failed to create data source');
+      if (error.response?.status === 409) {
+        // Source was created during test phase, treat as success
+        onSuccess();
+        onClose();
+      } else {
+        alert(error.response?.data?.detail || 'Failed to create data source');
+      }
     } finally {
       setCreating(false);
     }

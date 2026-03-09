@@ -111,6 +111,15 @@ CREATE TABLE IF NOT EXISTS audit_log (
     details_json    TEXT,
     timestamp       TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS workspace_rules (
+    id              TEXT PRIMARY KEY,
+    workspace_id    TEXT NOT NULL REFERENCES workspaces(workspace_id),
+    rule_id         TEXT NOT NULL,
+    assigned_by     TEXT,
+    assigned_at     TEXT NOT NULL,
+    UNIQUE(workspace_id, rule_id)
+);
 """
 
 SEED_SQL = """
@@ -340,6 +349,40 @@ class OperationalStore:
                 WHERE wm.workspace_id=?
             """, (workspace_id,)).fetchall()
             return [dict(r) for r in rows]
+
+    def remove_workspace_member(self, user_id: str, workspace_id: str) -> bool:
+        with _get_conn() as conn:
+            cur = conn.execute(
+                "DELETE FROM workspace_members WHERE workspace_id=? AND user_id=?",
+                (workspace_id, user_id)
+            )
+            return cur.rowcount > 0
+
+    def get_workspace_rules(self, workspace_id: str) -> List[str]:
+        with _get_conn() as conn:
+            rows = conn.execute(
+                "SELECT rule_id FROM workspace_rules WHERE workspace_id=? ORDER BY assigned_at",
+                (workspace_id,)
+            ).fetchall()
+            return [r["rule_id"] for r in rows]
+
+    def add_workspace_rule(self, workspace_id: str, rule_id: str, assigned_by: str = "") -> None:
+        now = _now()
+        entry_id = str(uuid.uuid4())
+        with _get_conn() as conn:
+            conn.execute("""
+                INSERT INTO workspace_rules (id, workspace_id, rule_id, assigned_by, assigned_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(workspace_id, rule_id) DO NOTHING
+            """, (entry_id, workspace_id, rule_id, assigned_by, now))
+
+    def remove_workspace_rule(self, workspace_id: str, rule_id: str) -> bool:
+        with _get_conn() as conn:
+            cur = conn.execute(
+                "DELETE FROM workspace_rules WHERE workspace_id=? AND rule_id=?",
+                (workspace_id, rule_id)
+            )
+            return cur.rowcount > 0
 
     # ── Audit Log ──────────────────────────────────────────────────────────────
 

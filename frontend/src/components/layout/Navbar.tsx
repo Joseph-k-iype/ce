@@ -4,8 +4,8 @@ import { useAuthStore } from '../../stores/authStore';
 import api from '../../services/api';
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Policy Overview', roles: ['admin', 'user'] },
-  { path: '/evaluator', label: 'Policy Evaluator', roles: ['admin', 'user'] },
+  { path: '/', label: 'Policy Overview', roles: ['admin', 'editor', 'user'] },
+  { path: '/evaluator', label: 'Policy Evaluator', roles: ['admin', 'editor', 'user'] },
   { path: '/saved-policies', label: 'Saved Policies', roles: ['admin'] },
   { path: '/generator', label: 'Policy Generator', roles: ['admin'] },
   { path: '/editor', label: 'Policy Editor', roles: ['admin', 'editor'] },
@@ -26,7 +26,7 @@ export function Navbar() {
 
   const { data: envData } = useQuery({
     queryKey: ['environment'],
-    queryFn: () => api.get('/api/env').then(r => r.data),
+    queryFn: () => api.get('/env').then(r => r.data),
     staleTime: Infinity,
     enabled: isAuthenticated,
   });

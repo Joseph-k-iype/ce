@@ -55,6 +55,10 @@ class WorkspaceMemberRequest(BaseModel):
     role: str = "user"
 
 
+class WorkspaceRuleRequest(BaseModel):
+    rule_id: str
+
+
 # ── Users ────────────────────────────────────────────────────────────────────
 
 @router.get("/users")
@@ -219,6 +223,61 @@ async def add_workspace_member(workspace_id: str, request: WorkspaceMemberReques
                      resource_type="workspace", resource_id=workspace_id,
                      details={"member_user_id": request.user_id, "role": request.role})
     return {"status": "added", "workspace_id": workspace_id, "user_id": request.user_id}
+
+
+@router.delete("/workspaces/{workspace_id}/members/{user_id}")
+async def remove_workspace_member(workspace_id: str, user_id: str,
+                                   current_user: User = Depends(get_current_admin)):
+    """Remove a user from a workspace."""
+    store = get_operational_store()
+    success = store.remove_workspace_member(user_id, workspace_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Member not found")
+    store.log_action("workspace.remove_member", user_id=current_user.user_id,
+                     resource_type="workspace", resource_id=workspace_id,
+                     details={"removed_user_id": user_id})
+    return {"status": "removed", "workspace_id": workspace_id, "user_id": user_id}
+
+
+@router.get("/workspaces/{workspace_id}/rules")
+async def get_workspace_rules(workspace_id: str,
+                               current_user: User = Depends(get_current_admin)):
+    """List rule IDs assigned to a workspace."""
+    store = get_operational_store()
+    ws = store.get_workspace(workspace_id)
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    rule_ids = store.get_workspace_rules(workspace_id)
+    return {"workspace_id": workspace_id, "rule_ids": rule_ids}
+
+
+@router.post("/workspaces/{workspace_id}/rules")
+async def assign_workspace_rule(workspace_id: str, request: WorkspaceRuleRequest,
+                                 current_user: User = Depends(get_current_admin)):
+    """Assign a rule to a workspace."""
+    store = get_operational_store()
+    ws = store.get_workspace(workspace_id)
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    store.add_workspace_rule(workspace_id, request.rule_id, assigned_by=current_user.user_id)
+    store.log_action("workspace.assign_rule", user_id=current_user.user_id,
+                     resource_type="workspace", resource_id=workspace_id,
+                     details={"rule_id": request.rule_id})
+    return {"status": "assigned", "workspace_id": workspace_id, "rule_id": request.rule_id}
+
+
+@router.delete("/workspaces/{workspace_id}/rules/{rule_id}")
+async def remove_workspace_rule(workspace_id: str, rule_id: str,
+                                 current_user: User = Depends(get_current_admin)):
+    """Remove a rule assignment from a workspace."""
+    store = get_operational_store()
+    success = store.remove_workspace_rule(workspace_id, rule_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Rule assignment not found")
+    store.log_action("workspace.remove_rule", user_id=current_user.user_id,
+                     resource_type="workspace", resource_id=workspace_id,
+                     details={"rule_id": rule_id})
+    return {"status": "removed", "workspace_id": workspace_id, "rule_id": rule_id}
 
 
 # ── Audit Log ────────────────────────────────────────────────────────────────
