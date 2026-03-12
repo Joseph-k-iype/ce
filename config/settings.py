@@ -22,6 +22,7 @@ class DatabaseSettings(BaseSettings):
     host: str = Field(default="localhost", validation_alias="FALKORDB_HOST")
     port: int = Field(default=6379, validation_alias="FALKORDB_PORT")
     password: Optional[str] = Field(default=None, validation_alias="FALKORDB_PASSWORD")
+    username: Optional[str] = Field(default=None, validation_alias="FALKORDB_USERNAME")
     rules_graph_name: str = Field(default="RulesGraph", validation_alias="RULES_GRAPH_NAME")
     data_graph_name: str = Field(default="DataTransferGraph", validation_alias="DATA_GRAPH_NAME")
     temp_graph_prefix: str = Field(default="TempGraph_", validation_alias="TEMP_GRAPH_PREFIX")

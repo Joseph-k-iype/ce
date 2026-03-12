@@ -26,15 +26,18 @@ Usage
 import argparse
 import json
 import sys
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 from datetime import datetime, timezone
 
 import pandas as pd
 from falkordb import FalkorDB
+from config.settings import settings as _settings
 
 # ── defaults ──────────────────────────────────────────────────────────────────
-DEFAULT_HOST       = "localhost"
-DEFAULT_PORT       = 6379
-DEFAULT_GRAPH      = "RulesGraph"
+DEFAULT_HOST       = _settings.database.host
+DEFAULT_PORT       = _settings.database.port
+DEFAULT_GRAPH      = _settings.database.rules_graph_name
 DEFAULT_EXCEL_OUT  = "falkordb_schema.xlsx"
 DEFAULT_JSON_OUT   = "compliance_policies_export.json"
 
@@ -397,7 +400,11 @@ def _autofit(writer):
 
 def run(host: str, port: int, graph: str, excel_out: str, json_out: str):
     print(f"Connecting to FalkorDB at {host}:{port}, graph='{graph}' ...")
-    db = FalkorDB(host=host, port=port)
+    db = FalkorDB(
+        host=host, port=port,
+        username=_settings.database.username,
+        password=_settings.database.password
+    )
     g  = db.select_graph(graph)
     print("Connected.\n")
 

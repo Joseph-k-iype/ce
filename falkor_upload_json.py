@@ -38,11 +38,14 @@ JSON Format:
 
 import json
 import sys
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 from pathlib import Path
 from falkordb import FalkorDB
 import logging
 from collections import defaultdict
 import time
+from config.settings import settings as _settings
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -488,8 +491,13 @@ def load_json_to_graph(json_file: str, clear_graph: bool = False, batch_size: in
 
     # Connect to FalkorDB
     try:
-        db = FalkorDB(host='localhost', port=6379)
-        graph = db.select_graph('DataTransferGraph')
+        db = FalkorDB(
+            host=_settings.database.host,
+            port=_settings.database.port,
+            username=_settings.database.username,
+            password=_settings.database.password
+        )
+        graph = db.select_graph(_settings.database.data_graph_name)
     except Exception as e:
         logger.error(f"Cannot connect to FalkorDB: {e}")
         logger.info("Make sure FalkorDB is running: docker run -p 6379:6379 falkordb/falkordb:latest")

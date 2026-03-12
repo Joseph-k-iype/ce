@@ -32,6 +32,7 @@ services:
     environment:
       - FALKORDB_HOST=falkordb
       - FALKORDB_PORT=6379
+      - FALKORDB_USERNAME=
       - FALKORDB_PASSWORD=
       - LOG_LEVEL=info
       - JWT_SECRET_KEY=dev-jwt-secret-key

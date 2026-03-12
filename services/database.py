@@ -47,6 +47,7 @@ class DatabaseService:
             self._db = FalkorDB(
                 host=settings.database.host,
                 port=settings.database.port,
+                username=settings.database.username,
                 password=settings.database.password
             )
             logger.info(f"Connected to FalkorDB at {settings.database.host}:{settings.database.port}")
