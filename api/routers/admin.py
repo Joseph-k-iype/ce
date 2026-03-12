@@ -345,8 +345,16 @@ async def list_rules(db=Depends(get_db)):
     RETURN r.rule_id AS rule_id, r.name AS name, r.description AS description,
            r.rule_type AS rule_type, r.priority AS priority, r.outcome AS outcome,
            r.origin_match_type AS origin_match_type, r.receiving_match_type AS receiving_match_type,
-           r.enabled AS enabled, r.odrl_type AS odrl_type, r.logic_tree AS logic_tree,
-           r.priority_order AS priority_order, r.valid_until AS valid_until, r.has_pii_required AS requires_pii,
+           r.enabled AS enabled, r.odrl_type AS odrl_type, r.odrl_action AS odrl_action,
+           r.odrl_target AS odrl_target, r.logic_tree AS logic_tree,
+           r.priority_order AS priority_order, r.valid_until AS valid_until,
+           r.valid_from AS valid_from, r.valid_till AS valid_till,
+           r.has_pii_required AS requires_pii,
+           r.requires_any_data AS requires_any_data,
+           r.requires_personal_data AS requires_personal_data,
+           r.status AS status, r.version_id AS version_id,
+           r.workspace_id AS workspace_id,
+           r.created_at AS created_at, r.updated_at AS updated_at,
            origin_scopes, receiving_scopes, required_assessments, required_actions, linked_attributes
     ORDER BY priority_order
     """
@@ -440,9 +448,105 @@ async def export_rules(db=Depends(get_db)):
 
 # ── JSON Full Export / Import ────────────────────────────────────────────────
 
+def _flatten_logic_tree(node: dict, conditions: list | None = None) -> list:
+    """Recursively extract all CONDITION leaf nodes from a logic tree into a flat list.
+
+    Each entry: {"dimension": str, "operator": "IN", "values": [str, ...]}
+    Values are split on comma so multi-value conditions surface correctly.
+    """
+    if conditions is None:
+        conditions = []
+    if not isinstance(node, dict):
+        return conditions
+    if node.get("type") == "CONDITION":
+        dim = node.get("dimension", "")
+        raw_val = node.get("value", "") or ""
+        values = [v.strip() for v in raw_val.split(",") if v.strip()]
+        if dim:
+            conditions.append({"dimension": dim, "operator": "IN", "values": values})
+    for child in node.get("children", []):
+        _flatten_logic_tree(child, conditions)
+    return conditions
+
+
+def _logic_tree_to_expression(node: dict, depth: int = 0) -> str:
+    """Convert a logic tree to a human-readable boolean expression string.
+
+    Example: (DataCategory IN [Personal Data] AND Purpose IN [Marketing])
+    """
+    if not isinstance(node, dict):
+        return ""
+    ntype = node.get("type", "AND")
+    if ntype == "CONDITION":
+        dim = node.get("dimension", "?")
+        raw_val = node.get("value", "") or ""
+        values = [v.strip() for v in raw_val.split(",") if v.strip()]
+        vals_str = ", ".join(f'"{v}"' for v in values) if values else '""'
+        return f'{dim} IN [{vals_str}]'
+    children = node.get("children", [])
+    if not children:
+        return f"({ntype})"
+    child_exprs = [_logic_tree_to_expression(c, depth + 1) for c in children if isinstance(c, dict)]
+    if ntype == "NOT":
+        inner = child_exprs[0] if child_exprs else ""
+        expr = f"NOT ({inner})"
+    else:
+        joiner = f" {ntype} "
+        expr = joiner.join(child_exprs)
+        if depth > 0 or len(child_exprs) > 1:
+            expr = f"({expr})"
+    return expr
+
+
+_POLICY_SCHEMA = {
+    "dimensions": {
+        "DataCategory": "Category of personal/sensitive data being processed (e.g. 'Financial Data', 'Health Data')",
+        "Purpose": "Purpose of processing the data (e.g. 'Marketing', 'Fraud Prevention')",
+        "Process": "Business process triggering the data transfer",
+        "Regulator": "Regulatory body governing the rule (e.g. 'GDPR', 'CCPA')",
+        "Authority": "Supervisory authority with jurisdiction",
+        "DataSubject": "Category of individuals whose data is processed (e.g. 'Employee', 'Customer')",
+        "SensitiveDataCategory": "Special-category sensitive data (e.g. 'Biometric', 'Genetic')",
+        "GDC": "Global Data Classification label",
+        "OriginCountry": "Country where the data originates",
+        "ReceivingCountry": "Country receiving the data",
+        "LegalEntity": "Legal entity initiating or receiving the transfer",
+    },
+    "outcomes": {
+        "permission": "Data transfer is allowed when all conditions are met",
+        "prohibition": "Data transfer is blocked when conditions are met",
+    },
+    "logic_operators": {
+        "AND": "All child conditions must be true",
+        "OR": "At least one child condition must be true",
+        "NOT": "The child condition must be false",
+        "CONDITION": "Leaf node — a single dimension/value check",
+    },
+    "status_values": {
+        "draft": "Rule is being authored and has not been reviewed",
+        "submitted": "Rule has been submitted for approval",
+        "approved": "Rule is live and enforced",
+        "archived": "Rule has been retired",
+    },
+    "priority_levels": ["critical", "high", "medium", "low"],
+}
+
+
 @router.get("/export/full")
 async def export_full_json(db=Depends(get_db)):
-    """Export all rules as a structured JSON bundle."""
+    """Export all rules as a fully enriched JSON bundle for downstream policy consumers.
+
+    Each rule includes:
+    - All rule metadata (status, versioning, date ranges, workspace)
+    - logic_tree: the raw nested AND/OR/NOT/CONDITION tree
+    - conditions_flattened: flat list of every leaf condition {dimension, operator, values}
+    - logic_tree_expression: human-readable boolean expression string
+    - origin_scopes / receiving_scopes: resolved country/group names
+    - required_actions / required_assessments / linked_attributes
+
+    The bundle also includes a top-level policy_schema section explaining all
+    dimension names, outcome values, operators, and priority levels.
+    """
     from fastapi.responses import JSONResponse as _JSONResponse
     from config.settings import settings as _settings
 
@@ -450,22 +554,39 @@ async def export_full_json(db=Depends(get_db)):
     rules = []
     for r in results:
         rule = dict(r)
-        if isinstance(rule.get("logic_tree"), str):
+
+        # Parse logic_tree string → dict
+        lt = rule.get("logic_tree")
+        if isinstance(lt, str):
             try:
-                rule["logic_tree"] = json.loads(rule["logic_tree"])
+                lt = json.loads(lt)
             except Exception:
-                pass
+                lt = {"type": "AND", "children": []}
+        rule["logic_tree"] = lt or {"type": "AND", "children": []}
+
+        # Enrich with flattened conditions and readable expression
+        rule["conditions_flattened"] = _flatten_logic_tree(rule["logic_tree"])
+        rule["logic_tree_expression"] = _logic_tree_to_expression(rule["logic_tree"])
+
+        # Clean up None/null lists for readability
+        for list_field in ("origin_scopes", "receiving_scopes", "required_assessments",
+                           "required_actions", "linked_attributes"):
+            if rule.get(list_field) is None:
+                rule[list_field] = []
+
         rules.append(rule)
 
     bundle = {
-        "format_version": "1.0",
+        "format_version": "2.0",
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "environment": _settings.environment,
+        "total_rules": len(rules),
+        "policy_schema": _POLICY_SCHEMA,
         "rules": rules,
     }
     return _JSONResponse(
         content=bundle,
-        headers={"Content-Disposition": "attachment; filename=compliance_export.json"}
+        headers={"Content-Disposition": "attachment; filename=compliance_policies_export.json"}
     )
 
 
